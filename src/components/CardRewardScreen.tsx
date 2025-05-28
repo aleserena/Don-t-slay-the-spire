@@ -163,23 +163,26 @@ const CardRewardCard: React.FC<CardRewardCardProps> = ({
         e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
       }}
     >
-      {/* Cost */}
+      {/* Cost Circle - Top Left */}
       <div style={{
         position: 'absolute',
-        top: '10px',
-        left: '10px',
-        width: '30px',
-        height: '30px',
-        background: '#2c3e50',
+        top: '-8px',
+        left: '-8px',
+        width: '24px',
+        height: '24px',
         borderRadius: '50%',
+        background: 'linear-gradient(135deg, #ffd700, #ffcc02)',
+        border: '2px solid #fff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: '16px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        border: '2px solid white'
+        color: '#000',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+        zIndex: 20
       }}>
-        {card.cost}
+        {card.baseId === 'whirlwind' ? 'X' : card.cost}
       </div>
 
       {/* Rarity indicator */}
@@ -227,7 +230,14 @@ const CardRewardCard: React.FC<CardRewardCardProps> = ({
         gap: '15px',
         marginBottom: '15px'
       }}>
-        {card.damage && card.damage > 0 && (
+        {/* Generic damage - only for cards without special displays */}
+        {card.damage && card.damage > 0 && 
+         card.baseId !== 'body_slam' && 
+         card.baseId !== 'bash' && 
+         card.baseId !== 'cleave' && 
+         card.baseId !== 'whirlwind' && 
+         card.baseId !== 'twin_strike' && 
+         card.baseId !== 'anger' && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -236,15 +246,113 @@ const CardRewardCard: React.FC<CardRewardCardProps> = ({
             color: '#fff',
             background: 'rgba(255, 107, 107, 0.9)',
             padding: '4px 8px',
-            borderRadius: '12px',
-            border: '2px solid #fff',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+            borderRadius: '8px',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
           }}>
             <span style={{ marginRight: '4px' }}>⚔️</span>
             {card.damage}
           </div>
         )}
+        
+        {/* Special handling for effect-based damage cards */}
+        {card.baseId === 'bash' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: '#fff',
+            background: 'rgba(255, 107, 107, 0.9)',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}>
+            <span style={{ marginRight: '4px' }}>⚔️</span>
+            {card.upgraded ? '10' : '8'}
+          </div>
+        )}
+        
+        {card.baseId === 'cleave' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: '#fff',
+            background: 'rgba(255, 107, 107, 0.9)',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}>
+            <span style={{ marginRight: '4px' }}>⚔️</span>
+            {card.upgraded ? '11' : '8'} to ALL
+          </div>
+        )}
+        
+        {card.baseId === 'whirlwind' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: '#fff',
+            background: 'rgba(255, 107, 107, 0.9)',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}>
+            <span style={{ marginRight: '4px' }}>⚔️</span>
+            {card.upgraded ? '8' : '5'}×X to ALL
+          </div>
+        )}
+        
+        {card.baseId === 'twin_strike' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: '#fff',
+            background: 'rgba(255, 107, 107, 0.9)',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}>
+            <span style={{ marginRight: '4px' }}>⚔️</span>
+            {card.upgraded ? '6' : '5'} × 2
+          </div>
+        )}
+        
+        {card.baseId === 'anger' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: '#fff',
+            background: 'rgba(255, 107, 107, 0.9)',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}>
+            <span style={{ marginRight: '4px' }}>⚔️</span>
+            {card.upgraded ? '8' : '6'}
+          </div>
+        )}
+        
+        {/* Block display */}
         {card.block && card.block > 0 && (
           <div style={{
             display: 'flex',
@@ -254,16 +362,18 @@ const CardRewardCard: React.FC<CardRewardCardProps> = ({
             color: '#fff',
             background: 'rgba(68, 68, 255, 0.9)',
             padding: '4px 8px',
-            borderRadius: '12px',
-            border: '2px solid #fff',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+            borderRadius: '8px',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
           }}>
             <span style={{ marginRight: '4px' }}>🛡️</span>
             {card.block}
           </div>
         )}
-        {card.id === 'body_slam' && (
+        
+        {/* Body Slam special display */}
+        {card.baseId === 'body_slam' && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -272,13 +382,13 @@ const CardRewardCard: React.FC<CardRewardCardProps> = ({
             color: '#fff',
             background: 'rgba(255, 107, 107, 0.9)',
             padding: '4px 8px',
-            borderRadius: '12px',
-            border: '2px solid #fff',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+            borderRadius: '8px',
+            border: '2px solid rgba(255, 255, 255, 0.3)',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
           }}>
             <span style={{ marginRight: '4px' }}>⚔️</span>
-            Block
+            {card.upgraded ? '2x' : '1x'} Block
           </div>
         )}
       </div>

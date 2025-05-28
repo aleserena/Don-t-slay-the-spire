@@ -182,7 +182,8 @@ export const getAllRelics = (): Relic[] => {
           trigger: RelicTrigger.COMBAT_START,
           effect: EffectType.APPLY_STATUS,
           value: 1,
-          statusType: StatusType.STRENGTH
+          statusType: StatusType.STRENGTH,
+          target: 'ALL_ENEMIES'
         }
       ]
     }

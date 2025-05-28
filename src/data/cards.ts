@@ -8,6 +8,7 @@ export const createInitialDeck = (): Card[] => {
   for (let i = 0; i < 5; i++) {
     cards.push({
       id: uuidv4(),
+      baseId: 'strike',
       name: 'Strike',
       cost: 1,
       type: CardType.ATTACK,
@@ -22,6 +23,7 @@ export const createInitialDeck = (): Card[] => {
   for (let i = 0; i < 4; i++) {
     cards.push({
       id: uuidv4(),
+      baseId: 'defend',
       name: 'Defend',
       cost: 1,
       type: CardType.SKILL,
@@ -35,19 +37,26 @@ export const createInitialDeck = (): Card[] => {
   // Bash (1 copy)
   cards.push({
     id: uuidv4(),
+    baseId: 'bash',
     name: 'Bash',
     cost: 2,
     type: CardType.ATTACK,
     rarity: CardRarity.COMMON,
     description: 'Deal 8 damage. Apply 2 Vulnerable.',
-    damage: 8,
     upgraded: false,
-    effects: [{
-      type: EffectType.APPLY_STATUS,
-      value: 2,
-      target: TargetType.ENEMY,
-      statusType: StatusType.VULNERABLE
-    }]
+    effects: [
+      {
+        type: EffectType.DAMAGE,
+        value: 8,
+        target: TargetType.ENEMY
+      },
+      {
+        type: EffectType.APPLY_STATUS,
+        value: 2,
+        target: TargetType.ENEMY,
+        statusType: StatusType.VULNERABLE
+      }
+    ]
   });
 
   return cards;
@@ -58,6 +67,7 @@ export const getAllCards = (): Card[] => {
     // Basic Cards
     {
       id: 'strike',
+      baseId: 'strike',
       name: 'Strike',
       cost: 1,
       type: CardType.ATTACK,
@@ -68,6 +78,7 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'defend',
+      baseId: 'defend',
       name: 'Defend',
       cost: 1,
       type: CardType.SKILL,
@@ -78,39 +89,54 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'bash',
+      baseId: 'bash',
       name: 'Bash',
       cost: 2,
       type: CardType.ATTACK,
       rarity: CardRarity.COMMON,
       description: 'Deal 8 damage. Apply 2 Vulnerable.',
-      damage: 8,
       upgraded: false,
-      effects: [{
-        type: EffectType.APPLY_STATUS,
-        value: 2,
-        target: TargetType.ENEMY,
-        statusType: StatusType.VULNERABLE
-      }]
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 8,
+          target: TargetType.ENEMY
+        },
+        {
+          type: EffectType.APPLY_STATUS,
+          value: 2,
+          target: TargetType.ENEMY,
+          statusType: StatusType.VULNERABLE
+        }
+      ]
     },
 
     // Advanced Attack Cards
     {
       id: 'anger',
+      baseId: 'anger',
       name: 'Anger',
       cost: 0,
       type: CardType.ATTACK,
       rarity: CardRarity.COMMON,
       description: 'Deal 6 damage. Add a copy of this card into your discard pile.',
-      damage: 6,
       upgraded: false,
-      effects: [{
-        type: EffectType.ADD_CARD_TO_DISCARD,
-        value: 1,
-        target: TargetType.SELF
-      }]
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 6,
+          target: TargetType.ENEMY
+        },
+        {
+          type: EffectType.ADD_CARD_TO_DISCARD,
+          value: 1,
+          target: TargetType.SELF
+        }
+      ]
     },
     {
       id: 'cleave',
+      baseId: 'cleave',
       name: 'Cleave',
       cost: 1,
       type: CardType.ATTACK,
@@ -125,6 +151,7 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'iron_wave',
+      baseId: 'iron_wave',
       name: 'Iron Wave',
       cost: 1,
       type: CardType.ATTACK,
@@ -136,6 +163,7 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'pommel_strike',
+      baseId: 'pommel_strike',
       name: 'Pommel Strike',
       cost: 1,
       type: CardType.ATTACK,
@@ -151,23 +179,31 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'twin_strike',
+      baseId: 'twin_strike',
       name: 'Twin Strike',
       cost: 1,
       type: CardType.ATTACK,
       rarity: CardRarity.COMMON,
       description: 'Deal 5 damage twice.',
-      damage: 5,
       upgraded: false,
-      effects: [{
-        type: EffectType.DAMAGE,
-        value: 5,
-        target: TargetType.ENEMY
-      }]
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 5,
+          target: TargetType.ENEMY
+        },
+        {
+          type: EffectType.DAMAGE,
+          value: 5,
+          target: TargetType.ENEMY
+        }
+      ]
     },
 
     // Status Effect Cards
     {
       id: 'poison_stab',
+      baseId: 'poison_stab',
       name: 'Poison Stab',
       cost: 1,
       type: CardType.ATTACK,
@@ -184,6 +220,7 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'shockwave',
+      baseId: 'shockwave',
       name: 'Shockwave',
       cost: 2,
       type: CardType.SKILL,
@@ -209,6 +246,7 @@ export const getAllCards = (): Card[] => {
     // Skill Cards
     {
       id: 'armaments',
+      baseId: 'armaments',
       name: 'Armaments',
       cost: 1,
       type: CardType.SKILL,
@@ -224,16 +262,23 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'body_slam',
+      baseId: 'body_slam',
       name: 'Body Slam',
       cost: 1,
       type: CardType.ATTACK,
       rarity: CardRarity.COMMON,
       description: 'Deal damage equal to your current Block.',
-      damage: 0,
-      upgraded: false
+      upgraded: false,
+      effects: [{
+        type: EffectType.DAMAGE_MULTIPLIER_BLOCK,
+        value: 0, // Base damage (not used for this effect type)
+        multiplier: 1, // 1x block damage
+        target: TargetType.ENEMY
+      }]
     },
     {
       id: 'true_grit',
+      baseId: 'true_grit',
       name: 'True Grit',
       cost: 1,
       type: CardType.SKILL,
@@ -244,6 +289,7 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'battle_trance',
+      baseId: 'battle_trance',
       name: 'Battle Trance',
       cost: 0,
       type: CardType.SKILL,
@@ -260,6 +306,7 @@ export const getAllCards = (): Card[] => {
     // Power Cards
     {
       id: 'inflame',
+      baseId: 'inflame',
       name: 'Inflame',
       cost: 1,
       type: CardType.POWER,
@@ -275,6 +322,7 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'metallicize',
+      baseId: 'metallicize',
       name: 'Metallicize',
       cost: 1,
       type: CardType.POWER,
@@ -291,6 +339,7 @@ export const getAllCards = (): Card[] => {
     // Rare Cards
     {
       id: 'demon_form',
+      baseId: 'demon_form',
       name: 'Demon Form',
       cost: 3,
       type: CardType.POWER,
@@ -306,18 +355,21 @@ export const getAllCards = (): Card[] => {
     },
     {
       id: 'whirlwind',
+      baseId: 'whirlwind',
       name: 'Whirlwind',
-      cost: 0,
+      cost: 'X' as any,
       type: CardType.ATTACK,
       rarity: CardRarity.RARE,
       description: 'Deal 5 damage to ALL enemies X times. (X = Energy)',
-      damage: 5,
       upgraded: false,
-      effects: [{
-        type: EffectType.DAMAGE,
-        value: 5,
-        target: TargetType.ALL_ENEMIES
-      }]
+      effects: [
+        {
+          type: EffectType.DAMAGE_MULTIPLIER_ENERGY,
+          value: 5, // Base damage per hit
+          multiplier: 1, // 1x energy (number of hits)
+          target: TargetType.ALL_ENEMIES
+        }
+      ]
     }
   ];
 }; 

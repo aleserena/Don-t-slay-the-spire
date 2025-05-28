@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import { GameState, Player, Enemy, TurnPhase, EffectType, TargetType, StatusType, IntentType, GamePhase, Relic, RelicTrigger } from '../types/game';
+import { GameState, Player, Enemy, TurnPhase, EffectType, TargetType, StatusType, IntentType, GamePhase, Relic, RelicTrigger, Card, CardType, PowerTrigger } from '../types/game';
 import { createInitialDeck, getAllCards } from '../data/cards';
 import { getBossForFloor } from '../data/bosses';
 import { getStarterRelic, getAllRelics } from '../data/relics';
 import { generateMap, completeNode } from '../utils/mapGeneration';
 import { getRandomEvent, processEventConsequence } from '../data/events';
 import { processRelicEffects } from '../utils/relicEffects';
+import { processPowerCardEffects } from '../utils/powerCardEffects';
+import { getPowerCardDefinition } from '../data/powerCards';
 import { 
   applyStatusEffect, 
   processStatusEffects, 
@@ -14,8 +16,14 @@ import {
 } from '../utils/statusEffects';
 import { upgradeCard } from '../utils/cardUpgrades';
 import { getRandomEnemyEncounter } from '../data/enemies';
+import { damageDebugger } from '../utils/damageDebugger';
 
 interface GameStore extends GameState {
+  // Additional state
+  firstAttackThisCombat: boolean;
+  selectedCard: Card | null;
+  showCardRemovalModal: boolean;
+  
   // Actions
   playCard: (cardId: string, targetId?: string) => void;
   endTurn: () => void;
@@ -35,7 +43,12 @@ interface GameStore extends GameState {
   // Shop actions
   purchaseShopCard: (index: number) => void;
   purchaseShopRelic: (index: number) => void;
-  removeCardFromDeck: () => void;
+  removeCardFromDeck: (cardId?: string) => void;
+  openCardRemovalModal: () => void;
+  closeCardRemovalModal: () => void;
+  
+  // Card selection
+  setSelectedCard: (card: Card | null) => void;
 }
 
 const createInitialPlayer = (): Player => ({
@@ -46,7 +59,8 @@ const createInitialPlayer = (): Player => ({
   maxEnergy: 3,
   statusEffects: [],
   gold: 99,
-  relics: [getStarterRelic()]
+  relics: [getStarterRelic()],
+  powerCards: []
 });
 
 const createInitialGameState = (): GameState => {
@@ -66,6 +80,9 @@ const createInitialGameState = (): GameState => {
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...createInitialGameState(),
+  firstAttackThisCombat: true,
+  selectedCard: null,
+  showCardRemovalModal: false,
 
   startNewRun: () => {
     set(createInitialGameState());
@@ -248,13 +265,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       
       return {
         ...state,
-        drawPile: [...allCards, { ...card, id: `${card.id}_${Date.now()}` }],
+        drawPile: [...allCards, { ...card, id: `${card.baseId}_${Date.now()}` }],
         discardPile: [],
         exhaustPile: [],
         hand: [],
         gamePhase: GamePhase.MAP,
         combatReward: undefined,
-        currentTurn: TurnPhase.PLAYER_TURN
+        currentTurn: TurnPhase.PLAYER_TURN,
+        selectedCard: null
       };
     });
   },
@@ -273,7 +291,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         hand: [],
         gamePhase: GamePhase.MAP,
         combatReward: undefined,
-        currentTurn: TurnPhase.PLAYER_TURN
+        currentTurn: TurnPhase.PLAYER_TURN,
+        selectedCard: null
       };
     });
   },
@@ -296,7 +315,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return {
         ...newState,
         gamePhase: GamePhase.MAP,
-        currentEvent: undefined
+        currentEvent: undefined,
+        selectedCard: null
       };
     });
   },
@@ -318,7 +338,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         exhaustPile: [],
         hand: [],
         currentTurn: TurnPhase.PLAYER_TURN,
-        enemies: []
+        enemies: [],
+        selectedCard: null
       };
     });
   },
@@ -327,56 +348,41 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const card = state.hand.find(c => c.id === cardId);
     
-    if (!card || state.player.energy < card.cost || state.currentTurn !== TurnPhase.PLAYER_TURN) return;
+    if (!card || state.currentTurn !== TurnPhase.PLAYER_TURN) return;
+    
+    // Calculate energy cost
+    let energyCost = typeof card.cost === 'number' ? card.cost : 0;
+    
+    // For X-cost cards like whirlwind, consume ALL energy
+    if (card.cost === 'X') {
+      energyCost = state.player.energy; // Consume all available energy
+    }
+    
+    // Check if player has enough energy (X-cost cards can be played with 0 energy)
+    if (card.cost !== 'X' && state.player.energy < energyCost) return;
 
     set((state) => {
       const newHand = state.hand.filter(c => c.id !== cardId);
       const newDiscardPile = [...state.discardPile, card];
-      let newPlayer = { ...state.player, energy: state.player.energy - card.cost };
+      
+      // Store original energy for X-cost cards before any effects are applied
+      const originalEnergy = state.player.energy;
+      
+      // Calculate whirlwind hits BEFORE consuming energy
+      let whirlwindHits = 1;
+      if (card.baseId === 'whirlwind') {
+        whirlwindHits = originalEnergy; // Number of hits equals original energy
+      }
+      
+      // Consume energy (for X-cost cards, this will be ALL energy)
+      let newPlayer = { ...state.player, energy: state.player.energy - energyCost };
       let newEnemies = [...state.enemies];
 
       // Check if this is an attack card for Akabeko effect
       const isAttackCard = card.type === 'attack';
       const isFirstAttack = state.firstAttackThisCombat && isAttackCard;
       
-      // Apply basic card effects
-      if (card.damage && card.damage > 0) {
-        if (targetId) {
-          const enemyIndex = newEnemies.findIndex(e => e.id === targetId);
-          if (enemyIndex !== -1) {
-            const finalDamage = calculateDamage(card.damage, newPlayer, newEnemies[enemyIndex], isFirstAttack);
-            const damageAfterBlock = Math.max(0, finalDamage - newEnemies[enemyIndex].block);
-            
-            newEnemies[enemyIndex] = {
-              ...newEnemies[enemyIndex],
-              health: newEnemies[enemyIndex].health - damageAfterBlock,
-              block: Math.max(0, newEnemies[enemyIndex].block - finalDamage)
-            };
-          }
-        }
-      }
-
-      // Special handling for Body Slam (damage equals current block)
-      if (card.id === 'body_slam' && targetId) {
-        const enemyIndex = newEnemies.findIndex(e => e.id === targetId);
-        if (enemyIndex !== -1) {
-          const bodySlimDamage = calculateDamage(newPlayer.block, newPlayer, newEnemies[enemyIndex], isFirstAttack);
-          const damageAfterBlock = Math.max(0, bodySlimDamage - newEnemies[enemyIndex].block);
-          
-          newEnemies[enemyIndex] = {
-            ...newEnemies[enemyIndex],
-            health: newEnemies[enemyIndex].health - damageAfterBlock,
-            block: Math.max(0, newEnemies[enemyIndex].block - bodySlimDamage)
-          };
-        }
-      }
-
-      if (card.block && card.block > 0) {
-        const finalBlock = calculateBlock(card.block, newPlayer);
-        newPlayer.block += finalBlock;
-      }
-
-      // Apply advanced card effects
+      // Apply card effects using the modular system
       if (card.effects) {
         for (const effect of card.effects) {
           switch (effect.type) {
@@ -385,6 +391,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 newEnemies = newEnemies.map(enemy => {
                   const finalDamage = calculateDamage(effect.value, newPlayer, enemy, isFirstAttack);
                   const damageAfterBlock = Math.max(0, finalDamage - enemy.block);
+                  const actualDamageDealt = Math.min(damageAfterBlock, enemy.health);
+                  
+                  // Debug logging
+                  damageDebugger.logDamageCalculation(
+                    card,
+                    newPlayer,
+                    enemy,
+                    effect.value,
+                    finalDamage,
+                    actualDamageDealt,
+                    isFirstAttack,
+                    'DAMAGE_ALL_ENEMIES'
+                  );
+                  
                   return {
                     ...enemy,
                     health: enemy.health - damageAfterBlock,
@@ -396,12 +416,97 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 if (enemyIndex !== -1) {
                   const finalDamage = calculateDamage(effect.value, newPlayer, newEnemies[enemyIndex], isFirstAttack);
                   const damageAfterBlock = Math.max(0, finalDamage - newEnemies[enemyIndex].block);
+                  const actualDamageDealt = Math.min(damageAfterBlock, newEnemies[enemyIndex].health);
+                  
+                  // Debug logging
+                  damageDebugger.logDamageCalculation(
+                    card,
+                    newPlayer,
+                    newEnemies[enemyIndex],
+                    effect.value,
+                    finalDamage,
+                    actualDamageDealt,
+                    isFirstAttack,
+                    'DAMAGE_SINGLE_ENEMY'
+                  );
                   
                   newEnemies[enemyIndex] = {
                     ...newEnemies[enemyIndex],
                     health: newEnemies[enemyIndex].health - damageAfterBlock,
                     block: Math.max(0, newEnemies[enemyIndex].block - finalDamage)
                   };
+                }
+              }
+              break;
+
+            case EffectType.DAMAGE_MULTIPLIER_BLOCK:
+              if (effect.target === TargetType.ENEMY && targetId) {
+                const enemyIndex = newEnemies.findIndex(e => e.id === targetId);
+                if (enemyIndex !== -1) {
+                  const blockDamage = newPlayer.block * (effect.multiplier || 1);
+                  const finalDamage = calculateDamage(blockDamage, newPlayer, newEnemies[enemyIndex], isFirstAttack);
+                  const damageAfterBlock = Math.max(0, finalDamage - newEnemies[enemyIndex].block);
+                  const actualDamageDealt = Math.min(damageAfterBlock, newEnemies[enemyIndex].health);
+                  
+                  // Debug logging
+                  damageDebugger.logDamageCalculation(
+                    card,
+                    newPlayer,
+                    newEnemies[enemyIndex],
+                    blockDamage,
+                    finalDamage,
+                    actualDamageDealt,
+                    isFirstAttack,
+                    'DAMAGE_MULTIPLIER_BLOCK'
+                  );
+                  
+                  newEnemies[enemyIndex] = {
+                    ...newEnemies[enemyIndex],
+                    health: newEnemies[enemyIndex].health - damageAfterBlock,
+                    block: Math.max(0, newEnemies[enemyIndex].block - finalDamage)
+                  };
+                }
+              }
+              break;
+
+            case EffectType.DAMAGE_MULTIPLIER_ENERGY:
+              if (effect.target === TargetType.ALL_ENEMIES) {
+                // Apply damage X times where X = energy spent (use original energy before consumption)
+                // Only deal damage if energy was actually spent
+                if (whirlwindHits > 0) {
+                  const damageResults: { target: Enemy; damageDealt: number }[] = [];
+                  
+                  for (let i = 0; i < whirlwindHits; i++) {
+                    newEnemies = newEnemies.map(enemy => {
+                      const finalDamage = calculateDamage(effect.value, state.player, enemy, isFirstAttack && i === 0);
+                      const damageAfterBlock = Math.max(0, finalDamage - enemy.block);
+                      const actualDamageDealt = Math.min(damageAfterBlock, enemy.health);
+                      
+                      // Track damage for debugging
+                      const existingResult = damageResults.find(r => r.target.id === enemy.id);
+                      if (existingResult) {
+                        existingResult.damageDealt += actualDamageDealt;
+                      } else {
+                        damageResults.push({ target: enemy, damageDealt: actualDamageDealt });
+                      }
+                      
+                      return {
+                        ...enemy,
+                        health: enemy.health - damageAfterBlock,
+                        block: Math.max(0, enemy.block - finalDamage)
+                      };
+                    });
+                  }
+                  
+                  // Debug logging for energy-based damage
+                  damageDebugger.logEnergyBasedDamage(
+                    card,
+                    originalEnergy,
+                    whirlwindHits,
+                    effect.value,
+                    whirlwindHits,
+                    damageResults
+                  );
                 }
               }
               break;
@@ -452,10 +557,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
               }
               break;
 
+            case EffectType.LOSE_ENERGY:
+              if (effect.target === TargetType.SELF) {
+                newPlayer.energy = Math.max(0, newPlayer.energy - effect.value);
+              }
+              break;
+
             case EffectType.ADD_CARD_TO_DISCARD:
               if (effect.target === TargetType.SELF) {
                 // Add a copy of the current card to the discard pile
-                const cardCopy = { ...card, id: `${card.id}_copy_${Date.now()}` };
+                const cardCopy = { ...card, id: `${card.baseId}_copy_${Date.now()}` };
                 newDiscardPile.push(cardCopy);
               }
               break;
@@ -476,6 +587,66 @@ export const useGameStore = create<GameStore>((set, get) => ({
               }
               break;
           }
+        }
+      }
+
+      // Legacy support: Handle cards with direct damage property (only if no damage effects)
+      if (card.damage && card.damage > 0 && (!card.effects || !card.effects.some(effect => 
+        effect.type === EffectType.DAMAGE || 
+        effect.type === EffectType.DAMAGE_MULTIPLIER_BLOCK || 
+        effect.type === EffectType.DAMAGE_MULTIPLIER_ENERGY
+      ))) {
+        if (targetId) {
+          const enemyIndex = newEnemies.findIndex(e => e.id === targetId);
+          if (enemyIndex !== -1) {
+            const finalDamage = calculateDamage(card.damage, newPlayer, newEnemies[enemyIndex], isFirstAttack);
+            const damageAfterBlock = Math.max(0, finalDamage - newEnemies[enemyIndex].block);
+            const actualDamageDealt = Math.min(damageAfterBlock, newEnemies[enemyIndex].health);
+            
+            // Debug logging for legacy damage
+            damageDebugger.logDamageCalculation(
+              card,
+              newPlayer,
+              newEnemies[enemyIndex],
+              card.damage,
+              finalDamage,
+              actualDamageDealt,
+              isFirstAttack,
+              'LEGACY_DAMAGE'
+            );
+            
+            newEnemies[enemyIndex] = {
+              ...newEnemies[enemyIndex],
+              health: newEnemies[enemyIndex].health - damageAfterBlock,
+              block: Math.max(0, newEnemies[enemyIndex].block - finalDamage)
+            };
+          }
+        }
+      }
+
+      // Legacy support: Handle cards with direct block property (only if no block effects)
+      if (card.block && card.block > 0 && (!card.effects || !card.effects.some(effect => 
+        effect.type === EffectType.BLOCK
+      ))) {
+        const finalBlock = calculateBlock(card.block, newPlayer);
+        newPlayer.block += finalBlock;
+      }
+
+      // Handle power cards
+      if (card.type === CardType.POWER) {
+        const powerCardDef = getPowerCardDefinition(card.id);
+        if (powerCardDef) {
+          // Check if this power card is already active
+          const existingPowerCard = newPlayer.powerCards.find(pc => pc.id === powerCardDef.id);
+          if (!existingPowerCard) {
+            // Add the power card to active power cards
+            newPlayer.powerCards = [...newPlayer.powerCards, powerCardDef];
+          }
+          
+          // Apply immediate effects (like Inflame's immediate strength gain)
+          const powerResult = processPowerCardEffects(PowerTrigger.COMBAT_START, newPlayer, newEnemies);
+          newPlayer = powerResult.player;
+          newEnemies = powerResult.enemies;
         }
       }
 
@@ -511,7 +682,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           combatReward: {
             gold: rewardGold,
             cardRewards: rewardCards
-          }
+          },
+          selectedCard: null
         };
       }
 
@@ -521,7 +693,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         discardPile: newDiscardPile,
         player: newPlayer,
         enemies: newEnemies,
-        firstAttackThisCombat: isFirstAttack ? false : state.firstAttackThisCombat
+        firstAttackThisCombat: isFirstAttack ? false : state.firstAttackThisCombat,
+        selectedCard: null
       };
     });
   },
@@ -546,6 +719,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
         block: 0
       }));
 
+      // Reset player block at start of player turn
+      newPlayer = {
+        ...newPlayer,
+        energy: newPlayer.maxEnergy,
+        block: 0
+      };
+      
+      // Process power card turn start effects (like Demon Form)
+      const powerResult = processPowerCardEffects(PowerTrigger.TURN_START, newPlayer, newEnemies);
+      newPlayer = powerResult.player;
+      newEnemies = powerResult.enemies;
+      
+      // Process relic turn start effects (like Energy Core)
+      const relicResult = processRelicEffects(RelicTrigger.TURN_START, newPlayer, newEnemies);
+      newPlayer = relicResult.player;
+      newEnemies = relicResult.enemies;
+      
+      // Enemy block is NOT reset here - it persists until start of their next turn
+
       // Each enemy performs their intended action
       for (let i = 0; i < newEnemies.length; i++) {
         const enemy = newEnemies[i];
@@ -555,6 +747,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (enemy.intent.value) {
               const damage = calculateDamage(enemy.intent.value, enemy, newPlayer);
               const damageAfterBlock = Math.max(0, damage - newPlayer.block);
+              const actualDamageDealt = Math.min(damageAfterBlock, newPlayer.health);
+              
+              // Debug logging for enemy damage
+              console.log('🔥 Enemy Attack Debug:', {
+                enemy: enemy.name,
+                baseDamage: enemy.intent.value,
+                calculatedDamage: damage,
+                playerBlock: newPlayer.block,
+                damageAfterBlock,
+                actualDamageDealt,
+                playerHealthBefore: newPlayer.health,
+                playerHealthAfter: newPlayer.health - damageAfterBlock
+              });
               
               // Apply damage to player
               newPlayer = {
@@ -569,6 +774,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 const relicResult = processRelicEffects(RelicTrigger.DAMAGE_TAKEN, newPlayer, newEnemies, context);
                 newPlayer = relicResult.player;
                 newEnemies = relicResult.enemies;
+                
+                // Remove dead enemies after relic effects (e.g., Bronze Scales)
+                newEnemies = newEnemies.filter(enemy => enemy.health > 0);
                 
                 // Handle Centennial Puzzle card drawing
                 if (context.shouldDrawCards) {
@@ -610,15 +818,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         };
       }
 
-      // Reset player block at start of player turn
-      newPlayer = {
-        ...newPlayer,
-        energy: newPlayer.maxEnergy,
-        block: 0
-      };
-      
-      // Enemy block is NOT reset here - it persists until start of their next turn
-
       // Check if combat should end (all enemies dead)
       const combatEnded = newEnemies.length === 0;
 
@@ -626,7 +825,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ...state,
         player: newPlayer,
         enemies: newEnemies,
-        currentTurn: combatEnded ? TurnPhase.COMBAT_END : TurnPhase.PLAYER_TURN
+        currentTurn: combatEnded ? TurnPhase.COMBAT_END : TurnPhase.PLAYER_TURN,
+        selectedCard: null
       };
     });
 
@@ -639,6 +839,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     
     if (state.currentTurn === TurnPhase.PLAYER_TURN) {
       set((currentState) => {
+        let newPlayer = { ...currentState.player };
+        let newEnemies = [...currentState.enemies];
+        
+        // Process power card turn end effects (like Metallicize)
+        const powerResult = processPowerCardEffects(PowerTrigger.TURN_END, newPlayer, newEnemies);
+        newPlayer = powerResult.player;
+        newEnemies = powerResult.enemies;
+        
         // Discard remaining hand
         const newDiscardPile = [...currentState.discardPile, ...currentState.hand];
         
@@ -646,7 +854,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ...currentState,
           hand: [],
           discardPile: newDiscardPile,
-          currentTurn: TurnPhase.ENEMY_TURN
+          currentTurn: TurnPhase.ENEMY_TURN,
+          player: newPlayer,
+          enemies: newEnemies,
+          selectedCard: null
           // Block is NOT reset here - it resets at start of next player turn
         };
       });
@@ -705,7 +916,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ...state,
         hand: newHand,
         drawPile: newDrawPile,
-        discardPile: newDiscardPile
+        discardPile: newDiscardPile,
+        selectedCard: null
       };
     });
   },
@@ -714,7 +926,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => ({
       ...state,
       drawPile: [...state.drawPile, ...state.discardPile].sort(() => Math.random() - 0.5),
-      discardPile: []
+      discardPile: [],
+      selectedCard: null
     }));
   },
 
@@ -735,8 +948,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ...state.player,
           gold: state.player.gold - shopCard.cost
         },
-        drawPile: [...state.drawPile, { ...shopCard.card, id: `${shopCard.card.id}_${Date.now()}` }],
-        currentShop: newShop
+        drawPile: [...state.drawPile, { ...shopCard.card, id: `${shopCard.card.baseId}_${Date.now()}` }],
+        currentShop: newShop,
+        selectedCard: null
       };
     });
   },
@@ -759,31 +973,40 @@ export const useGameStore = create<GameStore>((set, get) => ({
           gold: state.player.gold - shopRelic.cost,
           relics: [...state.player.relics, shopRelic.relic]
         },
-        currentShop: newShop
+        currentShop: newShop,
+        selectedCard: null
       };
     });
   },
 
-  removeCardFromDeck: () => {
+  removeCardFromDeck: (cardId?: string) => {
     set((state) => {
       if (!state.currentShop || state.player.gold < state.currentShop.removeCardCost) return state;
       
-      // For now, remove a random card from the deck (in a real implementation, player would choose)
+      if (!cardId) {
+        // If no cardId provided, open the card removal modal
+        return {
+          ...state,
+          showCardRemovalModal: true,
+          selectedCard: null
+        };
+      }
+      
+      // Remove the specific card
       const allCards = [...state.drawPile, ...state.discardPile];
-      if (allCards.length === 0) return state;
-
-      const randomIndex = Math.floor(Math.random() * allCards.length);
-      const cardToRemove = allCards[randomIndex];
+      const cardToRemove = allCards.find(c => c.id === cardId);
+      
+      if (!cardToRemove) return state;
 
       let newDrawPile = [...state.drawPile];
       let newDiscardPile = [...state.discardPile];
 
       // Remove the card from the appropriate pile
-      const drawIndex = newDrawPile.findIndex(c => c.id === cardToRemove.id);
+      const drawIndex = newDrawPile.findIndex(c => c.id === cardId);
       if (drawIndex !== -1) {
         newDrawPile.splice(drawIndex, 1);
       } else {
-        const discardIndex = newDiscardPile.findIndex(c => c.id === cardToRemove.id);
+        const discardIndex = newDiscardPile.findIndex(c => c.id === cardId);
         if (discardIndex !== -1) {
           newDiscardPile.splice(discardIndex, 1);
         }
@@ -796,8 +1019,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
           gold: state.player.gold - state.currentShop.removeCardCost
         },
         drawPile: newDrawPile,
-        discardPile: newDiscardPile
+        discardPile: newDiscardPile,
+        showCardRemovalModal: false,
+        selectedCard: null
       };
     });
+  },
+
+  setSelectedCard: (card: Card | null) => {
+    set((state) => ({
+      ...state,
+      selectedCard: card
+    }));
+  },
+
+  openCardRemovalModal: () => {
+    set((state) => ({
+      ...state,
+      showCardRemovalModal: true,
+      selectedCard: null
+    }));
+  },
+
+  closeCardRemovalModal: () => {
+    set((state) => ({
+      ...state,
+      showCardRemovalModal: false,
+      selectedCard: null
+    }));
   }
 })); 

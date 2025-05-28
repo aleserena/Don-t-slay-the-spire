@@ -1,18 +1,83 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { Card } from '../types/game';
+import { cardNeedsTarget, getCardDisplayDamage } from '../utils/cardUtils';
 
 interface HandAreaProps {
-  selectedCardId?: string | null;
-  onCardSelect?: (cardId: string | null) => void;
+  selectedCardId: string | null;
+  onCardSelect: (card: Card) => void;
+  onCardConfirming?: (card: Card | null) => void;
 }
 
-export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect }) => {
-  const { hand } = useGameStore();
+export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect, onCardConfirming }) => {
+  const { hand, player, enemies, firstAttackThisCombat } = useGameStore();
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [confirmingCard, setConfirmingCard] = useState<string | null>(null);
 
-  const handleCardSelect = (cardId: string) => {
-    if (onCardSelect) {
-      onCardSelect(selectedCardId === cardId ? null : cardId);
+  const canPlayCard = (card: Card): boolean => {
+    // Whirlwind can always be played regardless of energy (even with 0 energy)
+    if (card.baseId === 'whirlwind') {
+      return true;
+    }
+    // For other cards, check normal cost
+    const cardCost = typeof card.cost === 'number' ? card.cost : 0;
+    return player.energy >= cardCost;
+  };
+
+  const getCardDamage = (card: Card): number => {
+    let baseDamage = getCardDisplayDamage(card, player, enemies);
+    
+    // Add Akabeko damage for attack cards if it's the first attack
+    if (card.type === 'attack' && firstAttackThisCombat) {
+      const hasAkabeko = player.relics.some(r => r.id === 'akabeko');
+      if (hasAkabeko) {
+        baseDamage += 8;
+      }
+    }
+    
+    return baseDamage;
+  };
+
+  const getCardTypeColor = (type: string): string => {
+    switch (type) {
+      case 'attack': return '#ff6b6b, #ee5a52';
+      case 'skill': return '#4ecdc4, #44a08d';
+      case 'power': return '#ffe66d, #ffcc02';
+      default: return '#95a5a6, #7f8c8d';
+    }
+  };
+
+  const handleCardClick = (card: Card) => {
+    if (!canPlayCard(card)) return;
+    
+    const needsTarget = cardNeedsTarget(card);
+    
+    if (needsTarget) {
+      // For targeting cards, enter targeting mode immediately on first click
+      // The targeting interface itself serves as the confirmation stage
+      onCardSelect(card);
+      // Clear any existing confirmation when entering targeting mode
+      if (confirmingCard) {
+        setConfirmingCard(null);
+        onCardConfirming?.(null);
+      }
+    } else {
+      // For non-targeting cards, use the confirmation system
+      if (confirmingCard === card.id) {
+        // Second click - confirm and play
+        onCardSelect(card);
+        setConfirmingCard(null);
+        onCardConfirming?.(null);
+      } else {
+        // First click - show confirmation (clear any existing confirmation first)
+        if (confirmingCard && confirmingCard !== card.id) {
+          setConfirmingCard(null);
+          onCardConfirming?.(null);
+        }
+        setConfirmingCard(card.id);
+        onCardConfirming?.(card);
+        // Confirmation persists until a new card is selected (no timeout)
+      }
     }
   };
 
@@ -20,302 +85,264 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
     <div style={{
       display: 'flex',
       gap: '10px',
-      justifyContent: 'center',
       alignItems: 'flex-end',
-      flexWrap: 'wrap',
-      maxWidth: '100%',
-      overflow: 'visible',
-      position: 'relative',
-      zIndex: 100
+      justifyContent: 'center',
+      padding: '0 20px',
+      minHeight: '160px',
+      position: 'relative'
     }}>
-      {hand.map((card, index) => (
-        <CardComponent 
-          key={card.id} 
-          card={card} 
-          index={index} 
-          isSelected={selectedCardId === card.id}
-          onSelect={() => handleCardSelect(card.id)}
-        />
-      ))}
-    </div>
-  );
-};
+      {hand.map((card, index) => {
+        const isSelected = selectedCardId === card.id;
+        const isHovered = hoveredCard === card.id;
+        const isConfirming = confirmingCard === card.id;
+        const playable = canPlayCard(card);
+        const damage = getCardDamage(card);
 
-interface CardComponentProps {
-  card: Card;
-  index: number;
-  isSelected: boolean;
-  onSelect: () => void;
-}
+        return (
+          <div
+            key={`${card.id}-${index}`}
+            style={{
+              width: '120px',
+              height: '160px',
+              background: `linear-gradient(135deg, ${getCardTypeColor(card.type)})`,
+              border: isSelected 
+                ? '3px solid #ffd700' 
+                : isConfirming 
+                  ? '3px solid #ff6b6b'
+                  : playable 
+                    ? '2px solid #ffffff' 
+                    : '2px solid #666666',
+              borderRadius: '12px',
+              padding: '12px',
+              cursor: playable ? 'pointer' : 'not-allowed',
+              opacity: playable ? 1 : 0.6,
+              transform: isSelected 
+                ? 'translateY(-15px) scale(1.1)' 
+                : isHovered && playable 
+                  ? 'translateY(-10px) scale(1.05)' 
+                  : 'translateY(0) scale(1)',
+              transition: 'all 0.3s ease',
+              color: 'white',
+              fontSize: '11px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: isSelected 
+                ? '0 12px 24px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.4)' 
+                : isConfirming
+                  ? '0 12px 24px rgba(255, 107, 107, 0.6), 0 0 30px rgba(255, 107, 107, 0.4)'
+                  : isHovered && playable 
+                    ? '0 8px 16px rgba(0,0,0,0.4)' 
+                    : '0 4px 8px rgba(0,0,0,0.3)',
+              zIndex: isSelected ? 15 : isHovered ? 10 : 1,
+              position: 'relative'
+            }}
+            onClick={() => handleCardClick(card)}
+            onMouseEnter={() => setHoveredCard(card.id)}
+            onMouseLeave={() => setHoveredCard(null)}
+          >
+            {/* Cost Circle - Top Left */}
+            <div style={{
+              position: 'absolute',
+              top: '-8px',
+              left: '-8px',
+              width: '24px',
+              height: '24px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #ffd700, #ffcc02)',
+              border: '2px solid #fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: '#000',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+              zIndex: 20
+            }}>
+              {card.baseId === 'whirlwind' ? 'X' : card.cost}
+            </div>
 
-const CardComponent: React.FC<CardComponentProps> = ({ card, isSelected, onSelect }) => {
-  const { playCard, player, enemies } = useGameStore();
-  const [isHovered, setIsHovered] = useState(false);
+            {/* Confirmation Indicator */}
+            {isConfirming && !cardNeedsTarget(card) && (
+              <div style={{
+                position: 'absolute',
+                top: '-30px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(255, 107, 107, 0.95)',
+                color: 'white',
+                padding: '4px 8px',
+                borderRadius: '8px',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+                zIndex: 25,
+                border: '1px solid #fff',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+              }}>
+                Click again to confirm
+              </div>
+            )}
 
-  const canPlay = player.energy >= card.cost;
-  const needsTarget = (card.damage !== undefined && card.damage > 0) || card.id === 'body_slam';
+            {/* Card Header */}
+            <div>
+              <div style={{ 
+                fontWeight: 'bold', 
+                marginBottom: '6px',
+                fontSize: '12px',
+                lineHeight: '1.2',
+                marginTop: '8px' // Add space for cost circle
+              }}>
+                {card.name}
+              </div>
+            </div>
 
-  const handleCardClick = () => {
-    if (!canPlay) return;
+            {/* Card Effects */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {/* Generic Damage - only for cards without special displays */}
+              {((card.damage !== undefined && card.damage > 0) || 
+                card.effects?.some(effect => 
+                  effect.type === 'damage' || 
+                  effect.type === 'damage_multiplier_block' || 
+                  effect.type === 'damage_multiplier_energy'
+                )) && 
+                card.baseId !== 'body_slam' && 
+                card.baseId !== 'cleave' && 
+                card.baseId !== 'whirlwind' && 
+                card.baseId !== 'twin_strike' && 
+                card.baseId !== 'bash' && 
+                card.baseId !== 'anger' ? (
+                <div style={{
+                  background: 'rgba(255, 107, 107, 0.9)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '11px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                  ⚔️ {damage}
+                </div>
+              ) : null}
 
-    if (needsTarget && enemies.length > 0) {
-      onSelect(); // Select the card for targeting
-    } else {
-      playCard(card.id);
-    }
-  };
+              {/* Block */}
+              {card.block !== undefined && card.block > 0 ? (
+                <div style={{
+                  background: 'rgba(68, 68, 255, 0.9)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '11px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                  🛡️ {card.block}
+                </div>
+              ) : null}
 
-  // const handleEnemyClick = (enemyId: string) => {
-  //   if (isSelected && canPlay) {
-  //     playCard(card.id, enemyId);
-  //     onSelect(); // Deselect after playing
-  //   }
-  // };
+              {/* Special Effects - These replace the generic damage display */}
+              {card.baseId === 'bash' && (
+                <div style={{
+                  background: 'rgba(255, 107, 107, 0.9)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '10px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                  ⚔️ {card.upgraded ? '10' : '8'}
+                </div>
+              )}
+              {card.baseId === 'cleave' && (
+                <div style={{
+                  background: 'rgba(255, 107, 107, 0.9)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '10px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                  ⚔️ {damage} to ALL
+                </div>
+              )}
+              {card.baseId === 'whirlwind' && (
+                <div style={{
+                  background: 'rgba(255, 107, 107, 0.9)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '10px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                  ⚔️ 5×{player.energy} to ALL
+                </div>
+              )}
+              {card.baseId === 'body_slam' && (
+                <div style={{
+                  background: 'rgba(255, 107, 107, 0.9)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '10px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                  ⚔️ {card.upgraded ? '2x' : '1x'} Block
+                </div>
+              )}
+              {card.baseId === 'twin_strike' && (
+                <div style={{
+                  background: 'rgba(255, 107, 107, 0.9)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '10px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                  ⚔️ {card.upgraded ? '6' : '5'} × 2
+                </div>
+              )}
+              {card.baseId === 'anger' && (
+                <div style={{
+                  background: 'rgba(255, 107, 107, 0.9)',
+                  padding: '4px 8px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '10px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                }}>
+                  ⚔️ {card.upgraded ? '8' : '6'}
+                </div>
+              )}
+            </div>
 
-  const getCardTypeColor = () => {
-    switch (card.type) {
-      case 'attack':
-        return '#ff6b6b';
-      case 'skill':
-        return '#4ecdc4';
-      case 'power':
-        return '#ffe66d';
-      default:
-        return '#95a5a6';
-    }
-  };
-
-  const getRarityBorder = () => {
-    switch (card.rarity) {
-      case 'common':
-        return '#95a5a6';
-      case 'uncommon':
-        return '#3498db';
-      case 'rare':
-        return '#f39c12';
-      default:
-        return '#95a5a6';
-    }
-  };
-
-  // const getDamagePreview = (enemy: any) => {
-  //   if (!card.damage || card.damage <= 0) return null;
-  //   
-  //   let totalDamage = calculateDamage(card.damage, player, enemy);
-  //   
-  //   // Handle special cases for cards that deal damage multiple times
-  //   if (card.id === 'twin_strike') {
-  //     // Twin Strike deals damage twice
-  //     totalDamage = totalDamage * 2;
-  //   }
-  //   
-  //   // Add damage from effects that target the same enemy
-  //   if (card.effects) {
-  //     for (const effect of card.effects) {
-  //       if (effect.type === 'damage' && effect.target === 'enemy') {
-  //         totalDamage += calculateDamage(effect.value, player, enemy);
-  //       }
-  //     }
-  //   }
-  //   
-  //   const damageAfterBlock = Math.max(0, totalDamage - enemy.block);
-  //   
-  //   return {
-  //     totalDamage,
-  //     actualDamage: damageAfterBlock,
-  //     isVulnerable: enemy.statusEffects.some((effect: any) => effect.type === 'vulnerable')
-  //   };
-  // };
-
-  return (
-    <>
-      <div
-        style={{
-          width: '140px',
-          height: '180px',
-          background: `linear-gradient(135deg, ${getCardTypeColor()}, ${getCardTypeColor()}dd)`,
-          border: `3px solid ${isSelected ? '#ffd700' : getRarityBorder()}`,
-          borderRadius: '12px',
-          padding: '10px',
-          cursor: canPlay ? 'pointer' : 'not-allowed',
-          opacity: canPlay ? 1 : 0.6,
-          transform: (isHovered && canPlay) || isSelected ? 'translateY(-15px) scale(1.08)' : 'translateY(0) scale(1)',
-          transition: 'all 0.3s ease',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          position: 'relative',
-          boxShadow: (isHovered && canPlay) || isSelected ? '0 10px 20px rgba(0,0,0,0.4)' : '0 4px 8px rgba(0,0,0,0.3)',
-          zIndex: isSelected ? 10 : 1,
-          backdropFilter: 'blur(1px)'
-        }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={handleCardClick}
-      >
-        {/* Cost */}
-        <div style={{
-          position: 'absolute',
-          top: '-8px',
-          left: '-8px',
-          width: '30px',
-          height: '30px',
-          background: canPlay ? '#2c3e50' : '#7f8c8d',
-          border: '3px solid #ecf0f1',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '16px',
-          fontWeight: 'bold',
-          color: 'white',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-        }}>
-          {card.cost}
-        </div>
-
-        {/* Selection indicator */}
-        {isSelected && (
-          <div style={{
-            position: 'absolute',
-            top: '-8px',
-            right: '-8px',
-            width: '24px',
-            height: '24px',
-            background: '#ffd700',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '14px',
-            color: '#000',
-            fontWeight: 'bold',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-          }}>
-            🎯
+            {/* Card Description */}
+            <div style={{ 
+              fontSize: '9px', 
+              opacity: 0.8,
+              lineHeight: '1.2',
+              marginTop: '4px'
+            }}>
+              {card.description}
+            </div>
           </div>
-        )}
-
-        {/* Card Name */}
-        <div style={{
-          fontSize: '14px',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          marginTop: '20px',
-          marginBottom: '8px',
-          color: 'white',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-          lineHeight: '1.2'
-        }}>
-          {card.name}
-        </div>
-
-        {/* Card Effects */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '12px',
-          marginBottom: '8px'
-        }}>
-          {card.damage && card.damage > 0 && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              color: '#fff',
-              background: 'rgba(255, 107, 107, 0.9)',
-              padding: '4px 8px',
-              borderRadius: '12px',
-              border: '2px solid #fff',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-              textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-            }}>
-              <span style={{ marginRight: '4px' }}>⚔️</span>
-              {card.damage}
-            </div>
-          )}
-          {card.block && card.block > 0 && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              color: '#fff',
-              background: 'rgba(68, 68, 255, 0.9)',
-              padding: '4px 8px',
-              borderRadius: '12px',
-              border: '2px solid #fff',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-              textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-            }}>
-              <span style={{ marginRight: '4px' }}>🛡️</span>
-              {card.block}
-            </div>
-          )}
-          {card.id === 'body_slam' && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              color: '#fff',
-              background: 'rgba(255, 107, 107, 0.9)',
-              padding: '4px 8px',
-              borderRadius: '12px',
-              border: '2px solid #fff',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-              textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-            }}>
-              <span style={{ marginRight: '4px' }}>⚔️</span>
-              {player.block}
-            </div>
-          )}
-        </div>
-
-        {/* Description */}
-        <div style={{
-          fontSize: '11px',
-          textAlign: 'center',
-          color: 'white',
-          opacity: 0.95,
-          lineHeight: '1.3',
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(0,0,0,0.2)',
-          borderRadius: '6px',
-          padding: '4px',
-          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-        }}>
-          {card.description}
-        </div>
-      </div>
-
-      {/* Enemy targeting indicators */}
-      {isSelected && needsTarget && (
-        <style>
-          {`
-            .enemy-card {
-              cursor: pointer !important;
-              position: relative;
-            }
-            .enemy-card:hover::after {
-              content: '';
-              position: absolute;
-              top: -5px;
-              left: -5px;
-              right: -5px;
-              bottom: -5px;
-              border: 3px solid #ffd700;
-              border-radius: 20px;
-              pointer-events: none;
-              z-index: 15;
-            }
-          `}
-        </style>
-      )}
-    </>
+        );
+      })}
+    </div>
   );
 }; 

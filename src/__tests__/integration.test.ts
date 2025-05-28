@@ -60,7 +60,8 @@ describe('Integration Tests', () => {
         playCard(attackCard.id, 'test_enemy');
         
         const newStore = useGameStore.getState();
-        expect(newStore.player.energy).toBe(initialEnergy - attackCard.cost);
+        const cardCost = typeof attackCard.cost === 'number' ? attackCard.cost : 0;
+        expect(newStore.player.energy).toBe(initialEnergy - cardCost);
         expect(newStore.hand.find(c => c.id === attackCard.id)).toBeUndefined();
       }
     });
@@ -124,6 +125,7 @@ describe('Integration Tests', () => {
         }],
         hand: [{
           id: 'bash_test',
+          baseId: 'bash',
           name: 'Bash',
           cost: 2,
           type: CardType.ATTACK,
@@ -158,6 +160,7 @@ describe('Integration Tests', () => {
       // Test card reward selection
       const testCard = {
         id: 'reward_card',
+        baseId: 'reward_card',
         name: 'Test Reward',
         cost: 1,
         type: CardType.ATTACK,

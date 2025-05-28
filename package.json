@@ -1,6 +1,6 @@
 {
   "name": "slay-the-spire-clone",
-  "version": "1.0.0",
+  "version": "1.21.1",
   "description": "A roguelike deck-building card game inspired by Slay the Spire",
   "main": "index.js",
   "scripts": {
@@ -29,6 +29,7 @@
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/coverage-v8": "^3.1.4",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",

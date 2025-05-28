@@ -4,24 +4,8 @@ import { getStatusEffectIcon, getStatusEffectColor, getStatusEffectDescription, 
 
 export const PlayerArea: React.FC = () => {
   const { player } = useGameStore();
-  const [hoveredRelic, setHoveredRelic] = useState<any>(null);
   const [hoveredStatusEffect, setHoveredStatusEffect] = useState<any>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-
-  const handleRelicMouseEnter = (relic: any, event: React.MouseEvent) => {
-    setHoveredRelic(relic);
-    setMousePosition({ x: event.clientX, y: event.clientY });
-  };
-
-  const handleRelicMouseLeave = () => {
-    setHoveredRelic(null);
-  };
-
-  const handleRelicMouseMove = (event: React.MouseEvent) => {
-    if (hoveredRelic) {
-      setMousePosition({ x: event.clientX, y: event.clientY });
-    }
-  };
 
   const handleStatusEffectMouseEnter = (effect: any, event: React.MouseEvent) => {
     setHoveredStatusEffect(effect);
@@ -56,58 +40,82 @@ export const PlayerArea: React.FC = () => {
         
         {/* Health */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
+          background: 'rgba(0,0,0,0.3)',
+          borderRadius: '10px',
+          padding: '8px',
           marginBottom: '10px',
-          fontSize: '18px'
+          width: '100%'
         }}>
-          <span style={{ color: '#ff4444', marginRight: '5px' }}>❤️</span>
-          <span>{player.health}/{player.maxHealth}</span>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '5px'
+          }}>
+            <span style={{ fontSize: '14px', fontWeight: 'bold' }}>❤️ Health</span>
+            <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+              {player.health}/{player.maxHealth}
+            </span>
+          </div>
+          <div style={{
+            width: '100%',
+            height: '8px',
+            background: 'rgba(255,255,255,0.2)',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: `${(player.health / player.maxHealth) * 100}%`,
+              height: '100%',
+              background: player.health > player.maxHealth * 0.5 
+                ? 'linear-gradient(90deg, #27ae60, #2ecc71)' 
+                : player.health > player.maxHealth * 0.25 
+                  ? 'linear-gradient(90deg, #f39c12, #e67e22)'
+                  : 'linear-gradient(90deg, #e74c3c, #c0392b)',
+              transition: 'width 0.5s ease'
+            }} />
+          </div>
         </div>
         
         {/* Block */}
         {player.block > 0 && (
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
+            background: 'rgba(52, 152, 219, 0.8)',
+            padding: '6px 12px',
+            borderRadius: '8px',
             marginBottom: '10px',
-            fontSize: '18px'
+            border: '2px solid rgba(255,255,255,0.3)',
+            width: '100%',
+            textAlign: 'center'
           }}>
-            <span style={{ color: '#4444ff', marginRight: '5px' }}>🛡️</span>
-            <span>{player.block}</span>
+            <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+              🛡️ Block: {player.block}
+            </span>
           </div>
         )}
         
         {/* Energy */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          fontSize: '18px',
-          marginBottom: '10px'
+          background: 'rgba(255, 215, 0, 0.8)',
+          padding: '6px 12px',
+          borderRadius: '8px',
+          marginBottom: '10px',
+          border: '2px solid rgba(255,255,255,0.3)',
+          width: '100%',
+          textAlign: 'center'
         }}>
-          <span style={{ color: '#ffff44', marginRight: '5px' }}>⚡</span>
-          <span>{player.energy}/{player.maxEnergy}</span>
+          <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#000' }}>
+            ⚡ Energy: {player.energy}/{player.maxEnergy}
+          </span>
         </div>
 
-        {/* Gold */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          fontSize: '18px',
-          marginBottom: player.statusEffects.length > 0 || player.relics.length > 0 ? '10px' : '0'
-        }}>
-          <span style={{ color: '#ffd700', marginRight: '5px' }}>💰</span>
-          <span>{player.gold}</span>
-        </div>
-        
         {/* Status Effects */}
         {player.statusEffects.length > 0 && (
           <div style={{ 
             display: 'flex', 
             flexWrap: 'wrap', 
             gap: '5px',
-            justifyContent: 'center',
-            marginBottom: player.relics.length > 0 ? '10px' : '0'
+            justifyContent: 'center'
           }}>
             {player.statusEffects.map((effect, index) => (
               <div 
@@ -144,20 +152,20 @@ export const PlayerArea: React.FC = () => {
           </div>
         )}
 
-        {/* Relics */}
-        {player.relics.length > 0 && (
-          <div style={{
+        {/* Active Power Cards */}
+        {player.powerCards && player.powerCards.length > 0 && (
+          <div style={{ 
             marginTop: '10px',
             width: '100%'
           }}>
             <div style={{
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: 'bold',
-              marginBottom: '8px',
+              marginBottom: '5px',
               textAlign: 'center',
-              color: '#ffd700'
+              color: '#ffe66d'
             }}>
-              Relics
+              ⚡ Active Powers
             </div>
             <div style={{ 
               display: 'flex', 
@@ -165,79 +173,31 @@ export const PlayerArea: React.FC = () => {
               gap: '5px',
               justifyContent: 'center'
             }}>
-              {player.relics.map((relic, index) => (
+              {player.powerCards.map((powerCard, index) => (
                 <div 
                   key={index} 
                   style={{ 
-                    padding: '5px 8px',
-                    background: getRelicColor(relic.rarity),
+                    background: 'linear-gradient(135deg, #ffe66d, #ffcc02)',
+                    padding: '4px 8px',
                     borderRadius: '8px',
                     fontSize: '10px',
                     fontWeight: 'bold',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.3)',
+                    color: '#000',
+                    border: '2px solid rgba(255,255,255,0.3)',
                     cursor: 'pointer',
-                    maxWidth: '80px',
-                    textAlign: 'center',
                     transition: 'all 0.2s ease',
-                    transform: hoveredRelic?.id === relic.id ? 'scale(1.1)' : 'scale(1)'
+                    textAlign: 'center',
+                    minWidth: '60px'
                   }}
-                  onMouseEnter={(e) => handleRelicMouseEnter(relic, e)}
-                  onMouseLeave={handleRelicMouseLeave}
-                  onMouseMove={handleRelicMouseMove}
+                  title={powerCard.description}
                 >
-                  {relic.name}
+                  {powerCard.name}
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
-
-      {/* Floating Relic Tooltip */}
-      {hoveredRelic && (
-        <div style={{
-          position: 'fixed',
-          left: mousePosition.x + 15,
-          top: mousePosition.y - 10,
-          background: 'rgba(0, 0, 0, 0.95)',
-          color: 'white',
-          padding: '12px 16px',
-          borderRadius: '8px',
-          border: `2px solid ${getRelicColor(hoveredRelic.rarity)}`,
-          fontSize: '14px',
-          maxWidth: '300px',
-          zIndex: 1000,
-          pointerEvents: 'none',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
-        }}>
-          <div style={{
-            fontSize: '16px',
-            fontWeight: 'bold',
-            color: getRelicColor(hoveredRelic.rarity),
-            marginBottom: '8px',
-            textAlign: 'center'
-          }}>
-            {hoveredRelic.name}
-          </div>
-          <div style={{
-            fontSize: '12px',
-            color: '#ccc',
-            textAlign: 'center',
-            marginBottom: '8px',
-            textTransform: 'uppercase',
-            letterSpacing: '1px'
-          }}>
-            {hoveredRelic.rarity} Relic
-          </div>
-          <div style={{
-            lineHeight: '1.4',
-            textAlign: 'center'
-          }}>
-            {hoveredRelic.description}
-          </div>
-        </div>
-      )}
 
       {/* Floating Status Effect Tooltip */}
       {hoveredStatusEffect && (
@@ -292,21 +252,4 @@ export const PlayerArea: React.FC = () => {
       )}
     </>
   );
-};
-
-const getRelicColor = (rarity: string): string => {
-  switch (rarity) {
-    case 'starter':
-      return '#95a5a6';
-    case 'common':
-      return '#3498db';
-    case 'uncommon':
-      return '#9b59b6';
-    case 'rare':
-      return '#e74c3c';
-    case 'boss':
-      return '#f39c12';
-    default:
-      return '#95a5a6';
-  }
 }; 
