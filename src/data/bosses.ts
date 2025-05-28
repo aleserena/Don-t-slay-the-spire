@@ -111,6 +111,7 @@ export const getBossForFloor = (floor: number): Enemy => {
     const boss = getRandomBoss();
     return {
       ...boss,
+      id: `${boss.id}_act3_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       health: Math.floor(boss.health * 1.5),
       maxHealth: Math.floor(boss.maxHealth * 1.5),
       intent: {

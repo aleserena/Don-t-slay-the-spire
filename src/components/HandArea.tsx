@@ -14,6 +14,23 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [confirmingCard, setConfirmingCard] = useState<string | null>(null);
 
+  // Add CSS animation for pulse effect
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { opacity: 1; transform: translateX(-50%) scale(1); }
+        50% { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
+        100% { opacity: 1; transform: translateX(-50%) scale(1); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const canPlayCard = (card: Card): boolean => {
     // Whirlwind can always be played regardless of energy (even with 0 energy)
     if (card.baseId === 'whirlwind') {
@@ -52,9 +69,22 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
     
     const needsTarget = cardNeedsTarget(card);
     
+    // Clear any existing confirmation or targeting when clicking any card
+    if (confirmingCard && confirmingCard !== card.id) {
+      setConfirmingCard(null);
+      onCardConfirming?.(null);
+    }
+    
     if (needsTarget) {
       // For targeting cards, enter targeting mode immediately on first click
-      // The targeting interface itself serves as the confirmation stage
+      // If the same card is already selected, deselect it
+      if (selectedCardId === card.id) {
+        // Deselect the currently selected targeting card
+        onCardSelect(card); // This will deselect in GameBoard
+        return;
+      }
+      
+      // Select this card for targeting
       onCardSelect(card);
       // Clear any existing confirmation when entering targeting mode
       if (confirmingCard) {
@@ -69,14 +99,13 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
         setConfirmingCard(null);
         onCardConfirming?.(null);
       } else {
-        // First click - show confirmation (clear any existing confirmation first)
-        if (confirmingCard && confirmingCard !== card.id) {
-          setConfirmingCard(null);
-          onCardConfirming?.(null);
-        }
+        // First click - show confirmation
         setConfirmingCard(card.id);
         onCardConfirming?.(card);
-        // Confirmation persists until a new card is selected (no timeout)
+        // If there's a selected targeting card, we need to clear it
+        // but we should NOT call onCardSelect as that would play the card
+        // Instead, we'll let the parent component handle clearing the targeting state
+        // when it sees that we're setting a confirming card
       }
     }
   };
@@ -118,6 +147,8 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
               opacity: playable ? 1 : 0.6,
               transform: isSelected 
                 ? 'translateY(-15px) scale(1.1)' 
+                : isConfirming
+                  ? 'translateY(-12px) scale(1.08)'
                 : isHovered && playable 
                   ? 'translateY(-10px) scale(1.05)' 
                   : 'translateY(0) scale(1)',
@@ -135,7 +166,7 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
                   : isHovered && playable 
                     ? '0 8px 16px rgba(0,0,0,0.4)' 
                     : '0 4px 8px rgba(0,0,0,0.3)',
-              zIndex: isSelected ? 15 : isHovered ? 10 : 1,
+              zIndex: isSelected ? 15 : isConfirming ? 14 : isHovered ? 10 : 1,
               position: 'relative'
             }}
             onClick={() => handleCardClick(card)}
@@ -168,21 +199,45 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
             {isConfirming && !cardNeedsTarget(card) && (
               <div style={{
                 position: 'absolute',
-                top: '-30px',
+                top: '-35px',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 background: 'rgba(255, 107, 107, 0.95)',
                 color: 'white',
-                padding: '4px 8px',
-                borderRadius: '8px',
-                fontSize: '10px',
+                padding: '6px 12px',
+                borderRadius: '12px',
+                fontSize: '11px',
                 fontWeight: 'bold',
                 whiteSpace: 'nowrap',
                 zIndex: 25,
-                border: '1px solid #fff',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                border: '2px solid #fff',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.4), 0 0 15px rgba(255, 107, 107, 0.5)',
+                animation: 'pulse 2s infinite'
               }}>
                 Click again to confirm
+              </div>
+            )}
+
+            {/* Targeting Indicator */}
+            {isSelected && cardNeedsTarget(card) && (
+              <div style={{
+                position: 'absolute',
+                top: '-35px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(255, 215, 0, 0.95)',
+                color: '#000',
+                padding: '6px 12px',
+                borderRadius: '12px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+                zIndex: 25,
+                border: '2px solid #fff',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.4), 0 0 15px rgba(255, 215, 0, 0.5)',
+                animation: 'pulse 2s infinite'
+              }}>
+                Select target enemy
               </div>
             )}
 
@@ -336,7 +391,8 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
               fontSize: '9px', 
               opacity: 0.8,
               lineHeight: '1.2',
-              marginTop: '4px'
+              marginTop: '4px',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
             }}>
               {card.description}
             </div>

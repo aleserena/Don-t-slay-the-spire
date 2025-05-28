@@ -7,6 +7,7 @@ import { UnifiedHeader } from './UnifiedHeader';
 import { DebugPanel } from './DebugPanel';
 import { Card } from '../types/game';
 import { cardNeedsTarget, isMultiTargetCard } from '../utils/cardUtils';
+import { CardGrid } from './CardGrid';
 
 const getCardTypeColor = (cardType: string) => {
   switch (cardType) {
@@ -22,7 +23,7 @@ const getCardTypeColor = (cardType: string) => {
 };
 
 export const GameBoard: React.FC = () => {
-  const { selectedCard, setSelectedCard, playCard, drawPile, discardPile, hand, currentTurn, endTurn } = useGameStore();
+  const { selectedCard, setSelectedCard, playCard, drawPile, discardPile, hand, currentTurn, endTurn, toggleDebugMode } = useGameStore();
   const [previousHandSize, setPreviousHandSize] = useState(hand.length);
   const [previousDiscardSize, setPreviousDiscardSize] = useState(discardPile.length);
   const [previousDrawSize, setPreviousDrawSize] = useState(drawPile.length);
@@ -36,6 +37,20 @@ export const GameBoard: React.FC = () => {
     setPreviousDiscardSize(discardPile.length);
     setPreviousDrawSize(drawPile.length);
   }, [hand.length, discardPile.length, drawPile.length, previousHandSize, previousDiscardSize, previousDrawSize]);
+
+  // Add keyboard event listener for debug mode toggle
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'd') {
+        toggleDebugMode();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [toggleDebugMode]);
 
   const handleCardSelect = (card: Card) => {
     const needsTarget = cardNeedsTarget(card);
@@ -55,7 +70,8 @@ export const GameBoard: React.FC = () => {
       playCard(card.id);
       setSelectedCard(null);
     } else {
-      // For all other cards, play them immediately and clear selection
+      // For all other cards (non-targeting), play them immediately and clear selection
+      // This handles both confirmation cards and direct-play cards
       playCard(card.id);
       setSelectedCard(null);
     }
@@ -70,6 +86,11 @@ export const GameBoard: React.FC = () => {
 
   const handleCardConfirming = (card: Card | null) => {
     setConfirmingCard(card);
+    // If we're setting a confirming card and there's a selected targeting card,
+    // clear the targeting selection to prevent conflicts
+    if (card && selectedCard) {
+      setSelectedCard(null);
+    }
   };
 
   return (
@@ -274,289 +295,14 @@ export const GameBoard: React.FC = () => {
         </div>
       </div>
 
-      {/* Discard Pile Modal */}
+      {/* Discard Pile Modal - Using CardGrid */}
       {showDiscardPile && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
-            borderRadius: '15px',
-            padding: '30px',
-            maxWidth: '80%',
-            maxHeight: '80%',
-            overflow: 'auto',
-            border: '3px solid #f39c12'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px'
-            }}>
-              <h2 style={{ color: 'white', margin: 0 }}>
-                Discard Pile ({discardPile.length} cards)
-              </h2>
-              <button
-                onClick={() => setShowDiscardPile(false)}
-                style={{
-                  background: '#e74c3c',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '40px',
-                  height: '40px',
-                  color: 'white',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-              gap: '15px',
-              maxHeight: '500px',
-              overflow: 'auto',
-              padding: '10px'
-            }}>
-              {discardPile.map((card, index) => (
-                <div key={`discard-${index}`} style={{
-                  background: getCardTypeColor(card.type),
-                  padding: '12px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  textAlign: 'center',
-                  color: 'white',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  transition: 'transform 0.2s ease',
-                  position: 'relative'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-                >
-                  {/* Cost Circle */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    left: '-8px',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #ffd700, #ffcc02)',
-                    border: '2px solid #fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    color: '#000',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                    zIndex: 20
-                  }}>
-                    {card.baseId === 'whirlwind' ? 'X' : card.cost}
-                  </div>
-
-                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '14px', marginTop: '8px' }}>
-                    {card.name}
-                  </div>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    marginBottom: '6px'
-                  }}>
-                    {/* Generic damage - only for cards without special displays */}
-                    {card.damage && card.damage > 0 && 
-                     card.baseId !== 'body_slam' && 
-                     card.baseId !== 'bash' && 
-                     card.baseId !== 'cleave' && 
-                     card.baseId !== 'whirlwind' && 
-                     card.baseId !== 'twin_strike' && 
-                     card.baseId !== 'anger' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.damage}
-                      </div>
-                    )}
-                    
-                    {/* Special handling for effect-based damage cards */}
-                    {card.baseId === 'bash' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '10' : '8'}
-                      </div>
-                    )}
-                    
-                    {card.baseId === 'cleave' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '11' : '8'} to ALL
-                      </div>
-                    )}
-                    
-                    {card.baseId === 'whirlwind' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '8' : '5'}×X to ALL
-                      </div>
-                    )}
-                    
-                    {card.baseId === 'twin_strike' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '6' : '5'} × 2
-                      </div>
-                    )}
-                    
-                    {card.baseId === 'anger' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '8' : '6'}
-                      </div>
-                    )}
-                    
-                    {/* Block display */}
-                    {card.block && card.block > 0 && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(68, 68, 255, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>🛡️</span>
-                        {card.block}
-                      </div>
-                    )}
-                    
-                    {/* Body Slam special display */}
-                    {card.baseId === 'body_slam' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '2x' : '1x'} Block
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ 
-                    fontSize: '10px', 
-                    opacity: 0.8, 
-                    lineHeight: '1.2',
-                    marginTop: '4px'
-                  }}>
-                    {card.description}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <CardGrid
+          cards={discardPile}
+          title="Discard Pile"
+          onClose={() => setShowDiscardPile(false)}
+          borderColor="#f39c12"
+        />
       )}
 
       {/* Debug Panel */}

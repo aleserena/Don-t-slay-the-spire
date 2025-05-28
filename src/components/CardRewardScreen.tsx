@@ -402,7 +402,8 @@ const CardRewardCard: React.FC<CardRewardCardProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '0 5px'
+        padding: '0 5px',
+        textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
       }}>
         {card.description}
       </div>

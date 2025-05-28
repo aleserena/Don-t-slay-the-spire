@@ -41,8 +41,12 @@ describe('Component Integration Tests', () => {
 
   describe('Game State Integration', () => {
     it('should maintain consistent game state across components', () => {
-      const store = useGameStore.getState();
+      // Start a new game to transition from TITLE to MAP
+      const { startNewGame } = useGameStore.getState();
+      startNewGame();
       
+      const store = useGameStore.getState();
+
       expect(store.gamePhase).toBe(GamePhase.MAP);
       expect(store.player.health).toBe(80);
       expect(store.player.maxHealth).toBe(80);

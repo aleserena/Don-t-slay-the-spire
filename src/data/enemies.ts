@@ -150,5 +150,14 @@ export const getRandomEnemyEncounter = (): Enemy[] => {
   ];
   
   const randomEncounter = encounterTypes[Math.floor(Math.random() * encounterTypes.length)];
-  return randomEncounter();
+  const enemies = randomEncounter();
+  
+  // Ensure unique IDs by adding timestamp, random number, and index
+  const timestamp = Date.now();
+  const randomSuffix = Math.floor(Math.random() * 10000);
+  
+  return enemies.map((enemy, index) => ({
+    ...enemy,
+    id: `${enemy.id.split('_')[0]}_${enemy.id.split('_')[1]}_${timestamp}_${randomSuffix}_${index}`
+  }));
 }; 

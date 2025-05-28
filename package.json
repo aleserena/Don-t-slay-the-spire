@@ -1,6 +1,6 @@
 {
   "name": "slay-the-spire-clone",
-  "version": "1.21.1",
+  "version": "1.22.0",
   "description": "A roguelike deck-building card game inspired by Slay the Spire",
   "main": "index.js",
   "scripts": {

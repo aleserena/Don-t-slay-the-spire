@@ -1,4 +1,5 @@
-import { StatusType, Player, Enemy } from '../types/game';
+import { StatusType, Player, Enemy, StatusEffect, Relic } from '../types/game';
+import { debugConsole } from './debugUtils';
 
 export const applyStatusEffect = (
   target: Player | Enemy,
@@ -105,17 +106,17 @@ export const calculateDamage = (
 ): number => {
   // Input validation
   if (typeof baseDamage !== 'number' || isNaN(baseDamage)) {
-    console.error('🚨 DAMAGE CALCULATION ERROR: Invalid baseDamage:', baseDamage);
+    debugConsole.error('🚨 DAMAGE CALCULATION ERROR: Invalid baseDamage:', baseDamage);
     return 0;
   }
   
   if (!attacker || !target) {
-    console.error('🚨 DAMAGE CALCULATION ERROR: Missing attacker or target:', { attacker, target });
+    debugConsole.error('🚨 DAMAGE CALCULATION ERROR: Missing attacker or target:', { attacker, target });
     return 0;
   }
   
   if (!attacker.statusEffects || !target.statusEffects) {
-    console.error('🚨 DAMAGE CALCULATION ERROR: Missing statusEffects:', { 
+    debugConsole.error('�� DAMAGE CALCULATION ERROR: Missing statusEffects:', { 
       attackerEffects: attacker.statusEffects, 
       targetEffects: target.statusEffects 
     });
@@ -129,7 +130,7 @@ export const calculateDamage = (
   const strength = attacker.statusEffects.find(e => e.type === StatusType.STRENGTH);
   if (strength) {
     if (typeof strength.stacks !== 'number' || isNaN(strength.stacks)) {
-      console.error('🚨 DAMAGE CALCULATION ERROR: Invalid strength stacks:', strength.stacks);
+      debugConsole.error('🚨 DAMAGE CALCULATION ERROR: Invalid strength stacks:', strength.stacks);
     } else {
       damage += strength.stacks;
     }
@@ -139,7 +140,7 @@ export const calculateDamage = (
   const weak = attacker.statusEffects.find(e => e.type === StatusType.WEAK);
   if (weak) {
     if (typeof weak.stacks !== 'number' || isNaN(weak.stacks)) {
-      console.error('🚨 DAMAGE CALCULATION ERROR: Invalid weak stacks:', weak.stacks);
+      debugConsole.error('🚨 DAMAGE CALCULATION ERROR: Invalid weak stacks:', weak.stacks);
     } else {
       damage = Math.floor(damage * 0.75);
     }
@@ -149,7 +150,7 @@ export const calculateDamage = (
   const vulnerable = target.statusEffects.find(e => e.type === StatusType.VULNERABLE);
   if (vulnerable) {
     if (typeof vulnerable.stacks !== 'number' || isNaN(vulnerable.stacks)) {
-      console.error('🚨 DAMAGE CALCULATION ERROR: Invalid vulnerable stacks:', vulnerable.stacks);
+      debugConsole.error('🚨 DAMAGE CALCULATION ERROR: Invalid vulnerable stacks:', vulnerable.stacks);
     } else {
       damage = Math.floor(damage * 1.5);
     }
@@ -160,7 +161,7 @@ export const calculateDamage = (
     const player = attacker as Player;
     
     if (!player.relics) {
-      console.error('🚨 DAMAGE CALCULATION ERROR: Player missing relics array');
+      debugConsole.error('🚨 DAMAGE CALCULATION ERROR: Player missing relics array');
     } else {
       // Apply Akabeko effect (first attack each combat deals 8 additional damage)
       if (isFirstAttack) {
@@ -176,7 +177,7 @@ export const calculateDamage = (
   
   // Log calculation details for debugging
   if (originalDamage !== finalDamage) {
-    console.log('🔢 Damage Calculation Details:', {
+    debugConsole.log('🔢 Damage Calculation Details:', {
       baseDamage: originalDamage,
       finalDamage,
       modifiers: {
