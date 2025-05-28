@@ -236,9 +236,6 @@ describe('Card Interaction Improvements', () => {
       
       // Check that cards are properly validated for cost
       store.hand.forEach(card => {
-        const cardCost = card.baseId === 'whirlwind' ? 0 : 
-                        typeof card.cost === 'number' ? card.cost : 0;
-        
         // All cards in hand should be within energy range or be whirlwind
         if (card.baseId === 'whirlwind') {
           // Whirlwind can always be played

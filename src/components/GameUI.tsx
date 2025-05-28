@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
-import { DamageDebugPanel } from './DamageDebugPanel';
+import { DebugPanel } from './DebugPanel';
 
 export const GameUI: React.FC = () => {
   const { endTurn, currentTurn } = useGameStore();
@@ -53,7 +53,7 @@ export const GameUI: React.FC = () => {
       </div>
       
       {/* Damage Debug Panel */}
-      <DamageDebugPanel />
+      <DebugPanel />
     </>
   );
 }; 

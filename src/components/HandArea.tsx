@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { Card } from '../types/game';
-import { cardNeedsTarget, getCardDisplayDamage } from '../utils/cardUtils';
+import { cardNeedsTarget, getCardDisplayDamage, getEnhancedCardDescription, getActualCardDamage } from '../utils/cardUtils';
 
 interface HandAreaProps {
   selectedCardId: string | null;
@@ -311,7 +311,7 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
                   textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                 }}>
-                  ⚔️ {card.upgraded ? '10' : '8'}
+                  ⚔️ {getActualCardDamage(card, player)}
                 </div>
               )}
               {card.baseId === 'cleave' && (
@@ -367,7 +367,7 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
                   textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                 }}>
-                  ⚔️ {card.upgraded ? '6' : '5'} × 2
+                  ⚔️ {getActualCardDamage(card, player)} × 2
                 </div>
               )}
               {card.baseId === 'anger' && (
@@ -381,7 +381,7 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
                   textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
                 }}>
-                  ⚔️ {card.upgraded ? '8' : '6'}
+                  ⚔️ {getActualCardDamage(card, player)}
                 </div>
               )}
             </div>
@@ -394,7 +394,7 @@ export const HandArea: React.FC<HandAreaProps> = ({ selectedCardId, onCardSelect
               marginTop: '4px',
               textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
             }}>
-              {card.description}
+              {getEnhancedCardDescription(card, player)}
             </div>
           </div>
         );

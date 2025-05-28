@@ -1,20 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { Card } from '../types/game';
 import { CardGrid } from './CardGrid';
-
-const getCardTypeColor = (cardType: string) => {
-  switch (cardType) {
-    case 'attack':
-      return 'linear-gradient(135deg, #ff6b6b, #ee5a52)'; // Red
-    case 'skill':
-      return 'linear-gradient(135deg, #4ecdc4, #44a08d)'; // Blue/Teal
-    case 'power':
-      return 'linear-gradient(135deg, #ffe66d, #ffcc02)'; // Yellow
-    default:
-      return 'linear-gradient(135deg, #95a5a6, #7f8c8d)'; // Gray
-  }
-};
 
 export const UnifiedHeader: React.FC = () => {
   const { player, drawPile, discardPile, exhaustPile, hand } = useGameStore();

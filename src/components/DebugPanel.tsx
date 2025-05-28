@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { StatusType } from '../types/game';
+import { StatusType, GamePhase } from '../types/game';
 import { getAllCards } from '../data/cards';
 import { getAllRelics } from '../data/relics';
 import { Card } from '../types/game';
@@ -12,12 +12,18 @@ export const DebugPanel: React.FC = () => {
     hand, 
     drawPile, 
     discardPile,
+    exhaustPile,
+    gamePhase,
+    currentFloor,
     drawCards,
     endTurn,
-    debugMode
+    debugMode,
+    startNewGame,
+    returnToTitle
   } = useGameStore();
   
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'player' | 'enemies' | 'cards' | 'game' | 'debug'>('player');
 
   // Don't render anything if debug mode is off
   if (!debugMode) {
@@ -184,6 +190,87 @@ export const DebugPanel: React.FC = () => {
     setTimeout(() => drawCards(5), 100);
   };
 
+  // New debug functions
+  const handleAddStrength = () => {
+    useGameStore.setState({
+      player: {
+        ...player,
+        statusEffects: [
+          ...player.statusEffects.filter(e => e.type !== StatusType.STRENGTH),
+          {
+            type: StatusType.STRENGTH,
+            stacks: (player.statusEffects.find(e => e.type === StatusType.STRENGTH)?.stacks || 0) + 3,
+            duration: undefined
+          }
+        ]
+      }
+    });
+  };
+
+  const handleAddWeakToEnemies = () => {
+    if (enemies.length > 0) {
+      useGameStore.setState({
+        enemies: enemies.map(enemy => ({
+          ...enemy,
+          statusEffects: [
+            ...enemy.statusEffects.filter(e => e.type !== StatusType.WEAK),
+            {
+              type: StatusType.WEAK,
+              stacks: 3,
+              duration: undefined
+            }
+          ]
+        }))
+      });
+    }
+  };
+
+  const handleMaxEnergy = () => {
+    useGameStore.setState({
+      player: {
+        ...player,
+        energy: 10,
+        maxEnergy: 10
+      }
+    });
+  };
+
+  const handleTeleportToFloor = (floor: number) => {
+    useGameStore.setState({
+      currentFloor: floor
+    });
+  };
+
+  const handleForceGamePhase = (phase: GamePhase) => {
+    useGameStore.setState({
+      gamePhase: phase
+    });
+  };
+
+  const handleAddSpecificCard = (cardId: string) => {
+    const allCards = getAllCards();
+    const card = allCards.find(c => c.baseId === cardId);
+    if (card) {
+      const cardWithId = { ...card, id: `${card.baseId}_debug_${Date.now()}` };
+      useGameStore.setState({
+        hand: [...hand, cardWithId]
+      });
+    }
+  };
+
+  const handleClearStatusEffects = () => {
+    useGameStore.setState({
+      player: {
+        ...player,
+        statusEffects: []
+      },
+      enemies: enemies.map(enemy => ({
+        ...enemy,
+        statusEffects: []
+      }))
+    });
+  };
+
   if (!isOpen) {
     return (
       <button
@@ -219,7 +306,7 @@ export const DebugPanel: React.FC = () => {
       borderRadius: '8px',
       padding: '15px',
       zIndex: 1000,
-      minWidth: '250px',
+      minWidth: '300px',
       maxHeight: '80vh',
       overflow: 'auto'
     }}>
@@ -248,85 +335,231 @@ export const DebugPanel: React.FC = () => {
         </button>
       </div>
 
+      {/* Tab Navigation */}
+      <div style={{
+        display: 'flex',
+        gap: '4px',
+        marginBottom: '15px',
+        borderBottom: '1px solid #666',
+        paddingBottom: '8px'
+      }}>
+        {[
+          { id: 'player', label: '👤', title: 'Player' },
+          { id: 'enemies', label: '👹', title: 'Enemies' },
+          { id: 'cards', label: '🃏', title: 'Cards' },
+          { id: 'game', label: '🎮', title: 'Game' },
+          { id: 'debug', label: '🔍', title: 'Debug' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            style={{
+              ...tabButtonStyle,
+              background: activeTab === tab.id ? '#e74c3c' : '#555',
+              color: activeTab === tab.id ? 'white' : '#ccc'
+            }}
+            title={tab.title}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ borderBottom: '1px solid #666', paddingBottom: '8px', marginBottom: '8px' }}>
-          <strong>Player Actions</strong>
-        </div>
-        
-        <button onClick={handleHealPlayer} style={buttonStyle}>
-          ❤️ Heal to Full
-        </button>
-        
-        <button onClick={handleAddEnergy} style={buttonStyle}>
-          ⚡ +1 Energy
-        </button>
-        
-        <button onClick={handleAddGold} style={buttonStyle}>
-          💰 +100 Gold
-        </button>
-        
-        <button onClick={handleAddBlock} style={buttonStyle}>
-          🛡️ +10 Block
-        </button>
+        {/* Player Tab */}
+        {activeTab === 'player' && (
+          <>
+            <button onClick={handleHealPlayer} style={buttonStyle}>
+              ❤️ Heal to Full
+            </button>
+            <button onClick={handleAddEnergy} style={buttonStyle}>
+              ⚡ +1 Energy
+            </button>
+            <button onClick={handleMaxEnergy} style={buttonStyle}>
+              🔋 Max Energy (10)
+            </button>
+            <button onClick={handleAddGold} style={buttonStyle}>
+              💰 +100 Gold
+            </button>
+            <button onClick={handleAddBlock} style={buttonStyle}>
+              🛡️ +10 Block
+            </button>
+            <button onClick={handleAddStrength} style={buttonStyle}>
+              💪 +3 Strength
+            </button>
+            <button onClick={handleClearStatusEffects} style={buttonStyle}>
+              🧹 Clear All Status Effects
+            </button>
+          </>
+        )}
 
-        <div style={{ borderBottom: '1px solid #666', paddingBottom: '8px', marginBottom: '8px', marginTop: '15px' }}>
-          <strong>Enemy Actions</strong>
-        </div>
-        
-        <button onClick={handleKillAllEnemies} style={buttonStyle}>
-          💀 Kill All Enemies
-        </button>
-        
-        <button onClick={handleAddVulnerable} style={buttonStyle}>
-          🔥 Add Vulnerable to Enemies
-        </button>
+        {/* Enemies Tab */}
+        {activeTab === 'enemies' && (
+          <>
+            <button onClick={handleKillAllEnemies} style={buttonStyle}>
+              💀 Kill All Enemies
+            </button>
+            <button onClick={handleAddVulnerable} style={buttonStyle}>
+              🎯 Add Vulnerable (3)
+            </button>
+            <button onClick={handleAddWeakToEnemies} style={buttonStyle}>
+              💔 Add Weak (3)
+            </button>
+            <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '8px' }}>
+              {enemies.length > 0 ? (
+                enemies.map((enemy, i) => (
+                  <div key={i}>
+                    {enemy.name}: {enemy.health}/{enemy.maxHealth} HP
+                    {enemy.statusEffects.length > 0 && (
+                      <span style={{ color: '#ffd700' }}>
+                        {' '}[{enemy.statusEffects.map(e => `${e.type}:${e.stacks}`).join(', ')}]
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div>No enemies in combat</div>
+              )}
+            </div>
+          </>
+        )}
 
-        <div style={{ borderBottom: '1px solid #666', paddingBottom: '8px', marginBottom: '8px', marginTop: '15px' }}>
-          <strong>Card Actions</strong>
-        </div>
-        
-        <button onClick={handleAddRandomCard} style={buttonStyle}>
-          🃏 Add Random Card
-        </button>
-        
-        <button onClick={handleDrawCards} style={buttonStyle}>
-          📚 Draw 3 Cards
-        </button>
-        
-        <button onClick={handleClearHand} style={buttonStyle}>
-          🗑️ Clear Hand
-        </button>
+        {/* Cards Tab */}
+        {activeTab === 'cards' && (
+          <>
+            <button onClick={handleAddRandomCard} style={buttonStyle}>
+              🎲 Add Random Card
+            </button>
+            <button onClick={handleDrawCards} style={buttonStyle}>
+              📚 Draw 3 Cards
+            </button>
+            <button onClick={handleClearHand} style={buttonStyle}>
+              🗑️ Clear Hand
+            </button>
+            <div style={{ fontSize: '10px', marginTop: '8px' }}>
+              <strong>Add Specific Cards:</strong>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+              {['strike', 'defend', 'bash', 'cleave', 'whirlwind', 'twin_strike'].map(cardId => (
+                <button
+                  key={cardId}
+                  onClick={() => handleAddSpecificCard(cardId)}
+                  style={{ ...buttonStyle, fontSize: '10px', padding: '4px 6px' }}
+                >
+                  {cardId.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+            <button onClick={handleAddPowerCard} style={buttonStyle}>
+              🎭 Add Random Power
+            </button>
+          </>
+        )}
 
-        <div style={{ borderBottom: '1px solid #666', paddingBottom: '8px', marginBottom: '8px', marginTop: '15px' }}>
-          <strong>Other Actions</strong>
-        </div>
-        
-        <button onClick={handleAddRandomRelic} style={buttonStyle}>
-          🏺 Add Random Relic
-        </button>
-        
-        <button onClick={handleAddPowerCard} style={buttonStyle}>
-          🎲 Add Random Power Card
-        </button>
-        
-        <button onClick={handleAddEnergyCore} style={buttonStyle}>
-          🔋 Add Energy Core
-        </button>
-        
-        <button onClick={handleResetCombat} style={buttonStyle}>
-          🔄 Reset Combat
-        </button>
-        
-        <button onClick={endTurn} style={buttonStyle}>
-          ⏭️ Force End Turn
-        </button>
+        {/* Game Tab */}
+        {activeTab === 'game' && (
+          <>
+            <button onClick={handleResetCombat} style={buttonStyle}>
+              🔄 Reset Combat
+            </button>
+            <button onClick={endTurn} style={buttonStyle}>
+              ⏭️ Force End Turn
+            </button>
+            <button onClick={handleAddRandomRelic} style={buttonStyle}>
+              🏺 Add Random Relic
+            </button>
+            <button onClick={handleAddEnergyCore} style={buttonStyle}>
+              🔋 Add Energy Core
+            </button>
+            <div style={{ fontSize: '10px', marginTop: '8px' }}>
+              <strong>Game Phase:</strong>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+              {[
+                { phase: GamePhase.TITLE, label: 'Title' },
+                { phase: GamePhase.MAP, label: 'Map' },
+                { phase: GamePhase.COMBAT, label: 'Combat' },
+                { phase: GamePhase.SHOP, label: 'Shop' },
+                { phase: GamePhase.REST, label: 'Rest' },
+                { phase: GamePhase.GAME_OVER, label: 'Game Over' }
+              ].map(({ phase, label }) => (
+                <button
+                  key={phase}
+                  onClick={() => handleForceGamePhase(phase)}
+                  style={{
+                    ...buttonStyle,
+                    fontSize: '10px',
+                    padding: '4px 6px',
+                    background: gamePhase === phase ? '#27ae60' : '#3498db'
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: '10px', marginTop: '8px' }}>
+              <strong>Floor:</strong>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '2px' }}>
+              {[1, 5, 10, 15, 20].map(floor => (
+                <button
+                  key={floor}
+                  onClick={() => handleTeleportToFloor(floor)}
+                  style={{
+                    ...buttonStyle,
+                    fontSize: '10px',
+                    padding: '2px 4px',
+                    background: currentFloor === floor ? '#27ae60' : '#3498db'
+                  }}
+                >
+                  {floor}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+              <button onClick={startNewGame} style={{ ...buttonStyle, flex: 1 }}>
+                🆕 New Game
+              </button>
+              <button onClick={returnToTitle} style={{ ...buttonStyle, flex: 1 }}>
+                🏠 Title
+              </button>
+            </div>
+          </>
+        )}
 
-        <div style={{ borderTop: '1px solid #666', paddingTop: '8px', marginTop: '15px', fontSize: '11px', opacity: 0.7 }}>
-          <div>Hand: {hand.length} | Draw: {drawPile.length} | Discard: {discardPile.length}</div>
-          <div>Health: {player.health}/{player.maxHealth} | Energy: {player.energy}/{player.maxEnergy}</div>
+        {/* Debug Tab */}
+        {activeTab === 'debug' && (
+          <>
+            <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '8px' }}>
+              <div><strong>Debug Info:</strong></div>
+              <div>Debug Mode: {debugMode ? '✅ ON' : '❌ OFF'}</div>
+              <div>Press 'D' to toggle debug mode</div>
+              <div style={{ marginTop: '8px' }}>
+                <strong>Available Debug Features:</strong>
+                <div>• Player stats manipulation</div>
+                <div>• Enemy status effects</div>
+                <div>• Card addition and testing</div>
+                <div>• Game state controls</div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Status Bar */}
+        <div style={{ 
+          borderTop: '1px solid #666', 
+          paddingTop: '8px', 
+          marginTop: '15px', 
+          fontSize: '10px', 
+          opacity: 0.7 
+        }}>
+          <div><strong>Game State:</strong></div>
+          <div>Phase: {gamePhase} | Floor: {currentFloor}</div>
+          <div>Hand: {hand.length} | Draw: {drawPile.length} | Discard: {discardPile.length} | Exhaust: {exhaustPile.length}</div>
+          <div>Health: {player.health}/{player.maxHealth} | Energy: {player.energy}/{player.maxEnergy} | Block: {player.block}</div>
           <div>Gold: {player.gold} | Relics: {player.relics.length}</div>
-          {enemies.length > 0 && (
-            <div>Enemies: {enemies.map(e => `${e.name}(${e.health})`).join(', ')}</div>
+          {player.statusEffects.length > 0 && (
+            <div>Status: {player.statusEffects.map(e => `${e.type}:${e.stacks}`).join(', ')}</div>
           )}
         </div>
       </div>
@@ -344,4 +577,16 @@ const buttonStyle: React.CSSProperties = {
   cursor: 'pointer',
   transition: 'background 0.2s ease',
   textAlign: 'left'
+};
+
+const tabButtonStyle: React.CSSProperties = {
+  background: '#555',
+  color: '#ccc',
+  border: 'none',
+  borderRadius: '50%',
+  width: '24px',
+  height: '24px',
+  cursor: 'pointer',
+  fontSize: '14px',
+  fontWeight: 'bold'
 }; 

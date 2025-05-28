@@ -1,4 +1,4 @@
-import { Card, Player, Enemy, TargetType, EffectType } from '../types/game';
+import { Card, Player, Enemy, EffectType } from '../types/game';
 import { calculateDamage } from './statusEffects';
 import { getAllCards } from '../data/cards';
 
@@ -82,31 +82,18 @@ export const calculateCardEffectDamage = (
  * Check if card needs target selection
  */
 export const cardNeedsTarget = (card: Card): boolean => {
-  // Multi-target cards don't need targeting
-  if (isMultiTargetCard(card)) {
-    return false;
-  }
-  
-  // Cards that target enemies need targeting
-  if (card.effects) {
-    return card.effects.some(effect => 
-      effect.target === TargetType.ENEMY
-    );
-  }
-  
-  // Legacy damage cards need targeting
-  if (card.damage && card.damage > 0) {
-    return true;
-  }
-  
-  return false;
+  // Cards that need a specific target
+  const targetingCards = ['strike', 'bash', 'twin_strike', 'body_slam', 'anger', 'iron_wave', 'pommel_strike', 'poison_stab'];
+  return targetingCards.includes(card.baseId);
 };
 
 /**
  * Check if card targets all enemies (multi-target)
  */
 export const isMultiTargetCard = (card: Card): boolean => {
-  return hasBaseId(card, 'cleave') || hasBaseId(card, 'whirlwind');
+  // Cards that hit all enemies
+  const multiTargetCards = ['cleave', 'whirlwind'];
+  return multiTargetCards.includes(card.baseId);
 };
 
 /**
@@ -253,4 +240,79 @@ export const getCardDisplayDamage = (card: Card, player: Player, enemies: Enemy[
   }
   
   return totalDamage;
+};
+
+export const getActualCardDamage = (card: Card, player: Player, target?: Enemy): number => {
+  // Get base damage from card effects or legacy damage property
+  let baseDamage = 0;
+  
+  if (card.effects) {
+    const damageEffect = card.effects.find(effect => effect.type === EffectType.DAMAGE);
+    if (damageEffect) {
+      baseDamage = damageEffect.value;
+    }
+  } else if (card.damage) {
+    baseDamage = card.damage;
+  }
+  
+  if (baseDamage === 0) {
+    return 0;
+  }
+  
+  // If no target provided, calculate against a hypothetical enemy with no modifiers
+  const hypotheticalTarget: Enemy = target || {
+    id: 'hypothetical',
+    name: 'Target',
+    health: 100,
+    maxHealth: 100,
+    block: 0,
+    statusEffects: [],
+    intent: { type: 'attack' as any, value: 5 }
+  };
+  
+  // Calculate actual damage with all modifiers
+  return calculateDamage(baseDamage, player, hypotheticalTarget);
+};
+
+export const getEnhancedCardDescription = (card: Card, player: Player, selectedTarget?: Enemy): string => {
+  let description = card.description;
+  
+  // Only enhance attack cards that deal damage
+  if (card.type !== 'attack') {
+    return description;
+  }
+  
+  const actualDamage = getActualCardDamage(card, player, selectedTarget);
+  
+  if (actualDamage === 0) {
+    return description;
+  }
+  
+  // Get base damage for comparison
+  let baseDamage = 0;
+  if (card.effects) {
+    const damageEffect = card.effects.find(effect => effect.type === EffectType.DAMAGE);
+    if (damageEffect) {
+      baseDamage = damageEffect.value;
+    }
+  } else if (card.damage) {
+    baseDamage = card.damage;
+  }
+  
+  // If damage is modified, show both base and actual damage
+  if (actualDamage !== baseDamage) {
+    // Replace the damage number in the description
+    const damageRegex = /Deal (\d+) damage/;
+    const match = description.match(damageRegex);
+    
+    if (match) {
+      const modifiedDescription = description.replace(
+        damageRegex, 
+        `Deal ${baseDamage} (${actualDamage}) damage`
+      );
+      return modifiedDescription;
+    }
+  }
+  
+  return description;
 }; 
