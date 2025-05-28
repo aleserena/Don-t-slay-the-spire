@@ -11,14 +11,14 @@ export const upgradeCard = (card: Card): Card => {
   };
 
   // Apply upgrades based on card type and specific cards
-  switch (card.id) {
+  switch (card.baseId) {
     case 'strike':
-      upgradedCard.damage = (card.damage || 0) + 3;
+      upgradedCard.damage = 9; // Strike+ does 9 damage
       upgradedCard.description = 'Deal 9 damage.';
       break;
     
     case 'defend':
-      upgradedCard.block = (card.block || 0) + 3;
+      upgradedCard.block = 8; // Defend+ gives 8 block
       upgradedCard.description = 'Gain 8 Block.';
       break;
     
@@ -33,13 +33,13 @@ export const upgradeCard = (card: Card): Card => {
       break;
     
     case 'iron_wave':
-      upgradedCard.damage = (card.damage || 0) + 2;
-      upgradedCard.block = (card.block || 0) + 2;
+      upgradedCard.damage = 7; // Iron Wave+ does 7 damage and 7 block
+      upgradedCard.block = 7;
       upgradedCard.description = 'Gain 7 Block. Deal 7 damage.';
       break;
     
     case 'pommel_strike':
-      upgradedCard.damage = (card.damage || 0) + 1;
+      upgradedCard.damage = 10; // Pommel Strike+ does 10 damage
       upgradedCard.description = 'Deal 10 damage. Draw 1 card.';
       break;
     
@@ -48,7 +48,7 @@ export const upgradeCard = (card: Card): Card => {
       // Update the effect value for consistency
       if (upgradedCard.effects) {
         upgradedCard.effects = upgradedCard.effects.map(effect => 
-          effect.type === 'damage' ? { ...effect, value: (effect.value || 8) + 3 } : effect
+          effect.type === EffectType.DAMAGE ? { ...effect, value: 11 } : effect
         );
       }
       break;

@@ -120,6 +120,7 @@ export interface GameState {
 }
 
 export enum GamePhase {
+  TITLE = 'title',
   MAP = 'map',
   COMBAT = 'combat',
   CARD_REWARD = 'card_reward',

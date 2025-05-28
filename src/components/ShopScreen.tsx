@@ -2,6 +2,7 @@ import React from 'react';
 import { useGameStore } from '../store/gameStore';
 import { CardType } from '../types/game';
 import { UnifiedHeader } from './UnifiedHeader';
+import { CardGrid } from './CardGrid';
 
 export const ShopScreen: React.FC = () => {
   const { 
@@ -237,270 +238,17 @@ export const ShopScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Card Removal Modal */}
+      {/* Card Removal Modal - Using CardGrid */}
       {showCardRemovalModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          background: 'rgba(0, 0, 0, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
-            borderRadius: '15px',
-            padding: '30px',
-            maxWidth: '80%',
-            maxHeight: '80%',
-            overflow: 'auto',
-            border: '3px solid #e74c3c'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px'
-            }}>
-              <h2 style={{ color: 'white', margin: 0 }}>
-                Select Card to Remove ({currentShop.removeCardCost} Gold)
-              </h2>
-              <button
-                onClick={closeCardRemovalModal}
-                style={{
-                  background: '#e74c3c',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '40px',
-                  height: '40px',
-                  color: 'white',
-                  fontSize: '20px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-              gap: '15px',
-              maxHeight: '500px',
-              overflow: 'auto',
-              padding: '10px'
-            }}>
-              {[...drawPile, ...discardPile].map((card, index) => (
-                <div 
-                  key={`removal-${card.id}-${index}`} 
-                  onClick={() => removeCardFromDeck(card.id)}
-                  style={{
-                    background: getCardTypeColor(card.type),
-                    padding: '12px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    textAlign: 'center',
-                    color: 'white',
-                    border: '2px solid rgba(255,255,255,0.3)',
-                    transition: 'transform 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.border = '2px solid #e74c3c';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.border = '2px solid rgba(255,255,255,0.3)';
-                  }}
-                >
-                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '14px' }}>
-                    {card.name}
-                  </div>
-                  <div style={{ marginBottom: '6px' }}>
-                    Cost: {card.baseId === 'whirlwind' ? 'X' : card.cost} energy
-                  </div>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    marginBottom: '6px'
-                  }}>
-                    {/* Generic damage - only for cards without special displays */}
-                    {card.damage && card.damage > 0 && 
-                     card.baseId !== 'body_slam' && 
-                     card.baseId !== 'bash' && 
-                     card.baseId !== 'cleave' && 
-                     card.baseId !== 'whirlwind' && 
-                     card.baseId !== 'twin_strike' && 
-                     card.baseId !== 'anger' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.damage}
-                      </div>
-                    )}
-                    
-                    {/* Special handling for effect-based damage cards */}
-                    {card.baseId === 'bash' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '10' : '8'}
-                      </div>
-                    )}
-                    
-                    {card.baseId === 'cleave' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '11' : '8'} to ALL
-                      </div>
-                    )}
-                    
-                    {card.baseId === 'whirlwind' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '8' : '5'}×X to ALL
-                      </div>
-                    )}
-                    
-                    {card.baseId === 'twin_strike' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '6' : '5'} × 2
-                      </div>
-                    )}
-                    
-                    {card.baseId === 'anger' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '8' : '6'}
-                      </div>
-                    )}
-                    
-                    {/* Block display */}
-                    {card.block && card.block > 0 && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(68, 68, 255, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>🛡️</span>
-                        {card.block}
-                      </div>
-                    )}
-                    
-                    {/* Body Slam special display */}
-                    {card.baseId === 'body_slam' && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#fff',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(255, 255, 255, 0.3)',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                      }}>
-                        <span style={{ marginRight: '4px' }}>⚔️</span>
-                        {card.upgraded ? '2x' : '1x'} Block
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '10px', opacity: 0.8, lineHeight: '1.2' }}>
-                    {card.description}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <CardGrid
+          cards={[...drawPile, ...discardPile]}
+          title={`Select Card to Remove (${currentShop.removeCardCost} Gold)`}
+          onCardClick={(card) => removeCardFromDeck(card.id)}
+          onClose={closeCardRemovalModal}
+          borderColor="#e74c3c"
+          clickable={true}
+          hoverBorderColor="#c0392b"
+        />
       )}
     </div>
   );
@@ -787,7 +535,8 @@ const ShopCardComponent: React.FC<ShopCardComponentProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0 5px'
+          padding: '0 5px',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
         }}>
           {card.description}
         </div>
@@ -867,15 +616,14 @@ const ShopRelicComponent: React.FC<ShopRelicComponentProps> = ({
       >
         {/* Price */}
         <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
+          textAlign: 'center',
           padding: '4px 8px',
           background: '#ffd700',
           color: '#000',
           borderRadius: '10px',
           fontSize: '12px',
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          marginBottom: '10px'
         }}>
           {cost}💰
         </div>
@@ -899,7 +647,8 @@ const ShopRelicComponent: React.FC<ShopRelicComponentProps> = ({
           flex: 1,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
         }}>
           {relic.description}
         </div>

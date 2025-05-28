@@ -17,12 +17,17 @@ import {
 import { upgradeCard } from '../utils/cardUpgrades';
 import { getRandomEnemyEncounter } from '../data/enemies';
 import { damageDebugger } from '../utils/damageDebugger';
+import { debugConsole } from '../utils/debugUtils';
 
 interface GameStore extends GameState {
   // Additional state
   firstAttackThisCombat: boolean;
   selectedCard: Card | null;
   showCardRemovalModal: boolean;
+  showCardUpgradeModal: boolean;
+  debugMode: boolean;
+  currentFloor: number;
+  hasSavedGame: boolean;
   
   // Actions
   playCard: (cardId: string, targetId?: string) => void;
@@ -34,6 +39,9 @@ interface GameStore extends GameState {
   
   // Progression actions
   startNewRun: () => void;
+  startNewGame: () => void;
+  returnToTitle: () => void;
+  loadSavedGame: () => void;
   selectNode: (nodeId: string) => void;
   selectCardReward: (cardId: string) => void;
   skipCardReward: () => void;
@@ -47,8 +55,17 @@ interface GameStore extends GameState {
   openCardRemovalModal: () => void;
   closeCardRemovalModal: () => void;
   
+  // Rest site actions
+  restAndHeal: () => void;
+  upgradeCardAtRest: (cardId?: string) => void;
+  openCardUpgradeModal: () => void;
+  closeCardUpgradeModal: () => void;
+  
   // Card selection
   setSelectedCard: (card: Card | null) => void;
+  
+  // Debug actions
+  toggleDebugMode: () => void;
 }
 
 const createInitialPlayer = (): Player => ({
@@ -73,7 +90,7 @@ const createInitialGameState = (): GameState => {
     discardPile: [],
     exhaustPile: [],
     currentTurn: TurnPhase.PLAYER_TURN,
-    gamePhase: GamePhase.MAP,
+    gamePhase: GamePhase.TITLE,
     map: generateMap()
   };
 };
@@ -83,9 +100,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   firstAttackThisCombat: true,
   selectedCard: null,
   showCardRemovalModal: false,
+  showCardUpgradeModal: false,
+  debugMode: false,
+  currentFloor: 1,
+  hasSavedGame: false,
 
   startNewRun: () => {
-    set(createInitialGameState());
+    set((state) => ({
+      ...createInitialGameState(),
+      firstAttackThisCombat: true,
+      selectedCard: null,
+      showCardRemovalModal: false,
+      showCardUpgradeModal: false,
+      debugMode: state.debugMode // Preserve debug mode
+    }));
   },
 
   selectNode: (nodeId: string) => {
@@ -175,11 +203,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           return {
             ...state,
             gamePhase: GamePhase.REST,
-            map: updatedMap,
-            player: {
-              ...state.player,
-              health: Math.min(state.player.maxHealth, state.player.health + 30)
-            }
+            map: updatedMap
           };
           
         case 'treasure':
@@ -750,7 +774,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               const actualDamageDealt = Math.min(damageAfterBlock, newPlayer.health);
               
               // Debug logging for enemy damage
-              console.log('🔥 Enemy Attack Debug:', {
+              debugConsole.log('🔥 Enemy Attack Debug:', {
                 enemy: enemy.name,
                 baseDamage: enemy.intent.value,
                 calculatedDamage: damage,
@@ -767,6 +791,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 health: newPlayer.health - damageAfterBlock,
                 block: Math.max(0, newPlayer.block - damage)
               };
+              
+              // Check for game over
+              if (newPlayer.health <= 0) {
+                return {
+                  ...state,
+                  player: { ...newPlayer, health: 0 },
+                  gamePhase: GamePhase.GAME_OVER,
+                  selectedCard: null
+                };
+              }
               
               // Process damage taken relic effects if player took damage
               if (damageAfterBlock > 0) {
@@ -1047,5 +1081,115 @@ export const useGameStore = create<GameStore>((set, get) => ({
       showCardRemovalModal: false,
       selectedCard: null
     }));
+  },
+
+  toggleDebugMode: () => {
+    set((state) => ({
+      ...state,
+      debugMode: !state.debugMode
+    }));
+  },
+
+  restAndHeal: () => {
+    set((state) => ({
+      ...state,
+      gamePhase: GamePhase.MAP,
+      player: {
+        ...state.player,
+        health: Math.min(state.player.maxHealth, state.player.health + 30)
+      },
+      selectedCard: null
+    }));
+  },
+
+  upgradeCardAtRest: (cardId?: string) => {
+    set((state) => {
+      if (!cardId) {
+        // If no cardId provided, open the card upgrade modal
+        return {
+          ...state,
+          showCardUpgradeModal: true,
+          selectedCard: null
+        };
+      }
+      
+      // Upgrade the specific card
+      const allCards = [...state.drawPile, ...state.discardPile];
+      const cardToUpgrade = allCards.find(c => c.id === cardId);
+      
+      if (!cardToUpgrade || cardToUpgrade.upgraded) return state;
+
+      let newDrawPile = [...state.drawPile];
+      let newDiscardPile = [...state.discardPile];
+
+      // Find and upgrade the card in the appropriate pile
+      const drawIndex = newDrawPile.findIndex(c => c.id === cardId);
+      if (drawIndex !== -1) {
+        newDrawPile[drawIndex] = upgradeCard(cardToUpgrade);
+      } else {
+        const discardIndex = newDiscardPile.findIndex(c => c.id === cardId);
+        if (discardIndex !== -1) {
+          newDiscardPile[discardIndex] = upgradeCard(cardToUpgrade);
+        }
+      }
+
+      return {
+        ...state,
+        drawPile: newDrawPile,
+        discardPile: newDiscardPile,
+        showCardUpgradeModal: false,
+        gamePhase: GamePhase.MAP,
+        selectedCard: null
+      };
+    });
+  },
+
+  openCardUpgradeModal: () => {
+    set((state) => ({
+      ...state,
+      showCardUpgradeModal: true,
+      selectedCard: null
+    }));
+  },
+
+  closeCardUpgradeModal: () => {
+    set((state) => ({
+      ...state,
+      showCardUpgradeModal: false,
+      selectedCard: null
+    }));
+  },
+
+  startNewGame: () => {
+    set((state) => ({
+      ...createInitialGameState(),
+      firstAttackThisCombat: true,
+      selectedCard: null,
+      showCardRemovalModal: false,
+      showCardUpgradeModal: false,
+      debugMode: state.debugMode,
+      currentFloor: 1,
+      hasSavedGame: false,
+      gamePhase: GamePhase.MAP
+    }));
+  },
+
+  returnToTitle: () => {
+    set((state) => ({
+      ...state,
+      gamePhase: GamePhase.TITLE,
+      selectedCard: null
+    }));
+  },
+
+  loadSavedGame: () => {
+    // For now, just start a new game - in the future this could load from localStorage
+    const state = get();
+    if (state.hasSavedGame) {
+      set((state) => ({
+        ...state,
+        gamePhase: GamePhase.MAP
+      }));
+    }
   }
 })); 

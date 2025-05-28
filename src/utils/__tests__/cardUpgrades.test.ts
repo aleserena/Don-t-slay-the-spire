@@ -3,18 +3,27 @@ import { upgradeCard, canUpgradeCard, getUpgradePreview } from '../cardUpgrades'
 import { Card, CardType, CardRarity, EffectType, TargetType, StatusType } from '../../types/game';
 
 describe('CardUpgrades', () => {
-  const createMockCard = (overrides: Partial<Card> = {}): Card => ({
-    id: 'test_card',
-    baseId: 'test_card',
-    name: 'Test Card',
-    cost: 1,
-    type: CardType.ATTACK,
-    rarity: CardRarity.COMMON,
-    description: 'Test description',
-    damage: 5,
-    upgraded: false,
-    ...overrides
-  });
+  const createMockCard = (overrides: Partial<Card> = {}): Card => {
+    const baseCard = {
+      id: 'test_card',
+      baseId: 'test_card',
+      name: 'Test Card',
+      cost: 1,
+      type: CardType.ATTACK,
+      rarity: CardRarity.COMMON,
+      description: 'Test description',
+      damage: 5,
+      upgraded: false,
+      ...overrides
+    };
+    
+    // If id is overridden but baseId is not, set baseId to match id
+    if (overrides.id && !overrides.baseId) {
+      baseCard.baseId = overrides.id;
+    }
+    
+    return baseCard;
+  };
 
   describe('upgradeCard', () => {
     it('should not upgrade already upgraded card', () => {

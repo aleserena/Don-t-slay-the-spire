@@ -31,7 +31,7 @@ describe('GameStore', () => {
       expect(store.discardPile).toEqual([]);
       expect(store.exhaustPile).toEqual([]);
       expect(store.currentTurn).toBe(TurnPhase.PLAYER_TURN);
-      expect(store.gamePhase).toBe(GamePhase.MAP);
+      expect(store.gamePhase).toBe(GamePhase.TITLE);
       expect(store.drawPile.length).toBeGreaterThan(0); // Should have initial deck
     });
 
@@ -455,20 +455,20 @@ describe('GameStore', () => {
 
   describe('Progression System', () => {
     it('should start new run correctly', () => {
-      const { startNewRun } = useGameStore.getState();
-      
-      // Modify state
-      useGameStore.setState({
-        player: { ...useGameStore.getState().player, health: 50, gold: 200 }
-      });
+      const { startNewRun, startNewGame } = useGameStore.getState();
       
       startNewRun();
       
       const store = useGameStore.getState();
-      // Should reset to initial state
       expect(store.player.health).toBe(80);
       expect(store.player.gold).toBe(99);
-      expect(store.gamePhase).toBe(GamePhase.MAP);
+      expect(store.gamePhase).toBe(GamePhase.TITLE);
+      
+      // Now start the actual game
+      startNewGame();
+      
+      const gameStore = useGameStore.getState();
+      expect(gameStore.gamePhase).toBe(GamePhase.MAP);
     });
 
     it('should select card reward correctly', () => {

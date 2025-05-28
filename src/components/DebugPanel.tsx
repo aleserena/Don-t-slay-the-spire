@@ -13,10 +13,16 @@ export const DebugPanel: React.FC = () => {
     drawPile, 
     discardPile,
     drawCards,
-    endTurn
+    endTurn,
+    debugMode
   } = useGameStore();
   
   const [isOpen, setIsOpen] = useState(false);
+
+  // Don't render anything if debug mode is off
+  if (!debugMode) {
+    return null;
+  }
 
   const handleHealPlayer = () => {
     useGameStore.setState({

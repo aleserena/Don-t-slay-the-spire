@@ -13,15 +13,20 @@ describe('Integration Tests', () => {
     it('should handle a complete game run from start to combat', () => {
       const store = useGameStore.getState();
       
+      // Start a new game to transition from TITLE to MAP
+      store.startNewGame();
+      
+      const gameStore = useGameStore.getState();
+
       // 1. Game should start in MAP phase
-      expect(store.gamePhase).toBe(GamePhase.MAP);
-      expect(store.player.health).toBe(80);
-      expect(store.player.gold).toBe(99);
-      expect(store.drawPile.length).toBe(10); // Initial deck
+      expect(gameStore.gamePhase).toBe(GamePhase.MAP);
+      expect(gameStore.player.health).toBe(80);
+      expect(gameStore.player.gold).toBe(99);
+      expect(gameStore.drawPile.length).toBe(10); // Initial deck
       
       // 2. Player should have a valid map
-      expect(store.map).toBeDefined();
-      expect(store.map?.nodes.length).toBeGreaterThan(0);
+      expect(gameStore.map).toBeDefined();
+      expect(gameStore.map?.nodes.length).toBeGreaterThan(0);
       
       // 3. Start combat and get fresh state
       const { startCombat } = useGameStore.getState();

@@ -5,6 +5,8 @@ import { CardRewardScreen } from './components/CardRewardScreen';
 import { EventScreen } from './components/EventScreen';
 import { RestScreen } from './components/RestScreen';
 import { ShopScreen } from './components/ShopScreen';
+import { TitleScreen } from './components/TitleScreen';
+import { GameOverScreen } from './components/GameOverScreen';
 import { GamePhase } from './types/game';
 import './App.css';
 
@@ -13,6 +15,8 @@ function App() {
 
   const renderCurrentPhase = () => {
     switch (gamePhase) {
+      case GamePhase.TITLE:
+        return <TitleScreen />;
       case GamePhase.MAP:
         return <MapView />;
       case GamePhase.COMBAT:
@@ -26,39 +30,7 @@ function App() {
       case GamePhase.SHOP:
         return <ShopScreen />;
       case GamePhase.GAME_OVER:
-        return (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
-            color: 'white'
-          }}>
-            <h1 style={{ fontSize: '48px', color: '#ff4444', marginBottom: '20px' }}>
-              Game Over
-            </h1>
-            <p style={{ fontSize: '18px', marginBottom: '30px' }}>
-              Your journey ends here...
-            </p>
-            <button
-              onClick={startNewRun}
-              style={{
-                padding: '15px 30px',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                background: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                cursor: 'pointer'
-              }}
-            >
-              Start New Run
-            </button>
-          </div>
-        );
+        return <GameOverScreen />;
       case GamePhase.VICTORY:
         return (
           <div style={{

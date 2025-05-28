@@ -405,8 +405,12 @@ describe('Bug Fixes', () => {
 
   describe('Game State Consistency', () => {
     it('should maintain proper game flow after fixes', () => {
-      const store = useGameStore.getState();
+      // Start a new game to transition from TITLE to MAP
+      const { startNewGame } = useGameStore.getState();
+      startNewGame();
       
+      const store = useGameStore.getState();
+
       // Start with map phase
       expect(store.gamePhase).toBe(GamePhase.MAP);
       
