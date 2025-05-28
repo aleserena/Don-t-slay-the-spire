@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
-import { Card, CardType, Relic } from '../types/game';
+import { CardType } from '../types/game';
 
 export const ShopScreen: React.FC = () => {
   const { currentShop, player, returnToMap, purchaseShopCard, purchaseShopRelic, removeCardFromDeck } = useGameStore();
@@ -14,7 +14,7 @@ export const ShopScreen: React.FC = () => {
       case CardType.SKILL:
         return '#4ecdc4';
       case CardType.POWER:
-        return '#45b7d1';
+        return '#ffe66d';
       default:
         return '#95a5a6';
     }
@@ -336,26 +336,58 @@ const ShopCardComponent: React.FC<ShopCardComponentProps> = ({
           gap: '15px',
           marginBottom: '15px'
         }}>
-          {card.damage && (
+          {card.damage && card.damage > 0 && (
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              fontSize: '14px',
-              fontWeight: 'bold'
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: '#fff',
+              background: 'rgba(255, 107, 107, 0.9)',
+              padding: '4px 8px',
+              borderRadius: '12px',
+              border: '2px solid #fff',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
             }}>
-              <span style={{ marginRight: '5px' }}>⚔️</span>
+              <span style={{ marginRight: '4px' }}>⚔️</span>
               {card.damage}
             </div>
           )}
-          {card.block && (
+          {card.block && card.block > 0 && (
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              fontSize: '14px',
-              fontWeight: 'bold'
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: '#fff',
+              background: 'rgba(68, 68, 255, 0.9)',
+              padding: '4px 8px',
+              borderRadius: '12px',
+              border: '2px solid #fff',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
             }}>
-              <span style={{ marginRight: '5px' }}>🛡️</span>
+              <span style={{ marginRight: '4px' }}>🛡️</span>
               {card.block}
+            </div>
+          )}
+          {card.id === 'body_slam' && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: '#fff',
+              background: 'rgba(255, 107, 107, 0.9)',
+              padding: '4px 8px',
+              borderRadius: '12px',
+              border: '2px solid #fff',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+            }}>
+              <span style={{ marginRight: '4px' }}>⚔️</span>
+              Block
             </div>
           )}
         </div>

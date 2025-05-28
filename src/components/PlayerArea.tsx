@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { getStatusEffectIcon, getStatusEffectColor } from '../utils/statusEffects';
+import { getStatusEffectIcon, getStatusEffectColor, getStatusEffectDescription, getStatusEffectName } from '../utils/statusEffects';
 
 export const PlayerArea: React.FC = () => {
   const { player } = useGameStore();
   const [hoveredRelic, setHoveredRelic] = useState<any>(null);
+  const [hoveredStatusEffect, setHoveredStatusEffect] = useState<any>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   const handleRelicMouseEnter = (relic: any, event: React.MouseEvent) => {
@@ -18,6 +19,21 @@ export const PlayerArea: React.FC = () => {
 
   const handleRelicMouseMove = (event: React.MouseEvent) => {
     if (hoveredRelic) {
+      setMousePosition({ x: event.clientX, y: event.clientY });
+    }
+  };
+
+  const handleStatusEffectMouseEnter = (effect: any, event: React.MouseEvent) => {
+    setHoveredStatusEffect(effect);
+    setMousePosition({ x: event.clientX, y: event.clientY });
+  };
+
+  const handleStatusEffectMouseLeave = () => {
+    setHoveredStatusEffect(null);
+  };
+
+  const handleStatusEffectMouseMove = (event: React.MouseEvent) => {
+    if (hoveredStatusEffect) {
       setMousePosition({ x: event.clientX, y: event.clientY });
     }
   };
@@ -105,9 +121,14 @@ export const PlayerArea: React.FC = () => {
                   fontSize: '12px',
                   fontWeight: 'bold',
                   color: 'white',
-                  border: '1px solid rgba(255,255,255,0.3)'
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  transform: hoveredStatusEffect === effect ? 'scale(1.1)' : 'scale(1)'
                 }}
-                title={`${effect.type}: ${effect.stacks}${effect.duration ? ` (${effect.duration} turns)` : ''}`}
+                onMouseEnter={(e) => handleStatusEffectMouseEnter(effect, e)}
+                onMouseLeave={handleStatusEffectMouseLeave}
+                onMouseMove={handleStatusEffectMouseMove}
               >
                 <span style={{ marginRight: '3px' }}>
                   {getStatusEffectIcon(effect.type)}
@@ -215,15 +236,56 @@ export const PlayerArea: React.FC = () => {
           }}>
             {hoveredRelic.description}
           </div>
-          {hoveredRelic.effects && hoveredRelic.effects.length > 0 && (
+        </div>
+      )}
+
+      {/* Floating Status Effect Tooltip */}
+      {hoveredStatusEffect && (
+        <div style={{
+          position: 'fixed',
+          left: mousePosition.x + 15,
+          top: mousePosition.y - 10,
+          background: 'rgba(0, 0, 0, 0.95)',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          border: `2px solid ${getStatusEffectColor(hoveredStatusEffect.type)}`,
+          fontSize: '14px',
+          maxWidth: '250px',
+          zIndex: 1000,
+          pointerEvents: 'none',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
+        }}>
+          <div style={{
+            fontSize: '16px',
+            fontWeight: 'bold',
+            color: getStatusEffectColor(hoveredStatusEffect.type),
+            marginBottom: '8px',
+            textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '5px'
+          }}>
+            <span>{getStatusEffectIcon(hoveredStatusEffect.type)}</span>
+            <span>{getStatusEffectName(hoveredStatusEffect.type)}</span>
+            <span style={{ color: '#fff' }}>({hoveredStatusEffect.stacks})</span>
+          </div>
+          <div style={{
+            lineHeight: '1.4',
+            textAlign: 'center',
+            marginBottom: hoveredStatusEffect.duration ? '8px' : '0'
+          }}>
+            {getStatusEffectDescription(hoveredStatusEffect.type)}
+          </div>
+          {hoveredStatusEffect.duration && (
             <div style={{
-              marginTop: '8px',
               fontSize: '12px',
-              color: '#aaa',
+              color: '#ccc',
               textAlign: 'center',
               fontStyle: 'italic'
             }}>
-              Triggers: {hoveredRelic.effects.map((effect: any) => effect.trigger).join(', ')}
+              Duration: {hoveredStatusEffect.duration} turns
             </div>
           )}
         </div>

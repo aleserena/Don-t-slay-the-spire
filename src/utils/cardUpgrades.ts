@@ -38,7 +38,12 @@ export const upgradeCard = (card: Card): Card => {
       break;
     
     case 'cleave':
-      upgradedCard.damage = (card.damage || 0) + 3;
+      // Cleave uses effects for damage, so upgrade the effect value
+      if (upgradedCard.effects) {
+        upgradedCard.effects = upgradedCard.effects.map(effect => 
+          effect.type === 'damage' ? { ...effect, value: effect.value + 3 } : effect
+        );
+      }
       upgradedCard.description = 'Deal 11 damage to ALL enemies.';
       break;
     

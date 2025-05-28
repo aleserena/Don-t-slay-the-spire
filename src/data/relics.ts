@@ -6,7 +6,7 @@ export const getAllRelics = (): Relic[] => {
     {
       id: 'burning_blood',
       name: 'Burning Blood',
-      description: 'At the end of combat, heal 6 HP.',
+      description: 'At the start of combat, heal 6 HP.',
       rarity: RelicRarity.STARTER,
       effects: [{
         trigger: RelicTrigger.COMBAT_START,
@@ -58,7 +58,8 @@ export const getAllRelics = (): Relic[] => {
         trigger: RelicTrigger.COMBAT_START,
         effect: EffectType.APPLY_STATUS,
         value: 1,
-        statusType: StatusType.VULNERABLE
+        statusType: StatusType.VULNERABLE,
+        target: 'ALL_ENEMIES'
       }]
     },
     {

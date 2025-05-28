@@ -82,29 +82,33 @@ export const GameBoard: React.FC = () => {
         flex: '1',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '20px',
-        gap: '40px'
+        justifyContent: 'center',
+        padding: '40px 80px',
+        gap: '80px',
+        maxWidth: '1200px',
+        margin: '0 auto'
       }}>
         {/* Player Area - Left side */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-start',
+          justifyContent: 'center',
           flex: '0 0 auto'
         }}>
           <PlayerArea />
         </div>
         
-        {/* VS Indicator */}
+        {/* VS Indicator - Centered */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '48px',
+          fontSize: '64px',
           fontWeight: 'bold',
           color: '#ffd700',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+          textShadow: '3px 3px 6px rgba(0,0,0,0.8)',
+          zIndex: 5,
+          pointerEvents: 'none',
           flex: '0 0 auto'
         }}>
           VS
@@ -114,8 +118,8 @@ export const GameBoard: React.FC = () => {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-end',
-          flex: '1'
+          justifyContent: 'center',
+          flex: '0 0 auto'
         }}>
           <EnemyArea 
             enemies={enemies} 
@@ -129,10 +133,12 @@ export const GameBoard: React.FC = () => {
       <div style={{
         height: '200px',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         justifyContent: 'center',
-        padding: '20px',
-        background: 'rgba(0, 0, 0, 0.3)'
+        padding: '20px 40px',
+        background: 'rgba(0, 0, 0, 0.3)',
+        position: 'relative',
+        overflow: 'visible'
       }}>
         <HandArea 
           selectedCardId={selectedCard?.id || null}
@@ -161,6 +167,8 @@ export const GameBoard: React.FC = () => {
           </div>
         )}
       </div>
+
+
     </div>
   );
 }; 

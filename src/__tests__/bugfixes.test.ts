@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore';
 import { generateMap, completeNode } from '../utils/mapGeneration';
 import { GamePhase, TurnPhase, CardType, StatusType, IntentType, EffectType, TargetType } from '../types/game';
-import { calculateDamage } from '../utils/statusEffects';
+import { calculateDamage, getStatusEffectDescription, getStatusEffectName } from '../utils/statusEffects';
 
 describe('Bug Fixes', () => {
   beforeEach(() => {
@@ -176,13 +176,13 @@ describe('Bug Fixes', () => {
       expect(node2?.available).toBe(true);
       expect(node3?.available).toBe(false); // Should not be available yet
       
-      // Now complete node1 and check that node2 doesn't become available
+      // Now complete node1 and check that node2 becomes unavailable
       const updatedMap2 = completeNode(updatedMap, 'node1');
       const node2After = updatedMap2.nodes.find(n => n.id === 'node2');
       const node3After = updatedMap2.nodes.find(n => n.id === 'node3');
       
-      // node2 should still be available (it was already available)
-      expect(node2After?.available).toBe(true);
+      // node2 should now be unavailable (same floor as completed node1)
+      expect(node2After?.available).toBe(false);
       // node3 should now be available (it's on the next floor)
       expect(node3After?.available).toBe(true);
     });
@@ -197,6 +197,94 @@ describe('Bug Fixes', () => {
         expect(updatedMap.floor).toBe(1);
         expect(updatedMap.currentNodeId).toBe(startingNode.id);
       }
+    });
+
+    it('should only allow one node per floor to be visited', () => {
+      const map = generateMap();
+      
+      // Create a test scenario with multiple nodes on floor 1
+      const testMap = {
+        ...map,
+        nodes: [
+          // Floor 0 - starting node
+          {
+            id: 'start',
+            type: 'combat' as any,
+            x: 3,
+            y: 0,
+            connections: ['node1', 'node2', 'node3'],
+            completed: false,
+            available: true
+          },
+          // Floor 1 - multiple nodes
+          {
+            id: 'node1',
+            type: 'combat' as any,
+            x: 1,
+            y: 1,
+            connections: ['node4'],
+            completed: false,
+            available: false
+          },
+          {
+            id: 'node2',
+            type: 'elite' as any,
+            x: 3,
+            y: 1,
+            connections: ['node4'],
+            completed: false,
+            available: false
+          },
+          {
+            id: 'node3',
+            type: 'shop' as any,
+            x: 5,
+            y: 1,
+            connections: ['node4'],
+            completed: false,
+            available: false
+          },
+          // Floor 2 - next level
+          {
+            id: 'node4',
+            type: 'combat' as any,
+            x: 3,
+            y: 2,
+            connections: [],
+            completed: false,
+            available: false
+          }
+        ]
+      };
+      
+      // Complete the starting node - all floor 1 nodes should become available
+      const updatedMap = completeNode(testMap, 'start');
+      
+      const node1 = updatedMap.nodes.find(n => n.id === 'node1');
+      const node2 = updatedMap.nodes.find(n => n.id === 'node2');
+      const node3 = updatedMap.nodes.find(n => n.id === 'node3');
+      const node4 = updatedMap.nodes.find(n => n.id === 'node4');
+      
+      // All floor 1 nodes should be available
+      expect(node1?.available).toBe(true);
+      expect(node2?.available).toBe(true);
+      expect(node3?.available).toBe(true);
+      expect(node4?.available).toBe(false);
+      
+      // Complete node2 (elite) - other floor 1 nodes should become unavailable
+      const updatedMap2 = completeNode(updatedMap, 'node2');
+      
+      const node1After = updatedMap2.nodes.find(n => n.id === 'node1');
+      const node2After = updatedMap2.nodes.find(n => n.id === 'node2');
+      const node3After = updatedMap2.nodes.find(n => n.id === 'node3');
+      const node4After = updatedMap2.nodes.find(n => n.id === 'node4');
+      
+      // Only the completed node should remain available on floor 1
+      expect(node1After?.available).toBe(false);
+      expect(node2After?.completed).toBe(true);
+      expect(node3After?.available).toBe(false);
+      // Floor 2 node should now be available
+      expect(node4After?.available).toBe(true);
     });
   });
 
@@ -329,6 +417,20 @@ describe('Bug Fixes', () => {
       expect(afterCombat.gamePhase).toBe(GamePhase.COMBAT);
       expect(afterCombat.hand.length).toBe(5);
       expect(afterCombat.drawPile.length + afterCombat.hand.length).toBe(initialDeckSize);
+    });
+
+    it('should provide proper status effect descriptions for tooltips', () => {
+      // Test status effect descriptions
+      expect(getStatusEffectDescription(StatusType.VULNERABLE)).toBe('Takes 50% more damage from attacks.');
+      expect(getStatusEffectDescription(StatusType.WEAK)).toBe('Deals 25% less damage with attacks.');
+      expect(getStatusEffectDescription(StatusType.STRENGTH)).toBe('Increases damage dealt by attacks.');
+      expect(getStatusEffectDescription(StatusType.POISON)).toBe('Takes damage at the start of each turn, then reduces by 1.');
+      
+      // Test status effect names
+      expect(getStatusEffectName(StatusType.VULNERABLE)).toBe('Vulnerable');
+      expect(getStatusEffectName(StatusType.WEAK)).toBe('Weak');
+      expect(getStatusEffectName(StatusType.STRENGTH)).toBe('Strength');
+      expect(getStatusEffectName(StatusType.POISON)).toBe('Poison');
     });
 
     it('should handle Anger card effect correctly', () => {

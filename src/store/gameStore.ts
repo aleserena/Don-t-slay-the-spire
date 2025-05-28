@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { GameState, Player, Enemy, TurnPhase, EffectType, TargetType, StatusType, IntentType, GamePhase, Relic, RelicTrigger } from '../types/game';
 import { createInitialDeck, getAllCards } from '../data/cards';
-import { getRandomEnemyEncounter } from '../data/enemies';
 import { getBossForFloor } from '../data/bosses';
 import { getStarterRelic, getAllRelics } from '../data/relics';
 import { generateMap, completeNode } from '../utils/mapGeneration';
@@ -13,6 +12,8 @@ import {
   calculateDamage, 
   calculateBlock 
 } from '../utils/statusEffects';
+import { upgradeCard } from '../utils/cardUpgrades';
+import { getRandomEnemyEncounter } from '../data/enemies';
 
 interface GameStore extends GameState {
   // Actions
@@ -92,6 +93,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             discardPile: [],
             exhaustPile: [],
             currentTurn: TurnPhase.PLAYER_TURN,
+            firstAttackThisCombat: true,
             player: {
               ...state.player,
               energy: state.player.maxEnergy,
@@ -111,6 +113,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             discardPile: [],
             exhaustPile: [],
             currentTurn: TurnPhase.PLAYER_TURN,
+            firstAttackThisCombat: true,
             player: {
               ...state.player,
               energy: state.player.maxEnergy,
@@ -135,6 +138,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             discardPile: [],
             exhaustPile: [],
             currentTurn: TurnPhase.PLAYER_TURN,
+            firstAttackThisCombat: true,
             player: {
               ...state.player,
               energy: state.player.maxEnergy,
@@ -158,6 +162,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
             player: {
               ...state.player,
               health: Math.min(state.player.maxHealth, state.player.health + 30)
+            }
+          };
+          
+        case 'treasure':
+          // Give player a random relic
+          const treasureRelic = getAllRelics()
+            .filter((r: Relic) => r.rarity === 'common' || r.rarity === 'uncommon')
+            [Math.floor(Math.random() * getAllRelics().filter((r: Relic) => r.rarity === 'common' || r.rarity === 'uncommon').length)];
+          
+          return {
+            ...state,
+            gamePhase: GamePhase.MAP,
+            map: updatedMap,
+            player: {
+              ...state.player,
+              relics: [...state.player.relics, treasureRelic]
             }
           };
           
@@ -222,8 +242,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const card = state.combatReward?.cardRewards.find(c => c.id === cardId);
       if (!card) return state;
 
-      // Combine ALL cards back into the draw pile (including hand cards)
-      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand];
+      // Combine ALL cards back into the draw pile, but filter out cards created during combat
+      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand]
+        .filter(c => !c.id.includes('_copy_')); // Remove cards created during combat
       
       return {
         ...state,
@@ -240,8 +261,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   skipCardReward: () => {
     set((state) => {
-      // Combine ALL cards back into the draw pile (including hand cards)
-      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand];
+      // Combine ALL cards back into the draw pile, but filter out cards created during combat
+      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand]
+        .filter(c => !c.id.includes('_copy_')); // Remove cards created during combat
       
       return {
         ...state,
@@ -281,8 +303,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   returnToMap: () => {
     set((state) => {
-      // Combine ALL cards back into the draw pile when returning to map (including hand cards)
-      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand];
+      // Combine ALL cards back into the draw pile, but filter out cards created during combat
+      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand]
+        .filter(c => !c.id.includes('_copy_')); // Remove cards created during combat
       
       return {
         ...state,
@@ -312,12 +335,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       let newPlayer = { ...state.player, energy: state.player.energy - card.cost };
       let newEnemies = [...state.enemies];
 
+      // Check if this is an attack card for Akabeko effect
+      const isAttackCard = card.type === 'attack';
+      const isFirstAttack = state.firstAttackThisCombat && isAttackCard;
+      
       // Apply basic card effects
       if (card.damage && card.damage > 0) {
         if (targetId) {
           const enemyIndex = newEnemies.findIndex(e => e.id === targetId);
           if (enemyIndex !== -1) {
-            const finalDamage = calculateDamage(card.damage, newPlayer, newEnemies[enemyIndex]);
+            const finalDamage = calculateDamage(card.damage, newPlayer, newEnemies[enemyIndex], isFirstAttack);
             const damageAfterBlock = Math.max(0, finalDamage - newEnemies[enemyIndex].block);
             
             newEnemies[enemyIndex] = {
@@ -326,6 +353,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
               block: Math.max(0, newEnemies[enemyIndex].block - finalDamage)
             };
           }
+        }
+      }
+
+      // Special handling for Body Slam (damage equals current block)
+      if (card.id === 'body_slam' && targetId) {
+        const enemyIndex = newEnemies.findIndex(e => e.id === targetId);
+        if (enemyIndex !== -1) {
+          const bodySlimDamage = calculateDamage(newPlayer.block, newPlayer, newEnemies[enemyIndex], isFirstAttack);
+          const damageAfterBlock = Math.max(0, bodySlimDamage - newEnemies[enemyIndex].block);
+          
+          newEnemies[enemyIndex] = {
+            ...newEnemies[enemyIndex],
+            health: newEnemies[enemyIndex].health - damageAfterBlock,
+            block: Math.max(0, newEnemies[enemyIndex].block - bodySlimDamage)
+          };
         }
       }
 
@@ -341,7 +383,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             case EffectType.DAMAGE:
               if (effect.target === TargetType.ALL_ENEMIES) {
                 newEnemies = newEnemies.map(enemy => {
-                  const finalDamage = calculateDamage(effect.value, newPlayer, enemy);
+                  const finalDamage = calculateDamage(effect.value, newPlayer, enemy, isFirstAttack);
                   const damageAfterBlock = Math.max(0, finalDamage - enemy.block);
                   return {
                     ...enemy,
@@ -352,7 +394,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               } else if (effect.target === TargetType.ENEMY && targetId) {
                 const enemyIndex = newEnemies.findIndex(e => e.id === targetId);
                 if (enemyIndex !== -1) {
-                  const finalDamage = calculateDamage(effect.value, newPlayer, newEnemies[enemyIndex]);
+                  const finalDamage = calculateDamage(effect.value, newPlayer, newEnemies[enemyIndex], isFirstAttack);
                   const damageAfterBlock = Math.max(0, finalDamage - newEnemies[enemyIndex].block);
                   
                   newEnemies[enemyIndex] = {
@@ -417,6 +459,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 newDiscardPile.push(cardCopy);
               }
               break;
+
+            case EffectType.UPGRADE_CARD:
+              if (effect.target === TargetType.SELF) {
+                // Upgrade a random card in hand (in a real implementation, player would choose)
+                const upgradableCards = newHand.filter(c => !c.upgraded);
+                if (upgradableCards.length > 0) {
+                  const randomIndex = Math.floor(Math.random() * upgradableCards.length);
+                  const cardToUpgrade = upgradableCards[randomIndex];
+                  const handIndex = newHand.findIndex(c => c.id === cardToUpgrade.id);
+                  
+                  if (handIndex !== -1) {
+                    newHand[handIndex] = upgradeCard(cardToUpgrade);
+                  }
+                }
+              }
+              break;
           }
         }
       }
@@ -431,11 +489,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
           .filter(() => Math.random() < 0.4)
           .slice(0, 3);
 
+        // Clear temporary status effects at end of combat
+        const clearedPlayer = {
+          ...newPlayer,
+          gold: newPlayer.gold + rewardGold,
+          statusEffects: newPlayer.statusEffects.filter(effect => 
+            effect.type !== StatusType.WEAK && 
+            effect.type !== StatusType.VULNERABLE && 
+            effect.type !== StatusType.STRENGTH
+          )
+        };
+
         return {
           ...state,
           hand: newHand,
           discardPile: newDiscardPile,
-          player: { ...newPlayer, gold: newPlayer.gold + rewardGold },
+          player: clearedPlayer,
           enemies: newEnemies,
           currentTurn: TurnPhase.COMBAT_END,
           gamePhase: GamePhase.CARD_REWARD,
@@ -451,7 +520,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         hand: newHand,
         discardPile: newDiscardPile,
         player: newPlayer,
-        enemies: newEnemies
+        enemies: newEnemies,
+        firstAttackThisCombat: isFirstAttack ? false : state.firstAttackThisCombat
       };
     });
   },
@@ -464,8 +534,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Process status effects on enemies
       newEnemies = newEnemies.map(enemy => processStatusEffects(enemy) as Enemy);
       
+      // Remove dead enemies (health <= 0)
+      newEnemies = newEnemies.filter(enemy => enemy.health > 0);
+      
       // Process status effects on player
       newPlayer = processStatusEffects(newPlayer) as Player;
+
+      // Reset enemy block at start of their turn
+      newEnemies = newEnemies.map(enemy => ({
+        ...enemy,
+        block: 0
+      }));
 
       // Each enemy performs their intended action
       for (let i = 0; i < newEnemies.length; i++) {
@@ -476,11 +555,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (enemy.intent.value) {
               const damage = calculateDamage(enemy.intent.value, enemy, newPlayer);
               const damageAfterBlock = Math.max(0, damage - newPlayer.block);
+              
+              // Apply damage to player
               newPlayer = {
                 ...newPlayer,
                 health: newPlayer.health - damageAfterBlock,
                 block: Math.max(0, newPlayer.block - damage)
               };
+              
+              // Process damage taken relic effects if player took damage
+              if (damageAfterBlock > 0) {
+                const context: any = { damage: damageAfterBlock };
+                const relicResult = processRelicEffects(RelicTrigger.DAMAGE_TAKEN, newPlayer, newEnemies, context);
+                newPlayer = relicResult.player;
+                newEnemies = relicResult.enemies;
+                
+                // Handle Centennial Puzzle card drawing
+                if (context.shouldDrawCards) {
+                  setTimeout(() => get().drawCards(context.shouldDrawCards), 100);
+                }
+              }
             }
             break;
           
@@ -516,18 +610,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
         };
       }
 
-      // Restore energy and reset block for new player turn
+      // Reset player block at start of player turn
       newPlayer = {
         ...newPlayer,
         energy: newPlayer.maxEnergy,
         block: 0
       };
+      
+      // Enemy block is NOT reset here - it persists until start of their next turn
+
+      // Check if combat should end (all enemies dead)
+      const combatEnded = newEnemies.length === 0;
 
       return {
         ...state,
         player: newPlayer,
         enemies: newEnemies,
-        currentTurn: TurnPhase.PLAYER_TURN
+        currentTurn: combatEnded ? TurnPhase.COMBAT_END : TurnPhase.PLAYER_TURN
       };
     });
 
@@ -547,8 +646,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ...currentState,
           hand: [],
           discardPile: newDiscardPile,
-          currentTurn: TurnPhase.ENEMY_TURN,
-          player: { ...currentState.player, block: 0 } // Reset block at end of turn
+          currentTurn: TurnPhase.ENEMY_TURN
+          // Block is NOT reset here - it resets at start of next player turn
         };
       });
 
@@ -560,8 +659,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startCombat: () => {
-    const currentState = get();
-    
     // Preserve current player state and deck, but reset combat-specific state
     set((state) => ({
       ...state,

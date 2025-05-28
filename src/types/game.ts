@@ -37,7 +37,8 @@ export enum EffectType {
   DRAW_CARDS = 'draw_cards',
   GAIN_ENERGY = 'gain_energy',
   APPLY_STATUS = 'apply_status',
-  ADD_CARD_TO_DISCARD = 'add_card_to_discard'
+  ADD_CARD_TO_DISCARD = 'add_card_to_discard',
+  UPGRADE_CARD = 'upgrade_card'
 }
 
 export enum TargetType {
@@ -109,6 +110,7 @@ export interface GameState {
   map?: import('./map').GameMap;
   currentEvent?: import('./map').Event;
   currentShop?: import('./map').Shop;
+  firstAttackThisCombat?: boolean;
 }
 
 export enum GamePhase {
@@ -147,6 +149,7 @@ export interface RelicEffect {
   effect: EffectType;
   value?: number;
   statusType?: StatusType;
+  target?: string;
 }
 
 export enum RelicTrigger {

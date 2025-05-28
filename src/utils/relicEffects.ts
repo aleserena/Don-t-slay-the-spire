@@ -5,7 +5,7 @@ export const processRelicEffects = (
   trigger: RelicTrigger,
   player: Player,
   enemies: Enemy[],
-  context?: any
+  _context?: any
 ): { player: Player; enemies: Enemy[] } => {
   let newPlayer = { ...player };
   let newEnemies = [...enemies];
@@ -14,9 +14,24 @@ export const processRelicEffects = (
   for (const relic of player.relics) {
     for (const effect of relic.effects) {
       if (effect.trigger === trigger) {
-        const result = applyRelicEffect(effect, newPlayer, newEnemies, context);
-        newPlayer = result.player;
-        newEnemies = result.enemies;
+        // Special handling for specific relics
+        if (relic.id === 'bronze_scales' && trigger === RelicTrigger.DAMAGE_TAKEN) {
+          // Bronze Scales: Deal 3 damage back to all enemies
+          newEnemies = newEnemies.map(enemy => ({
+            ...enemy,
+            health: enemy.health - 3
+          }));
+        } else if (relic.id === 'centennial_puzzle' && trigger === RelicTrigger.DAMAGE_TAKEN) {
+          // Centennial Puzzle: Draw 3 cards on first damage taken
+          // This would need to be handled in the game store to actually draw cards
+          // For now, we'll mark that cards should be drawn
+          _context.shouldDrawCards = 3;
+        } else {
+          // Apply standard relic effect
+          const result = applyRelicEffect(effect, newPlayer, newEnemies, _context);
+          newPlayer = result.player;
+          newEnemies = result.enemies;
+        }
       }
     }
   }
@@ -28,7 +43,7 @@ const applyRelicEffect = (
   effect: any,
   player: Player,
   enemies: Enemy[],
-  context?: any
+  _context?: any
 ): { player: Player; enemies: Enemy[] } => {
   let newPlayer = { ...player };
   let newEnemies = [...enemies];
@@ -53,9 +68,10 @@ const applyRelicEffect = (
 
     case EffectType.APPLY_STATUS:
       if (effect.statusType) {
-        if (effect.target === 'self') {
+        // Check if the effect has a target specified, otherwise apply to all enemies
+        if (effect.target === 'self' || !effect.target) {
           newPlayer = applyStatusEffect(newPlayer, effect.statusType, effect.value || 1) as Player;
-        } else if (effect.target === 'all_enemies') {
+        } else if (effect.target === 'all_enemies' || effect.target === 'ALL_ENEMIES') {
           newEnemies = newEnemies.map(enemy => 
             applyStatusEffect(enemy, effect.statusType!, effect.value || 1) as Enemy
           );
@@ -64,7 +80,7 @@ const applyRelicEffect = (
       break;
 
     case EffectType.DAMAGE:
-      if (effect.target === 'all_enemies') {
+      if (effect.target === 'all_enemies' || effect.target === 'ALL_ENEMIES') {
         newEnemies = newEnemies.map(enemy => ({
           ...enemy,
           health: enemy.health - (effect.value || 0)
@@ -83,7 +99,7 @@ export const getRelicDescription = (relic: Relic): string => {
 export const shouldTriggerRelic = (
   relic: Relic,
   trigger: RelicTrigger,
-  context?: any
+  _context?: any
 ): boolean => {
   // Check if any of the relic's effects should trigger
   return relic.effects.some(effect => effect.trigger === trigger);

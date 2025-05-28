@@ -18,14 +18,14 @@ A roguelike deck-building card game inspired by Slay the Spire, built with React
 - ✅ **Enemy System**: Advanced enemy AI with intent display and elite encounters
 - ✅ **Hand Management**: Proper card drawing, playing, and deck preservation
 
-### Recent Bug Fixes (v2.1)
-- 🔧 **Deck Preservation**: Fixed deck state management across all game phases
-- 🔧 **Map Progression**: Fixed old nodes remaining available after advancing
-- 🔧 **Targeting UX**: Removed obscuring overlay when selecting attack targets
-- 🔧 **Anger Card**: Fixed Anger effect to properly add copies to discard pile
-- 🔧 **Map Connectivity**: Improved map generation to ensure all nodes are reachable
-- 🔧 **Elite Energy Bug**: Fixed energy not resetting properly for elite encounters
-- 🔧 **Turn Indicator**: Moved to avoid collision with player area
+### Latest Updates
+For detailed information about all changes, bug fixes, and improvements, see [CHANGELOG.md](CHANGELOG.md).
+
+**Recent Highlights:**
+- 🔧 **Critical Bug Fixes**: Deck preservation, map progression, and targeting issues resolved
+- ✨ **Enhanced Tooltips**: Comprehensive tooltip system for all game elements
+- 🎯 **Improved UX**: Better visual feedback and information accessibility
+- 🧪 **Robust Testing**: 135 tests ensuring game reliability
 
 ### Planned Features (Future Phases)
 - 🔄 **More Content**: Additional cards, enemies, and encounters
@@ -142,7 +142,7 @@ src/
 ## 🧪 Testing
 
 The project includes comprehensive test coverage:
-- **133 tests** across 9 test files
+- **135 tests** across 9 test files
 - **Bug fix verification**: Tests for all major bug fixes
 - **Integration tests**: End-to-end game flow testing
 - **Unit tests**: Individual component and utility testing

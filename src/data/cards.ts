@@ -116,7 +116,6 @@ export const getAllCards = (): Card[] => {
       type: CardType.ATTACK,
       rarity: CardRarity.COMMON,
       description: 'Deal 8 damage to ALL enemies.',
-      damage: 8,
       upgraded: false,
       effects: [{
         type: EffectType.DAMAGE,
@@ -216,7 +215,12 @@ export const getAllCards = (): Card[] => {
       rarity: CardRarity.COMMON,
       description: 'Gain 5 Block. Upgrade a card in your hand.',
       block: 5,
-      upgraded: false
+      upgraded: false,
+      effects: [{
+        type: EffectType.UPGRADE_CARD,
+        value: 1,
+        target: TargetType.SELF
+      }]
     },
     {
       id: 'body_slam',
