@@ -77,7 +77,8 @@ export const processStatusEffects = (target: Player | Enemy): Player | Enemy => 
 export const calculateDamage = (
   baseDamage: number,
   attacker: Player | Enemy,
-  target: Player | Enemy
+  target: Player | Enemy,
+  isFirstAttack?: boolean
 ): number => {
   let damage = baseDamage;
   
@@ -97,6 +98,22 @@ export const calculateDamage = (
   const vulnerable = target.statusEffects.find(e => e.type === StatusType.VULNERABLE);
   if (vulnerable) {
     damage = Math.floor(damage * 1.5);
+  }
+  
+  // Apply relic effects if attacker is a player
+  if ('relics' in attacker) {
+    const player = attacker as Player;
+    
+    // Apply Akabeko effect (first attack each combat deals 8 additional damage)
+    if (isFirstAttack) {
+      const hasAkabeko = player.relics.some(r => r.id === 'akabeko');
+      if (hasAkabeko) {
+        damage += 8;
+      }
+    }
+    
+    // Add other damage-affecting relics here if needed
+    // Note: Bronze Scales is a defensive relic that triggers on damage taken, not dealt
   }
   
   return Math.max(0, damage);
@@ -148,5 +165,39 @@ export const getStatusEffectColor = (effectType: StatusType): string => {
       return '#A8E6CF';
     default:
       return '#95A5A6';
+  }
+};
+
+export const getStatusEffectDescription = (statusType: StatusType): string => {
+  switch (statusType) {
+    case StatusType.VULNERABLE:
+      return 'Takes 50% more damage from attacks.';
+    case StatusType.WEAK:
+      return 'Deals 25% less damage with attacks.';
+    case StatusType.STRENGTH:
+      return 'Increases damage dealt by attacks.';
+    case StatusType.POISON:
+      return 'Takes damage at the start of each turn, then reduces by 1.';
+    case StatusType.DEXTERITY:
+      return 'Increases block gained from cards.';
+    default:
+      return 'Unknown status effect.';
+  }
+};
+
+export const getStatusEffectName = (statusType: StatusType): string => {
+  switch (statusType) {
+    case StatusType.VULNERABLE:
+      return 'Vulnerable';
+    case StatusType.WEAK:
+      return 'Weak';
+    case StatusType.STRENGTH:
+      return 'Strength';
+    case StatusType.POISON:
+      return 'Poison';
+    case StatusType.DEXTERITY:
+      return 'Dexterity';
+    default:
+      return statusType;
   }
 }; 

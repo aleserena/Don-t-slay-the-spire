@@ -33,7 +33,7 @@ describe('Integration Tests', () => {
     });
 
     it('should handle card playing and combat mechanics', () => {
-      const { startCombat, playCard, drawCards } = useGameStore.getState();
+      const { playCard, drawCards } = useGameStore.getState();
       
       // Set up combat scenario
       useGameStore.setState({
@@ -153,7 +153,7 @@ describe('Integration Tests', () => {
     });
 
     it('should handle shop and progression systems', () => {
-      const { purchaseShopCard, selectCardReward } = useGameStore.getState();
+      const { selectCardReward } = useGameStore.getState();
       
       // Test card reward selection
       const testCard = {

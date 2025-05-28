@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { upgradeCard, canUpgradeCard, getUpgradePreview } from '../cardUpgrades';
-import { Card, CardType, CardRarity } from '../../types/game';
+import { Card, CardType, CardRarity, EffectType, TargetType } from '../../types/game';
 
 describe('CardUpgrades', () => {
   const createMockCard = (overrides: Partial<Card> = {}): Card => ({
@@ -106,13 +106,17 @@ describe('CardUpgrades', () => {
       const card = createMockCard({ 
         id: 'cleave', 
         name: 'Cleave', 
-        damage: 8,
-        description: 'Deal 8 damage to ALL enemies.'
+        description: 'Deal 8 damage to ALL enemies.',
+        effects: [{
+          type: EffectType.DAMAGE,
+          value: 8,
+          target: TargetType.ALL_ENEMIES
+        }]
       });
       const result = upgradeCard(card);
       
       expect(result.name).toBe('Cleave+');
-      expect(result.damage).toBe(11);
+      expect(result.effects?.[0]?.value).toBe(11);
       expect(result.description).toBe('Deal 11 damage to ALL enemies.');
       expect(result.upgraded).toBe(true);
     });

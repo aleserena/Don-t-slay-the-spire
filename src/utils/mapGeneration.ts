@@ -105,7 +105,7 @@ const generateConnections = (nodes: MapNode[]): void => {
     if (currentFloor.length === 0 || nextFloor.length === 0) continue;
     
     // First, ensure every node on the next floor has at least one connection
-    nextFloor.forEach((nextNode, index) => {
+    nextFloor.forEach((nextNode) => {
       // Find the closest node from current floor
       const closestCurrentNode = currentFloor
         .map(node => ({
@@ -121,9 +121,11 @@ const generateConnections = (nodes: MapNode[]): void => {
     
     // Then, add additional connections for variety
     currentFloor.forEach(currentNode => {
+      // Skip if this node already has many connections
+      if (currentNode.connections.length >= 3) return;
+      
       // Each node connects to 1-2 additional nodes on the next floor
       const maxAdditionalConnections = Math.min(2, nextFloor.length);
-      const currentConnections = currentNode.connections.length;
       const additionalConnections = Math.min(
         Math.floor(Math.random() * 2) + 1,
         maxAdditionalConnections
@@ -168,20 +170,20 @@ export const completeNode = (map: GameMap, nodeId: string): GameMap => {
     if (node.id === nodeId) {
       return { ...node, completed: true };
     }
-    // Disable all nodes from previous floors (they should no longer be available)
-    if (node.y < nodeToComplete.y && !node.completed) {
+    // Disable all nodes from previous floors AND same floor (except the completed one)
+    if (node.y <= nodeToComplete.y && !node.completed) {
       return { ...node, available: false };
     }
     return node;
   });
   
-  // Make connected nodes available ONLY if they are on the next floor
+  // Make connected nodes available ONLY if they are on the immediate next floor
   nodeToComplete.connections.forEach(connectionId => {
     const nodeIndex = updatedNodes.findIndex(n => n.id === connectionId);
     if (nodeIndex !== -1) {
       const connectedNode = updatedNodes[nodeIndex];
-      // Only make available if it's on the next floor (y > current node's y)
-      if (connectedNode.y > nodeToComplete.y) {
+      // Only make available if it's on the immediate next floor (y = current node's y + 1)
+      if (connectedNode.y === nodeToComplete.y + 1) {
         updatedNodes[nodeIndex] = { ...updatedNodes[nodeIndex], available: true };
       }
     }

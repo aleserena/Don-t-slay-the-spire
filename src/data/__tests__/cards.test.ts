@@ -147,9 +147,14 @@ describe('Cards Data', () => {
       const attackCards = allCards.filter(card => card.type === CardType.ATTACK);
       
       attackCards.forEach(card => {
-        expect(card.damage).toBeDefined();
+        // Cards can have damage either as a direct property or through effects
+        const hasDamageProperty = card.damage !== undefined;
+        const hasDamageEffect = card.effects?.some(effect => effect.type === 'damage');
+        
+        expect(hasDamageProperty || hasDamageEffect).toBe(true);
+        
         // Body Slam has 0 base damage by design (damage equals current block)
-        if (card.id !== 'body_slam') {
+        if (card.id !== 'body_slam' && card.damage !== undefined) {
           expect(card.damage).toBeGreaterThan(0);
         }
       });
