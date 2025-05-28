@@ -8,19 +8,7 @@ import { DebugPanel } from './DebugPanel';
 import { Card } from '../types/game';
 import { cardNeedsTarget, isMultiTargetCard } from '../utils/cardUtils';
 import { CardGrid } from './CardGrid';
-
-const getCardTypeColor = (cardType: string) => {
-  switch (cardType) {
-    case 'attack':
-      return 'linear-gradient(135deg, #ff6b6b, #ee5a52)'; // Red
-    case 'skill':
-      return 'linear-gradient(135deg, #4ecdc4, #44a08d)'; // Blue/Teal
-    case 'power':
-      return 'linear-gradient(135deg, #ffe66d, #ffcc02)'; // Yellow
-    default:
-      return 'linear-gradient(135deg, #95a5a6, #7f8c8d)'; // Gray
-  }
-};
+import { DamageDebugPanel } from './DamageDebugPanel';
 
 export const GameBoard: React.FC = () => {
   const { selectedCard, setSelectedCard, playCard, drawPile, discardPile, hand, currentTurn, endTurn, toggleDebugMode } = useGameStore();
@@ -307,6 +295,9 @@ export const GameBoard: React.FC = () => {
 
       {/* Debug Panel */}
       <DebugPanel />
+      
+      {/* Damage Debug Panel */}
+      <DamageDebugPanel />
     </div>
   );
 }; 

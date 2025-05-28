@@ -16,7 +16,6 @@ import {
 } from '../utils/statusEffects';
 import { upgradeCard } from '../utils/cardUpgrades';
 import { getRandomEnemyEncounter } from '../data/enemies';
-import { damageDebugger } from '../utils/damageDebugger';
 import { debugConsole } from '../utils/debugUtils';
 
 interface GameStore extends GameState {
@@ -387,6 +386,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     set((state) => {
       const newHand = state.hand.filter(c => c.id !== cardId);
+      
+      // All cards (including power cards) are discarded normally
       const newDiscardPile = [...state.discardPile, card];
       
       // Store original energy for X-cost cards before any effects are applied
@@ -415,19 +416,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 newEnemies = newEnemies.map(enemy => {
                   const finalDamage = calculateDamage(effect.value, newPlayer, enemy, isFirstAttack);
                   const damageAfterBlock = Math.max(0, finalDamage - enemy.block);
-                  const actualDamageDealt = Math.min(damageAfterBlock, enemy.health);
-                  
-                  // Debug logging
-                  damageDebugger.logDamageCalculation(
-                    card,
-                    newPlayer,
-                    enemy,
-                    effect.value,
-                    finalDamage,
-                    actualDamageDealt,
-                    isFirstAttack,
-                    'DAMAGE_ALL_ENEMIES'
-                  );
                   
                   return {
                     ...enemy,
@@ -440,19 +428,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 if (enemyIndex !== -1) {
                   const finalDamage = calculateDamage(effect.value, newPlayer, newEnemies[enemyIndex], isFirstAttack);
                   const damageAfterBlock = Math.max(0, finalDamage - newEnemies[enemyIndex].block);
-                  const actualDamageDealt = Math.min(damageAfterBlock, newEnemies[enemyIndex].health);
-                  
-                  // Debug logging
-                  damageDebugger.logDamageCalculation(
-                    card,
-                    newPlayer,
-                    newEnemies[enemyIndex],
-                    effect.value,
-                    finalDamage,
-                    actualDamageDealt,
-                    isFirstAttack,
-                    'DAMAGE_SINGLE_ENEMY'
-                  );
                   
                   newEnemies[enemyIndex] = {
                     ...newEnemies[enemyIndex],
@@ -470,19 +445,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
                   const blockDamage = newPlayer.block * (effect.multiplier || 1);
                   const finalDamage = calculateDamage(blockDamage, newPlayer, newEnemies[enemyIndex], isFirstAttack);
                   const damageAfterBlock = Math.max(0, finalDamage - newEnemies[enemyIndex].block);
-                  const actualDamageDealt = Math.min(damageAfterBlock, newEnemies[enemyIndex].health);
-                  
-                  // Debug logging
-                  damageDebugger.logDamageCalculation(
-                    card,
-                    newPlayer,
-                    newEnemies[enemyIndex],
-                    blockDamage,
-                    finalDamage,
-                    actualDamageDealt,
-                    isFirstAttack,
-                    'DAMAGE_MULTIPLIER_BLOCK'
-                  );
                   
                   newEnemies[enemyIndex] = {
                     ...newEnemies[enemyIndex],
@@ -504,14 +466,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     newEnemies = newEnemies.map(enemy => {
                       const finalDamage = calculateDamage(effect.value, state.player, enemy, isFirstAttack && i === 0);
                       const damageAfterBlock = Math.max(0, finalDamage - enemy.block);
-                      const actualDamageDealt = Math.min(damageAfterBlock, enemy.health);
                       
                       // Track damage for debugging
                       const existingResult = damageResults.find(r => r.target.id === enemy.id);
                       if (existingResult) {
-                        existingResult.damageDealt += actualDamageDealt;
+                        existingResult.damageDealt += damageAfterBlock;
                       } else {
-                        damageResults.push({ target: enemy, damageDealt: actualDamageDealt });
+                        damageResults.push({ target: enemy, damageDealt: damageAfterBlock });
                       }
                       
                       return {
@@ -522,15 +483,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     });
                   }
                   
-                  // Debug logging for energy-based damage
-                  damageDebugger.logEnergyBasedDamage(
-                    card,
-                    originalEnergy,
-                    whirlwindHits,
-                    effect.value,
-                    whirlwindHits,
-                    damageResults
-                  );
                 }
               }
               break;
@@ -625,19 +577,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if (enemyIndex !== -1) {
             const finalDamage = calculateDamage(card.damage, newPlayer, newEnemies[enemyIndex], isFirstAttack);
             const damageAfterBlock = Math.max(0, finalDamage - newEnemies[enemyIndex].block);
-            const actualDamageDealt = Math.min(damageAfterBlock, newEnemies[enemyIndex].health);
-            
-            // Debug logging for legacy damage
-            damageDebugger.logDamageCalculation(
-              card,
-              newPlayer,
-              newEnemies[enemyIndex],
-              card.damage,
-              finalDamage,
-              actualDamageDealt,
-              isFirstAttack,
-              'LEGACY_DAMAGE'
-            );
             
             newEnemies[enemyIndex] = {
               ...newEnemies[enemyIndex],
@@ -658,19 +597,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // Handle power cards
       if (card.type === CardType.POWER) {
-        const powerCardDef = getPowerCardDefinition(card.id);
+        const powerCardDef = getPowerCardDefinition(card.baseId);
         if (powerCardDef) {
-          // Check if this power card is already active
-          const existingPowerCard = newPlayer.powerCards.find(pc => pc.id === powerCardDef.id);
-          if (!existingPowerCard) {
-            // Add the power card to active power cards
-            newPlayer.powerCards = [...newPlayer.powerCards, powerCardDef];
-          }
+          // Always add the power card (allow multiple copies)
+          newPlayer.powerCards = [...newPlayer.powerCards, powerCardDef];
           
-          // Apply immediate effects (like Inflame's immediate strength gain)
-          const powerResult = processPowerCardEffects(PowerTrigger.COMBAT_START, newPlayer, newEnemies);
-          newPlayer = powerResult.player;
-          newEnemies = powerResult.enemies;
+          // Only apply immediate power card effects if the card doesn't have its own effects
+          // This prevents double application for cards like Inflame
+          if (!card.effects || card.effects.length === 0) {
+            const powerResult = processPowerCardEffects(PowerTrigger.COMBAT_START, newPlayer, newEnemies);
+            newPlayer = powerResult.player;
+            newEnemies = powerResult.enemies;
+          }
         }
       }
 
@@ -684,7 +622,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           .filter(() => Math.random() < 0.4)
           .slice(0, 3);
 
-        // Clear temporary status effects at end of combat
+        // Clear temporary status effects and power cards at end of combat
         const clearedPlayer = {
           ...newPlayer,
           gold: newPlayer.gold + rewardGold,
@@ -692,7 +630,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             effect.type !== StatusType.WEAK && 
             effect.type !== StatusType.VULNERABLE && 
             effect.type !== StatusType.STRENGTH
-          )
+          ),
+          powerCards: [] // Clear all power cards after combat
         };
 
         return {
@@ -771,16 +710,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             if (enemy.intent.value) {
               const damage = calculateDamage(enemy.intent.value, enemy, newPlayer);
               const damageAfterBlock = Math.max(0, damage - newPlayer.block);
-              const actualDamageDealt = Math.min(damageAfterBlock, newPlayer.health);
               
               // Debug logging for enemy damage
-              debugConsole.log('🔥 Enemy Attack Debug:', {
+              debugConsole.log('Enemy Attack Debug:', {
                 enemy: enemy.name,
                 baseDamage: enemy.intent.value,
                 calculatedDamage: damage,
                 playerBlock: newPlayer.block,
                 damageAfterBlock,
-                actualDamageDealt,
                 playerHealthBefore: newPlayer.health,
                 playerHealthAfter: newPlayer.health - damageAfterBlock
               });

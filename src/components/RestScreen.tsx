@@ -1,13 +1,11 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
-import { Card, CardType } from '../types/game';
 import { canUpgradeCard, getUpgradePreview } from '../utils/cardUpgrades';
 import { UnifiedHeader } from './UnifiedHeader';
 import { CardGrid } from './CardGrid';
 
 export const RestScreen: React.FC = () => {
   const { 
-    player,
     drawPile, 
     discardPile, 
     showCardUpgradeModal,
@@ -16,32 +14,6 @@ export const RestScreen: React.FC = () => {
     openCardUpgradeModal,
     closeCardUpgradeModal
   } = useGameStore();
-
-  const getCardTypeColor = (type: CardType): string => {
-    switch (type) {
-      case CardType.ATTACK:
-        return '#ff6b6b';
-      case CardType.SKILL:
-        return '#4ecdc4';
-      case CardType.POWER:
-        return '#ffe66d';
-      default:
-        return '#95a5a6';
-    }
-  };
-
-  const getRarityColor = (rarity: string): string => {
-    switch (rarity) {
-      case 'common':
-        return '#95a5a6';
-      case 'uncommon':
-        return '#3498db';
-      case 'rare':
-        return '#f39c12';
-      default:
-        return '#95a5a6';
-    }
-  };
 
   const upgradableCards = [...drawPile, ...discardPile].filter(canUpgradeCard);
 

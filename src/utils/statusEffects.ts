@@ -1,4 +1,4 @@
-import { StatusType, Player, Enemy, StatusEffect, Relic } from '../types/game';
+import { StatusType, Player, Enemy } from '../types/game';
 import { debugConsole } from './debugUtils';
 
 export const applyStatusEffect = (
@@ -116,7 +116,7 @@ export const calculateDamage = (
   }
   
   if (!attacker.statusEffects || !target.statusEffects) {
-    debugConsole.error('�� DAMAGE CALCULATION ERROR: Missing statusEffects:', { 
+    debugConsole.error('🚨 DAMAGE CALCULATION ERROR: Missing statusEffects:', { 
       attackerEffects: attacker.statusEffects, 
       targetEffects: target.statusEffects 
     });
