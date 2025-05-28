@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore';
 import { generateMap, completeNode } from '../utils/mapGeneration';
-import { GamePhase, TurnPhase, CardType, StatusType, IntentType, EffectType, TargetType } from '../types/game';
+import { GamePhase, TurnPhase, CardType, StatusType, IntentType, EffectType, TargetType, Card } from '../types/game';
 import { calculateDamage, getStatusEffectDescription, getStatusEffectName } from '../utils/statusEffects';
 
 describe('Bug Fixes', () => {
@@ -14,13 +14,14 @@ describe('Bug Fixes', () => {
       const { selectCardReward, startCombat } = useGameStore.getState();
       
       // Add a card to the deck through card reward
-      const testCard = {
-        id: 'test_reward_card',
-        name: 'Test Reward',
+      const testCard: Card = {
+        id: 'test_card',
+        baseId: 'test_card',
+        name: 'Test Card',
         cost: 1,
         type: CardType.ATTACK,
         rarity: 'common' as any,
-        description: 'Test card',
+        description: 'A test card',
         damage: 5,
         upgraded: false
       };
@@ -439,6 +440,7 @@ describe('Bug Fixes', () => {
       // Create an Anger card
       const angerCard = {
         id: 'anger_test',
+        baseId: 'anger',
         name: 'Anger',
         cost: 0,
         type: CardType.ATTACK,

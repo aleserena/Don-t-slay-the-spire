@@ -1,16 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { upgradeCard, canUpgradeCard, getUpgradePreview } from '../cardUpgrades';
-import { Card, CardType, CardRarity, EffectType, TargetType } from '../../types/game';
+import { Card, CardType, CardRarity, EffectType, TargetType, StatusType } from '../../types/game';
 
 describe('CardUpgrades', () => {
   const createMockCard = (overrides: Partial<Card> = {}): Card => ({
     id: 'test_card',
+    baseId: 'test_card',
     name: 'Test Card',
     cost: 1,
     type: CardType.ATTACK,
     rarity: CardRarity.COMMON,
-    description: 'A test card',
-    damage: 6,
+    description: 'Test description',
+    damage: 5,
     upgraded: false,
     ...overrides
   });
@@ -56,18 +57,40 @@ describe('CardUpgrades', () => {
     });
 
     it('should upgrade Bash card', () => {
-      const card = createMockCard({ 
-        id: 'bash', 
-        name: 'Bash', 
-        damage: 8,
-        description: 'Deal 8 damage. Apply 2 Vulnerable.'
-      });
-      const result = upgradeCard(card);
-      
+      const bashCard: Card = {
+        id: 'bash',
+        baseId: 'bash',
+        name: 'Bash',
+        cost: 2,
+        type: CardType.ATTACK,
+        rarity: CardRarity.COMMON,
+        description: 'Deal 8 damage. Apply 2 Vulnerable.',
+        upgraded: false,
+        effects: [
+          {
+            type: EffectType.DAMAGE,
+            value: 8,
+            target: TargetType.ENEMY
+          },
+          {
+            type: EffectType.APPLY_STATUS,
+            value: 2,
+            target: TargetType.ENEMY,
+            statusType: StatusType.VULNERABLE
+          }
+        ]
+      };
+
+      const result = upgradeCard(bashCard);
+
       expect(result.name).toBe('Bash+');
-      expect(result.damage).toBe(10);
       expect(result.description).toBe('Deal 10 damage. Apply 2 Vulnerable.');
       expect(result.upgraded).toBe(true);
+      
+      // Check for upgraded damage effect
+      const damageEffect = result.effects?.find(effect => effect.type === EffectType.DAMAGE);
+      expect(damageEffect).toBeDefined();
+      expect(damageEffect?.value).toBe(10);
     });
 
     it('should upgrade Iron Wave card', () => {

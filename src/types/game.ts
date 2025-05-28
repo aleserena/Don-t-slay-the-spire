@@ -1,7 +1,8 @@
 export interface Card {
   id: string;
+  baseId: string;
   name: string;
-  cost: number;
+  cost: number | 'X';
   type: CardType;
   rarity: CardRarity;
   description: string;
@@ -26,16 +27,20 @@ export enum CardRarity {
 export interface CardEffect {
   type: EffectType;
   value: number;
+  multiplier?: number;
   target: TargetType;
   statusType?: StatusType;
 }
 
 export enum EffectType {
   DAMAGE = 'damage',
+  DAMAGE_MULTIPLIER_BLOCK = 'damage_multiplier_block',
+  DAMAGE_MULTIPLIER_ENERGY = 'damage_multiplier_energy',
   BLOCK = 'block',
   HEAL = 'heal',
   DRAW_CARDS = 'draw_cards',
   GAIN_ENERGY = 'gain_energy',
+  LOSE_ENERGY = 'lose_energy',
   APPLY_STATUS = 'apply_status',
   ADD_CARD_TO_DISCARD = 'add_card_to_discard',
   UPGRADE_CARD = 'upgrade_card'
@@ -95,6 +100,7 @@ export interface Player {
   statusEffects: StatusEffect[];
   gold: number;
   relics: Relic[];
+  powerCards: PowerCard[];
 }
 
 export interface GameState {
@@ -168,4 +174,27 @@ export enum RelicRarity {
   RARE = 'rare',
   BOSS = 'boss',
   STARTER = 'starter'
+}
+
+export interface PowerCard {
+  id: string;
+  name: string;
+  description: string;
+  effects: PowerCardEffect[];
+}
+
+export interface PowerCardEffect {
+  trigger: PowerTrigger;
+  type: EffectType;
+  value: number;
+  target: TargetType;
+  statusType?: StatusType;
+}
+
+export enum PowerTrigger {
+  TURN_START = 'turn_start',
+  TURN_END = 'turn_end',
+  COMBAT_START = 'combat_start',
+  CARD_PLAYED = 'card_played',
+  DAMAGE_TAKEN = 'damage_taken'
 } 

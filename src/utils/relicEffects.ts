@@ -19,7 +19,7 @@ export const processRelicEffects = (
           // Bronze Scales: Deal 3 damage back to all enemies
           newEnemies = newEnemies.map(enemy => ({
             ...enemy,
-            health: enemy.health - 3
+            health: Math.max(0, enemy.health - 3)
           }));
         } else if (relic.id === 'centennial_puzzle' && trigger === RelicTrigger.DAMAGE_TAKEN) {
           // Centennial Puzzle: Draw 3 cards on first damage taken
@@ -68,10 +68,11 @@ const applyRelicEffect = (
 
     case EffectType.APPLY_STATUS:
       if (effect.statusType) {
-        // Check if the effect has a target specified, otherwise apply to all enemies
-        if (effect.target === 'self' || !effect.target) {
+        // Check if the effect has a target specified
+        if (effect.target === 'self') {
           newPlayer = applyStatusEffect(newPlayer, effect.statusType, effect.value || 1) as Player;
-        } else if (effect.target === 'all_enemies' || effect.target === 'ALL_ENEMIES') {
+        } else if (effect.target === 'all_enemies' || effect.target === 'ALL_ENEMIES' || !effect.target) {
+          // Default to all enemies if no target specified for status effects
           newEnemies = newEnemies.map(enemy => 
             applyStatusEffect(enemy, effect.statusType!, effect.value || 1) as Enemy
           );

@@ -300,7 +300,7 @@ export const processEventConsequence = (consequence: any, gameState: any) => {
       if (card) {
         return {
           ...gameState,
-          drawPile: [...gameState.drawPile, { ...card, id: `${card.id}_${Date.now()}` }]
+          drawPile: [...gameState.drawPile, { ...card, id: `${card.baseId}_${Date.now()}` }]
         };
       }
       return gameState;

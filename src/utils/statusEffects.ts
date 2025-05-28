@@ -36,7 +36,7 @@ export const getStatusEffectDuration = (effectType: StatusType): number | undefi
   switch (effectType) {
     case StatusType.WEAK:
     case StatusType.VULNERABLE:
-      return 3; // These effects last 3 turns
+      return undefined; // These effects use stacks, not duration
     case StatusType.POISON:
       return undefined; // Poison lasts until combat ends
     case StatusType.STRENGTH:
@@ -47,31 +47,54 @@ export const getStatusEffectDuration = (effectType: StatusType): number | undefi
   }
 };
 
-export const processStatusEffects = (target: Player | Enemy): Player | Enemy => {
-  const newTarget = { ...target };
+export const processStatusEffects = (entity: Player | Enemy): Player | Enemy => {
+  let newEntity = { ...entity };
   
   // Process each status effect
-  newTarget.statusEffects = newTarget.statusEffects.map(effect => {
+  newEntity.statusEffects = newEntity.statusEffects.map(effect => {
+    let newEffect = { ...effect };
+    
     switch (effect.type) {
       case StatusType.POISON:
-        // Poison deals damage at start of turn
-        newTarget.health = Math.max(0, newTarget.health - effect.stacks);
-        return effect;
-      
+        // Poison deals damage then reduces stacks
+        if ('health' in newEntity) {
+          newEntity.health = Math.max(0, newEntity.health - effect.stacks);
+        }
+        newEffect.stacks = Math.max(0, effect.stacks - 1);
+        break;
+        
       case StatusType.WEAK:
       case StatusType.VULNERABLE:
-        // Reduce duration
-        if (effect.duration !== undefined) {
-          return { ...effect, duration: effect.duration - 1 };
-        }
-        return effect;
-      
+        // Reduce stacks by 1 at end of turn
+        newEffect.stacks = Math.max(0, effect.stacks - 1);
+        break;
+        
+      case StatusType.STRENGTH:
+      case StatusType.DEXTERITY:
+        // These persist for the entire combat
+        break;
+        
       default:
-        return effect;
+        // For other effects with duration, reduce duration
+        if (effect.duration !== undefined) {
+          newEffect.duration = Math.max(0, effect.duration - 1);
+        }
+        break;
     }
-  }).filter(effect => effect.duration === undefined || effect.duration > 0);
-  
-  return newTarget;
+    
+    return newEffect;
+  }).filter(effect => {
+    // Remove effects with 0 stacks or 0 duration
+    if (effect.stacks !== undefined && effect.stacks <= 0) {
+      return false;
+    }
+    if (effect.duration !== undefined && effect.duration <= 0) {
+      return false;
+    }
+    return true;
+  });
+
+  return newEntity;
 };
 
 export const calculateDamage = (
@@ -80,43 +103,93 @@ export const calculateDamage = (
   target: Player | Enemy,
   isFirstAttack?: boolean
 ): number => {
+  // Input validation
+  if (typeof baseDamage !== 'number' || isNaN(baseDamage)) {
+    console.error('🚨 DAMAGE CALCULATION ERROR: Invalid baseDamage:', baseDamage);
+    return 0;
+  }
+  
+  if (!attacker || !target) {
+    console.error('🚨 DAMAGE CALCULATION ERROR: Missing attacker or target:', { attacker, target });
+    return 0;
+  }
+  
+  if (!attacker.statusEffects || !target.statusEffects) {
+    console.error('🚨 DAMAGE CALCULATION ERROR: Missing statusEffects:', { 
+      attackerEffects: attacker.statusEffects, 
+      targetEffects: target.statusEffects 
+    });
+    return 0;
+  }
+
   let damage = baseDamage;
+  const originalDamage = damage;
   
   // Apply strength bonus
   const strength = attacker.statusEffects.find(e => e.type === StatusType.STRENGTH);
   if (strength) {
-    damage += strength.stacks;
+    if (typeof strength.stacks !== 'number' || isNaN(strength.stacks)) {
+      console.error('🚨 DAMAGE CALCULATION ERROR: Invalid strength stacks:', strength.stacks);
+    } else {
+      damage += strength.stacks;
+    }
   }
   
   // Apply weak debuff (reduces damage by 25%)
   const weak = attacker.statusEffects.find(e => e.type === StatusType.WEAK);
   if (weak) {
-    damage = Math.floor(damage * 0.75);
+    if (typeof weak.stacks !== 'number' || isNaN(weak.stacks)) {
+      console.error('🚨 DAMAGE CALCULATION ERROR: Invalid weak stacks:', weak.stacks);
+    } else {
+      damage = Math.floor(damage * 0.75);
+    }
   }
   
   // Apply vulnerable on target (increases damage by 50%)
   const vulnerable = target.statusEffects.find(e => e.type === StatusType.VULNERABLE);
   if (vulnerable) {
-    damage = Math.floor(damage * 1.5);
+    if (typeof vulnerable.stacks !== 'number' || isNaN(vulnerable.stacks)) {
+      console.error('🚨 DAMAGE CALCULATION ERROR: Invalid vulnerable stacks:', vulnerable.stacks);
+    } else {
+      damage = Math.floor(damage * 1.5);
+    }
   }
   
   // Apply relic effects if attacker is a player
   if ('relics' in attacker) {
     const player = attacker as Player;
     
-    // Apply Akabeko effect (first attack each combat deals 8 additional damage)
-    if (isFirstAttack) {
-      const hasAkabeko = player.relics.some(r => r.id === 'akabeko');
-      if (hasAkabeko) {
-        damage += 8;
+    if (!player.relics) {
+      console.error('🚨 DAMAGE CALCULATION ERROR: Player missing relics array');
+    } else {
+      // Apply Akabeko effect (first attack each combat deals 8 additional damage)
+      if (isFirstAttack) {
+        const hasAkabeko = player.relics.some(r => r && r.id === 'akabeko');
+        if (hasAkabeko) {
+          damage += 8;
+        }
       }
     }
-    
-    // Add other damage-affecting relics here if needed
-    // Note: Bronze Scales is a defensive relic that triggers on damage taken, not dealt
   }
   
-  return Math.max(0, damage);
+  const finalDamage = Math.max(0, damage);
+  
+  // Log calculation details for debugging
+  if (originalDamage !== finalDamage) {
+    console.log('🔢 Damage Calculation Details:', {
+      baseDamage: originalDamage,
+      finalDamage,
+      modifiers: {
+        strength: strength?.stacks || 0,
+        weak: weak ? 'applied (-25%)' : 'none',
+        vulnerable: vulnerable ? 'applied (+50%)' : 'none',
+        akabeko: isFirstAttack && 'relics' in attacker && (attacker as Player).relics?.some(r => r?.id === 'akabeko') ? 'applied (+8)' : 'none'
+      },
+      calculation: `${originalDamage} → ${finalDamage}`
+    });
+  }
+  
+  return finalDamage;
 };
 
 export const calculateBlock = (

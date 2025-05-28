@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../gameStore';
 import { TurnPhase, GamePhase, StatusType, IntentType, CardType, CardRarity, EffectType, TargetType } from '../../types/game';
+import { getAllCards } from '../../data/cards';
 
 describe('GameStore', () => {
   beforeEach(() => {
@@ -72,7 +73,8 @@ describe('GameStore', () => {
         playCard(cardToPlay.id);
         
         const newStore = useGameStore.getState();
-        expect(newStore.player.energy).toBe(initialEnergy - cardToPlay.cost);
+        const cardCost = typeof cardToPlay.cost === 'number' ? cardToPlay.cost : 0;
+        expect(newStore.player.energy).toBe(initialEnergy - cardCost);
         expect(newStore.hand.find(c => c.id === cardToPlay.id)).toBeUndefined();
         expect(newStore.discardPile.find(c => c.id === cardToPlay.id)).toBeDefined();
       }
@@ -103,7 +105,7 @@ describe('GameStore', () => {
       const cardToPlay = store.hand[0];
       const initialHandSize = store.hand.length;
       
-      if (cardToPlay && cardToPlay.cost > 0) {
+      if (cardToPlay && typeof cardToPlay.cost === 'number' && cardToPlay.cost > 0) {
         playCard(cardToPlay.id);
         
         const newStore = useGameStore.getState();
@@ -144,6 +146,167 @@ describe('GameStore', () => {
         // Hand should remain unchanged
         expect(newStore.hand.length).toBe(initialHandSize);
       }
+    });
+
+    it('should handle whirlwind energy consumption and damage', () => {
+      const { playCard } = useGameStore.getState();
+      
+      // Get the actual Whirlwind card from data
+      const whirlwindCard = getAllCards().find(card => card.baseId === 'whirlwind')!;
+      
+      // Set up combat scenario with whirlwind card
+      useGameStore.setState({
+        gamePhase: GamePhase.COMBAT,
+        enemies: [
+          {
+            id: 'enemy1',
+            name: 'Enemy 1',
+            health: 20,
+            maxHealth: 20,
+            block: 0,
+            intent: { type: IntentType.ATTACK, value: 10 },
+            statusEffects: []
+          },
+          {
+            id: 'enemy2',
+            name: 'Enemy 2',
+            health: 20,
+            maxHealth: 20,
+            block: 0,
+            intent: { type: IntentType.ATTACK, value: 10 },
+            statusEffects: []
+          }
+        ],
+        currentTurn: TurnPhase.PLAYER_TURN,
+        player: { 
+          ...useGameStore.getState().player, 
+          energy: 3,
+          maxEnergy: 3
+        },
+        hand: [whirlwindCard],
+        discardPile: []
+      });
+      
+      // Play whirlwind
+      playCard('whirlwind');
+      
+      const finalState = useGameStore.getState();
+      
+      // Should consume all energy (3)
+      expect(finalState.player.energy).toBe(0);
+      
+      // Each enemy should take 15 damage (5 damage × 3 hits)
+      expect(finalState.enemies[0].health).toBe(5); // 20 - 15 = 5
+      expect(finalState.enemies[1].health).toBe(5); // 20 - 15 = 5
+      
+      // Card should be in discard pile
+      expect(finalState.hand.length).toBe(0);
+      expect(finalState.discardPile.length).toBe(1);
+      expect(finalState.discardPile[0].name).toBe('Whirlwind');
+    });
+
+    it('should allow whirlwind to be played with 0 energy', () => {
+      const { playCard } = useGameStore.getState();
+      
+      // Get the actual Whirlwind card from data
+      const whirlwindCard = getAllCards().find(card => card.baseId === 'whirlwind')!;
+      
+      // Set up combat scenario with whirlwind card and 0 energy
+      useGameStore.setState({
+        gamePhase: GamePhase.COMBAT,
+        enemies: [
+          {
+            id: 'enemy1',
+            name: 'Enemy 1',
+            health: 20,
+            maxHealth: 20,
+            block: 0,
+            intent: { type: IntentType.ATTACK, value: 10 },
+            statusEffects: []
+          }
+        ],
+        currentTurn: TurnPhase.PLAYER_TURN,
+        player: { 
+          ...useGameStore.getState().player, 
+          energy: 0,
+          maxEnergy: 3
+        },
+        hand: [whirlwindCard],
+        discardPile: []
+      });
+      
+      // Play whirlwind with 0 energy
+      playCard('whirlwind');
+      
+      const finalState = useGameStore.getState();
+      
+      // Should still consume 0 energy (no change)
+      expect(finalState.player.energy).toBe(0);
+      
+      // Enemy should take no damage (0 hits)
+      expect(finalState.enemies[0].health).toBe(20); // No damage
+      
+      // Card should be in discard pile
+      expect(finalState.hand.length).toBe(0);
+      expect(finalState.discardPile.length).toBe(1);
+      expect(finalState.discardPile[0].name).toBe('Whirlwind');
+    });
+
+    it('should kill enemies when Bronze Scales reduces their health to 0', () => {
+      const { processEnemyTurn } = useGameStore.getState();
+      
+      // Set up combat scenario with Bronze Scales relic and low-health enemy
+      useGameStore.setState({
+        gamePhase: GamePhase.COMBAT,
+        enemies: [
+          {
+            id: 'weak_enemy',
+            name: 'Weak Enemy',
+            health: 2, // Low health so Bronze Scales will kill it
+            maxHealth: 10,
+            block: 0,
+            intent: { type: IntentType.ATTACK, value: 5 },
+            statusEffects: []
+          },
+          {
+            id: 'strong_enemy',
+            name: 'Strong Enemy',
+            health: 20,
+            maxHealth: 20,
+            block: 0,
+            intent: { type: IntentType.ATTACK, value: 5 },
+            statusEffects: []
+          }
+        ],
+        currentTurn: TurnPhase.ENEMY_TURN,
+        player: { 
+          ...useGameStore.getState().player, 
+          energy: 3,
+          maxEnergy: 3,
+          relics: [{
+            id: 'bronze_scales',
+            name: 'Bronze Scales',
+            description: 'Whenever you take damage, deal 3 damage to ALL enemies.',
+            rarity: 'uncommon' as any,
+            effects: [{
+              trigger: 'damage_taken' as any,
+              effect: 'damage' as any,
+              value: 3,
+              target: 'all_enemies'
+            }]
+          }]
+        }
+      });
+      
+      // Process enemy turn (they will attack and trigger Bronze Scales)
+      processEnemyTurn();
+      
+      const finalState = useGameStore.getState();
+      
+      // Weak enemy should be dead (removed from enemies array)
+      expect(finalState.enemies.length).toBe(1);
+      expect(finalState.enemies[0].name).toBe('Strong Enemy');
+      expect(finalState.enemies[0].health).toBe(17); // 20 - 3 = 17
     });
   });
 
@@ -267,11 +430,12 @@ describe('GameStore', () => {
         }],
         hand: [{
           id: 'test_strike',
+          baseId: 'strike',
           name: 'Strike',
           cost: 1,
           type: CardType.ATTACK,
           rarity: CardRarity.COMMON,
-          description: 'Deal 6 damage',
+          description: 'Deal 10 damage.',
           damage: 10,
           upgraded: false
         }],
@@ -312,6 +476,7 @@ describe('GameStore', () => {
       
       const testCard = {
         id: 'test_reward_card',
+        baseId: 'test_reward_card',
         name: 'Test Card',
         cost: 1,
         type: CardType.ATTACK,
@@ -371,6 +536,7 @@ describe('GameStore', () => {
       
       const testCard = {
         id: 'shop_card',
+        baseId: 'shop_card',
         name: 'Shop Card',
         cost: 1,
         type: CardType.ATTACK,
@@ -412,6 +578,7 @@ describe('GameStore', () => {
       
       const testCard = {
         id: 'expensive_card',
+        baseId: 'expensive_card',
         name: 'Expensive Card',
         cost: 1,
         type: CardType.ATTACK,
@@ -467,6 +634,7 @@ describe('GameStore', () => {
         }],
         hand: [{
           id: 'bash',
+          baseId: 'bash',
           name: 'Bash',
           cost: 2,
           type: CardType.ATTACK,

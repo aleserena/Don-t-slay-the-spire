@@ -25,7 +25,7 @@ For detailed information about all changes, bug fixes, and improvements, see [CH
 - 🔧 **Critical Bug Fixes**: Deck preservation, map progression, and targeting issues resolved
 - ✨ **Enhanced Tooltips**: Comprehensive tooltip system for all game elements
 - 🎯 **Improved UX**: Better visual feedback and information accessibility
-- 🧪 **Robust Testing**: 135 tests ensuring game reliability
+- 🧪 **Robust Testing**: 176 tests ensuring game reliability
 
 ### Planned Features (Future Phases)
 - 🔄 **More Content**: Additional cards, enemies, and encounters
@@ -142,7 +142,7 @@ src/
 ## 🧪 Testing
 
 The project includes comprehensive test coverage:
-- **135 tests** across 9 test files
+- **176 tests** across 15 test files
 - **Bug fix verification**: Tests for all major bug fixes
 - **Integration tests**: End-to-end game flow testing
 - **Unit tests**: Individual component and utility testing

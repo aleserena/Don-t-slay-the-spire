@@ -17,7 +17,8 @@ describe('StatusEffects', () => {
     maxEnergy: 3,
     statusEffects: [],
     gold: 50,
-    relics: []
+    relics: [],
+    powerCards: []
   });
 
   const createMockEnemy = (): Enemy => ({
@@ -60,15 +61,15 @@ describe('StatusEffects', () => {
       expect(result.statusEffects[0]).toEqual({
         type: StatusType.WEAK,
         stacks: 1,
-        duration: 3
+        duration: undefined
       });
     });
   });
 
   describe('getStatusEffectDuration', () => {
     it('should return correct duration for temporary effects', () => {
-      expect(getStatusEffectDuration(StatusType.WEAK)).toBe(3);
-      expect(getStatusEffectDuration(StatusType.VULNERABLE)).toBe(3);
+      expect(getStatusEffectDuration(StatusType.WEAK)).toBeUndefined();
+      expect(getStatusEffectDuration(StatusType.VULNERABLE)).toBeUndefined();
     });
 
     it('should return undefined for permanent effects', () => {
@@ -87,18 +88,18 @@ describe('StatusEffects', () => {
       expect(result.health).toBe(75); // 80 - 5 poison damage
     });
 
-    it('should reduce duration of temporary effects', () => {
+    it('should reduce stacks of temporary effects', () => {
       const player = createMockPlayer();
-      player.statusEffects = [{ type: StatusType.WEAK, stacks: 1, duration: 3 }];
+      player.statusEffects = [{ type: StatusType.WEAK, stacks: 2, duration: undefined }];
       
       const result = processStatusEffects(player) as Player;
       
-      expect(result.statusEffects[0].duration).toBe(2);
+      expect(result.statusEffects[0].stacks).toBe(1);
     });
 
     it('should remove expired effects', () => {
       const player = createMockPlayer();
-      player.statusEffects = [{ type: StatusType.WEAK, stacks: 1, duration: 1 }];
+      player.statusEffects = [{ type: StatusType.WEAK, stacks: 1, duration: undefined }];
       
       const result = processStatusEffects(player) as Player;
       
@@ -136,7 +137,7 @@ describe('StatusEffects', () => {
 
     it('should apply weak debuff', () => {
       const attacker = createMockPlayer();
-      attacker.statusEffects = [{ type: StatusType.WEAK, stacks: 1, duration: 3 }];
+      attacker.statusEffects = [{ type: StatusType.WEAK, stacks: 1, duration: undefined }];
       const target = createMockEnemy();
       
       const damage = calculateDamage(10, attacker, target);
@@ -146,7 +147,7 @@ describe('StatusEffects', () => {
     it('should apply vulnerable on target', () => {
       const attacker = createMockPlayer();
       const target = createMockEnemy();
-      target.statusEffects = [{ type: StatusType.VULNERABLE, stacks: 1, duration: 3 }];
+      target.statusEffects = [{ type: StatusType.VULNERABLE, stacks: 1, duration: undefined }];
       
       const damage = calculateDamage(10, attacker, target);
       expect(damage).toBe(15); // 10 * 1.5 = 15
@@ -156,10 +157,10 @@ describe('StatusEffects', () => {
       const attacker = createMockPlayer();
       attacker.statusEffects = [
         { type: StatusType.STRENGTH, stacks: 2, duration: undefined },
-        { type: StatusType.WEAK, stacks: 1, duration: 3 }
+        { type: StatusType.WEAK, stacks: 1, duration: undefined }
       ];
       const target = createMockEnemy();
-      target.statusEffects = [{ type: StatusType.VULNERABLE, stacks: 1, duration: 3 }];
+      target.statusEffects = [{ type: StatusType.VULNERABLE, stacks: 1, duration: undefined }];
       
       const damage = calculateDamage(10, attacker, target);
       // (10 + 2) * 0.75 * 1.5 = 12 * 0.75 * 1.5 = 13.5, floored to 13

@@ -1,4 +1,5 @@
 import { Card, CardType } from '../types/game';
+import { EffectType } from '../types/game';
 
 export const upgradeCard = (card: Card): Card => {
   if (card.upgraded) return card; // Already upgraded
@@ -22,8 +23,13 @@ export const upgradeCard = (card: Card): Card => {
       break;
     
     case 'bash':
-      upgradedCard.damage = (card.damage || 0) + 2;
       upgradedCard.description = 'Deal 10 damage. Apply 2 Vulnerable.';
+      // Update the damage effect value
+      if (upgradedCard.effects) {
+        upgradedCard.effects = upgradedCard.effects.map(effect => 
+          effect.type === EffectType.DAMAGE ? { ...effect, value: 10 } : effect
+        );
+      }
       break;
     
     case 'iron_wave':
@@ -38,13 +44,45 @@ export const upgradeCard = (card: Card): Card => {
       break;
     
     case 'cleave':
-      // Cleave uses effects for damage, so upgrade the effect value
+      upgradedCard.description = 'Deal 11 damage to ALL enemies.';
+      // Update the effect value for consistency
       if (upgradedCard.effects) {
         upgradedCard.effects = upgradedCard.effects.map(effect => 
-          effect.type === 'damage' ? { ...effect, value: effect.value + 3 } : effect
+          effect.type === 'damage' ? { ...effect, value: (effect.value || 8) + 3 } : effect
         );
       }
-      upgradedCard.description = 'Deal 11 damage to ALL enemies.';
+      break;
+    
+    case 'twin_strike':
+      upgradedCard.description = 'Deal 6 damage twice.';
+      // Update both damage effects
+      if (upgradedCard.effects) {
+        upgradedCard.effects = upgradedCard.effects.map(effect => 
+          effect.type === EffectType.DAMAGE ? { ...effect, value: 6 } : effect
+        );
+      }
+      break;
+    
+    case 'body_slam':
+      // Body Slam+ deals double block damage (2x multiplier)
+      if (upgradedCard.effects) {
+        upgradedCard.effects = upgradedCard.effects.map(effect => 
+          effect.type === EffectType.DAMAGE_MULTIPLIER_BLOCK 
+            ? { ...effect, multiplier: 2 } 
+            : effect
+        );
+      }
+      upgradedCard.description = 'Deal damage equal to 2x your current Block.';
+      break;
+    
+    case 'anger':
+      upgradedCard.description = 'Deal 8 damage. Add a copy of this card into your discard pile.';
+      // Update the damage effect value
+      if (upgradedCard.effects) {
+        upgradedCard.effects = upgradedCard.effects.map(effect => 
+          effect.type === EffectType.DAMAGE ? { ...effect, value: 8 } : effect
+        );
+      }
       break;
     
     default:
@@ -53,18 +91,18 @@ export const upgradeCard = (card: Card): Card => {
         if (card.damage) {
           upgradedCard.damage = card.damage + 3;
         }
-        if (card.cost > 0) {
+        if (typeof card.cost === 'number' && card.cost > 0) {
           upgradedCard.cost = Math.max(0, card.cost - 1);
         }
       } else if (card.type === CardType.SKILL) {
         if (card.block) {
           upgradedCard.block = card.block + 3;
         }
-        if (card.cost > 0) {
+        if (typeof card.cost === 'number' && card.cost > 0) {
           upgradedCard.cost = Math.max(0, card.cost - 1);
         }
       } else if (card.type === CardType.POWER) {
-        if (card.cost > 0) {
+        if (typeof card.cost === 'number' && card.cost > 0) {
           upgradedCard.cost = Math.max(0, card.cost - 1);
         }
       }
