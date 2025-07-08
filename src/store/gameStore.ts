@@ -684,7 +684,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // Apply all consequences
       choice.consequences.forEach((consequence) => {
-        newState = processEventConsequence(consequence, newState);
+        const processedState = processEventConsequence(consequence, newState);
+        // Merge the processed state back into our GameStore, preserving additional properties
+        newState = {
+          ...newState,
+          ...processedState,
+        };
       });
 
       return {

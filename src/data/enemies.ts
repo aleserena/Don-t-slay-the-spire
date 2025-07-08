@@ -30,7 +30,7 @@ export const createTestEnemy = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -51,7 +51,7 @@ export const createJawWorm = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -72,7 +72,7 @@ export const createRedLouse = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -93,7 +93,7 @@ export const createGreenLouse = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -114,7 +114,7 @@ export const createAcidSlime = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -135,7 +135,7 @@ export const createSpikeSlime = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -156,7 +156,7 @@ export const createFungiBeast = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -177,7 +177,7 @@ export const createLooter = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -199,7 +199,7 @@ export const createGremlinNob = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -221,7 +221,7 @@ export const createLagavulin = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -243,7 +243,7 @@ export const createSentryBot = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -264,7 +264,7 @@ export const createFatGremlin = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -285,7 +285,7 @@ export const createMadGremlin = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],
@@ -306,7 +306,7 @@ export const createSneakyGremlin = (): Enemy => {
     block: 0,
     intent: {
       type: convertCardTypeToIntentType(selectedCard.type),
-      value: selectedCard.damage || selectedCard.block,
+      value: selectedCard.damage || selectedCard.block || 0,
       card: selectedCard,
     },
     statusEffects: [],

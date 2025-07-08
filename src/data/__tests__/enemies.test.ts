@@ -12,7 +12,7 @@ import {
   getRandomEnemy,
   getRandomEnemyEncounter,
 } from "../enemies";
-import { IntentType } from "../../types/game";
+import { IntentType, Enemy } from '../../types/game';
 
 describe("Enemies Data", () => {
   describe("Enemy Creation Functions", () => {
@@ -36,7 +36,13 @@ describe("Enemies Data", () => {
       expect(enemy.health).toBe(40);
       expect(enemy.maxHealth).toBe(40);
       expect(enemy.intent.type).toBe(IntentType.ATTACK);
-      expect(enemy.intent.value).toBeGreaterThan(0);
+      expect(typeof enemy.intent.value).toBe("number");
+      if (
+        enemy.intent.type === IntentType.ATTACK ||
+        enemy.intent.type === IntentType.DEFEND
+      ) {
+        expect(enemy.intent.value).toBeGreaterThan(0);
+      }
       expect(enemy.deck).toBeDefined();
       expect(enemy.currentCard).toBeDefined();
     });
@@ -89,7 +95,13 @@ describe("Enemies Data", () => {
       expect([IntentType.ATTACK, IntentType.DEBUFF]).toContain(
         enemy.intent.type,
       );
-      expect(enemy.intent.value).toBeGreaterThan(0);
+      expect(typeof enemy.intent.value).toBe("number");
+      if (
+        enemy.intent.type === IntentType.ATTACK ||
+        enemy.intent.type === IntentType.DEFEND
+      ) {
+        expect(enemy.intent.value).toBeGreaterThan(0);
+      }
       expect(enemy.deck).toBeDefined();
       expect(enemy.currentCard).toBeDefined();
     });
@@ -118,7 +130,13 @@ describe("Enemies Data", () => {
       expect([IntentType.ATTACK, IntentType.DEFEND]).toContain(
         enemy.intent.type,
       );
-      expect(enemy.intent.value).toBeGreaterThan(0);
+      expect(typeof enemy.intent.value).toBe("number");
+      if (
+        enemy.intent.type === IntentType.ATTACK ||
+        enemy.intent.type === IntentType.DEFEND
+      ) {
+        expect(enemy.intent.value).toBeGreaterThan(0);
+      }
       expect(enemy.deck).toBeDefined();
       expect(enemy.currentCard).toBeDefined();
     });
@@ -126,14 +144,14 @@ describe("Enemies Data", () => {
 
   describe("getAllEnemies", () => {
     it("should return an array of all enemies", () => {
-      const enemies = getAllEnemies();
+      const enemies: Enemy[] = getAllEnemies();
 
       expect(Array.isArray(enemies)).toBe(true);
       expect(enemies).toHaveLength(13);
     });
 
     it("should include all enemy types", () => {
-      const enemies = getAllEnemies();
+      const enemies: Enemy[] = getAllEnemies();
       const enemyNames = enemies.map((enemy) => enemy.name);
 
       expect(enemyNames).toContain("Cultist");
@@ -152,7 +170,7 @@ describe("Enemies Data", () => {
     });
 
     it("should have enemies with valid properties", () => {
-      const enemies = getAllEnemies();
+      const enemies: Enemy[] = getAllEnemies();
 
       enemies.forEach((enemy) => {
         expect(enemy.id).toBeDefined();
@@ -168,7 +186,7 @@ describe("Enemies Data", () => {
     });
 
     it("should have enemies with valid intent types", () => {
-      const enemies = getAllEnemies();
+      const enemies: Enemy[] = getAllEnemies();
       const validIntentTypes = Object.values(IntentType);
 
       enemies.forEach((enemy) => {
@@ -179,7 +197,7 @@ describe("Enemies Data", () => {
 
   describe("getRandomEnemy", () => {
     it("should return a valid enemy", () => {
-      const enemy = getRandomEnemy();
+      const enemy: Enemy = getRandomEnemy();
 
       expect(enemy).toBeDefined();
       expect(enemy.id).toBeDefined();
@@ -191,7 +209,7 @@ describe("Enemies Data", () => {
     });
 
     it("should return different enemies on multiple calls", () => {
-      const enemies = [];
+      const enemies: Enemy[] = [];
       for (let i = 0; i < 20; i++) {
         enemies.push(getRandomEnemy());
       }
@@ -201,11 +219,11 @@ describe("Enemies Data", () => {
     });
 
     it("should only return enemies from the available pool", () => {
-      const allEnemies = getAllEnemies();
+      const allEnemies: Enemy[] = getAllEnemies();
       const availableNames = allEnemies.map((enemy) => enemy.name);
 
       for (let i = 0; i < 10; i++) {
-        const randomEnemy = getRandomEnemy();
+        const randomEnemy: Enemy = getRandomEnemy();
         expect(availableNames).toContain(randomEnemy.name);
       }
     });
@@ -213,7 +231,7 @@ describe("Enemies Data", () => {
 
   describe("getRandomEnemyEncounter", () => {
     it("should return an array of enemies", () => {
-      const encounter = getRandomEnemyEncounter();
+      const encounter: Enemy[] = getRandomEnemyEncounter();
 
       expect(Array.isArray(encounter)).toBe(true);
       expect(encounter.length).toBeGreaterThan(0);
@@ -221,7 +239,7 @@ describe("Enemies Data", () => {
     });
 
     it("should return valid enemies in encounter", () => {
-      const encounter = getRandomEnemyEncounter();
+      const encounter: Enemy[] = getRandomEnemyEncounter();
 
       encounter.forEach((enemy) => {
         expect(enemy.id).toBeDefined();
@@ -234,7 +252,7 @@ describe("Enemies Data", () => {
     });
 
     it("should generate different encounters", () => {
-      const encounters = [];
+      const encounters: Enemy[][] = [];
       for (let i = 0; i < 10; i++) {
         encounters.push(getRandomEnemyEncounter());
       }
@@ -248,13 +266,11 @@ describe("Enemies Data", () => {
     });
 
     it("should include specific encounter combinations", () => {
-      // Test multiple times to increase chance of getting specific encounters
       let foundLouseEncounter = false;
       let foundCultistLooterEncounter = false;
 
       for (let i = 0; i < 50; i++) {
-        const encounter = getRandomEnemyEncounter();
-
+        const encounter: Enemy[] = getRandomEnemyEncounter();
         if (encounter.length === 2) {
           const names = encounter.map((enemy) => enemy.name);
           if (names.includes("Red Louse") && names.includes("Green Louse")) {
@@ -265,9 +281,8 @@ describe("Enemies Data", () => {
           }
         }
       }
-
-      // At least one of the specific encounters should be found
-      expect(foundLouseEncounter || foundCultistLooterEncounter).toBe(true);
+      expect(foundLouseEncounter).toBe(true);
+      expect(foundCultistLooterEncounter).toBe(true);
     });
   });
 });

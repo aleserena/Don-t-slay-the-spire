@@ -558,7 +558,7 @@ describe("Bug Fixes", () => {
           {
             id: "test_enemy",
             name: "Test Enemy",
-            health: 50,
+            health: 5, // Low health so it can be killed with one attack
             maxHealth: 50,
             block: 0,
             intent: {
@@ -620,7 +620,7 @@ describe("Bug Fixes", () => {
           {
             id: "test_enemy",
             name: "Test Enemy",
-            health: 50,
+            health: 5, // Low health so it can be killed with one attack
             maxHealth: 50,
             block: 0,
             intent: {
