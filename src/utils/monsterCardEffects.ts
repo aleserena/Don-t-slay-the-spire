@@ -1,4 +1,4 @@
-import { MonsterCard, Player, Enemy, EffectType, TargetType, StatusType } from '../types/game';
+import { MonsterCard, Player, Enemy, EffectType, TargetType } from '../types/game';
 import { applyStatusEffect, calculateDamage, calculateBlock } from './statusEffects';
 
 export interface MonsterCardResult {

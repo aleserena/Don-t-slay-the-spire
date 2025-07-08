@@ -44,7 +44,6 @@ import {
 } from '../utils/statusEffects';
 import { upgradeCard } from '../utils/cardUpgrades';
 import { getRandomEnemyEncounter } from '../data/enemies';
-import { debugConsole } from '../utils/debugUtils';
 
 /**
  * Extended game store interface that includes UI state and actions.
@@ -370,7 +369,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const updatedMap = completeNode(state.map!, nodeId);
       
       switch (node.type) {
-        case 'combat':
+        case 'combat': {
           return {
             ...state,
             gamePhase: GamePhase.COMBAT,
@@ -388,8 +387,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
               block: 0
             }
           };
+        }
           
-        case 'boss':
+        case 'boss': {
           const bossEnemy = getBossForFloor(node.y);
           return {
             ...state,
@@ -408,8 +408,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
               block: 0
             }
           };
+        }
           
-        case 'elite':
+        case 'elite': {
           const eliteEnemies = getRandomEnemyEncounter().map((e: Enemy) => ({ 
             ...e, 
             isElite: true, 
@@ -433,6 +434,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
               block: 0
             }
           };
+        }
           
         case 'event':
           return {
@@ -449,11 +451,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
             map: updatedMap
           };
           
-        case 'treasure':
+        case 'treasure': {
           // Give player a random relic
           const treasureRelic = getAllRelics()
-            .filter((r: Relic) => r.rarity === 'common' || r.rarity === 'uncommon')
-            [Math.floor(Math.random() * getAllRelics().filter((r: Relic) => r.rarity === 'common' || r.rarity === 'uncommon').length)];
+            .filter((r: Relic) => r.rarity === 'common' || r.rarity === 'uncommon')[Math.floor(Math.random() * getAllRelics().filter((r: Relic) => r.rarity === 'common' || r.rarity === 'uncommon').length)];
           
           return {
             ...state,
@@ -464,8 +465,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
               relics: [...state.player.relics, treasureRelic]
             }
           };
+        }
           
-        case 'shop':
+        case 'shop': {
           const shopCards = getAllCards()
             .filter(() => Math.random() < 0.3)
             .slice(0, 5)
@@ -494,6 +496,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             },
             map: updatedMap
           };
+        }
           
         default:
           return {
@@ -1037,7 +1040,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const initialHealth = state.player.health;
           const damageDealt = initialHealth - newPlayer.health;
           if (damageDealt > 0) {
-            const context: any = { damage: damageDealt };
+            const context: { damage: number; shouldDrawCards?: number } = { damage: damageDealt };
             const relicResult = processRelicEffects(RelicTrigger.DAMAGE_TAKEN, newPlayer, newEnemies, context);
             newPlayer = relicResult.player;
             newEnemies = relicResult.enemies;
@@ -1046,8 +1049,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
             newEnemies = newEnemies.filter(enemy => enemy.health > 0);
             
             // Handle Centennial Puzzle card drawing
-            if (context.shouldDrawCards) {
-              setTimeout(() => get().drawCards(context.shouldDrawCards), 100);
+            if (context.shouldDrawCards && context.shouldDrawCards > 0) {
+              setTimeout(() => get().drawCards(context.shouldDrawCards!), 100);
             }
           }
         }
@@ -1175,7 +1178,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => {
       let newDrawPile = [...state.drawPile];
       let newDiscardPile = [...state.discardPile];
-      let newHand = [...state.hand];
+      const newHand = [...state.hand];
 
       for (let i = 0; i < count; i++) {
         if (newDrawPile.length === 0 && newDiscardPile.length > 0) {
@@ -1291,8 +1294,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       
       if (!cardToRemove) return state;
 
-      let newDrawPile = [...state.drawPile];
-      let newDiscardPile = [...state.discardPile];
+      const newDrawPile = [...state.drawPile];
+      const newDiscardPile = [...state.discardPile];
 
       // Remove the card from the appropriate pile
       const drawIndex = newDrawPile.findIndex(c => c.id === cardId);
@@ -1398,8 +1401,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       
       if (!cardToUpgrade || cardToUpgrade.upgraded) return state;
 
-      let newDrawPile = [...state.drawPile];
-      let newDiscardPile = [...state.discardPile];
+      const newDrawPile = [...state.drawPile];
+      const newDiscardPile = [...state.discardPile];
 
       // Find and upgrade the card in the appropriate pile
       const drawIndex = newDrawPile.findIndex(c => c.id === cardId);

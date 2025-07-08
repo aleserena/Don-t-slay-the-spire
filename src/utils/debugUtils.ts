@@ -2,28 +2,28 @@ import { useGameStore } from '../store/gameStore';
 
 // Debug console wrapper that respects debug mode
 export const debugConsole = {
-  log: (...args: any[]) => {
+  log: (...args: unknown[]) => {
     const { debugMode } = useGameStore.getState();
     if (debugMode) {
       console.log(...args);
     }
   },
   
-  error: (...args: any[]) => {
+  error: (...args: unknown[]) => {
     const { debugMode } = useGameStore.getState();
     if (debugMode) {
       console.error(...args);
     }
   },
   
-  warn: (...args: any[]) => {
+  warn: (...args: unknown[]) => {
     const { debugMode } = useGameStore.getState();
     if (debugMode) {
       console.warn(...args);
     }
   },
   
-  info: (...args: any[]) => {
+  info: (...args: unknown[]) => {
     const { debugMode } = useGameStore.getState();
     if (debugMode) {
       console.info(...args);

@@ -49,11 +49,11 @@ export const getStatusEffectDuration = (effectType: StatusType): number | undefi
 };
 
 export const processStatusEffects = (entity: Player | Enemy): Player | Enemy => {
-  let newEntity = { ...entity };
+  const newEntity = { ...entity };
   
   // Process each status effect
   newEntity.statusEffects = newEntity.statusEffects.map(effect => {
-    let newEffect = { ...effect };
+    const newEffect = { ...effect };
     
     switch (effect.type) {
       case StatusType.POISON:

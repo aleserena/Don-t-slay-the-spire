@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
 import { CardType } from '../types/game';
+import { ShopCard, ShopRelic } from '../types/map';
 import { UnifiedHeader } from './UnifiedHeader';
 import { CardGrid } from './CardGrid';
 
@@ -255,7 +256,7 @@ export const ShopScreen: React.FC = () => {
 };
 
 interface ShopCardComponentProps {
-  shopCard: any;
+  shopCard: ShopCard;
   canAfford: boolean;
   onPurchase: () => void;
   getCardTypeColor: (type: CardType) => string;
@@ -564,7 +565,7 @@ const ShopCardComponent: React.FC<ShopCardComponentProps> = ({
 };
 
 interface ShopRelicComponentProps {
-  shopRelic: any;
+  shopRelic: ShopRelic;
   canAfford: boolean;
   onPurchase: () => void;
   getRelicColor: (rarity: string) => string;

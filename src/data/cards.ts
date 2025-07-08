@@ -357,7 +357,7 @@ export const getAllCards = (): Card[] => {
       id: 'whirlwind',
       baseId: 'whirlwind',
       name: 'Whirlwind',
-      cost: 'X' as any,
+      cost: 'X' as number | 'X',
       type: CardType.ATTACK,
       rarity: CardRarity.RARE,
       description: 'Deal 5 damage to ALL enemies X times. (X = Energy)',

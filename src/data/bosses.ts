@@ -1,4 +1,5 @@
 import { Enemy, IntentType } from '../types/game';
+import { getEnemyDeck } from './monsterCards';
 
 export const createSlimeBoss = (): Enemy => ({
   id: 'slime_boss',
@@ -11,7 +12,8 @@ export const createSlimeBoss = (): Enemy => ({
     value: 35
   },
   statusEffects: [],
-  isBoss: true
+  isBoss: true,
+  deck: getEnemyDeck('slime_boss')
 });
 
 export const createGuardian = (): Enemy => ({
@@ -25,7 +27,8 @@ export const createGuardian = (): Enemy => ({
     value: 32
   },
   statusEffects: [],
-  isBoss: true
+  isBoss: true,
+  deck: getEnemyDeck('guardian')
 });
 
 export const createHexaghost = (): Enemy => ({
@@ -39,7 +42,8 @@ export const createHexaghost = (): Enemy => ({
     value: 45
   },
   statusEffects: [],
-  isBoss: true
+  isBoss: true,
+  deck: getEnemyDeck('hexaghost')
 });
 
 export const createChamp = (): Enemy => ({
@@ -53,7 +57,8 @@ export const createChamp = (): Enemy => ({
     value: 22
   },
   statusEffects: [],
-  isBoss: true
+  isBoss: true,
+  deck: getEnemyDeck('champ')
 });
 
 export const createCollector = (): Enemy => ({
@@ -66,7 +71,8 @@ export const createCollector = (): Enemy => ({
     type: IntentType.DEBUFF
   },
   statusEffects: [],
-  isBoss: true
+  isBoss: true,
+  deck: getEnemyDeck('collector')
 });
 
 export const createCityBoss = (): Enemy => ({
@@ -80,7 +86,8 @@ export const createCityBoss = (): Enemy => ({
     value: 50
   },
   statusEffects: [],
-  isBoss: true
+  isBoss: true,
+  deck: getEnemyDeck('automaton')
 });
 
 export const getAllBosses = (): Enemy[] => [

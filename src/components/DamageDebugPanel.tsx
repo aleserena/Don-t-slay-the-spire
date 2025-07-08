@@ -80,8 +80,12 @@ export const DamageDebugPanel: React.FC = () => {
       </div>
 
       <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '10px' }}>
-        Press 'D' to toggle debug mode
+        Press D to toggle debug mode
       </div>
+
+      <span style={{ color: 'red' }}>
+        DEBUG MODE - For development only!
+      </span>
     </div>
   );
 }; 

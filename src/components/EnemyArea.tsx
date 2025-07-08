@@ -2,23 +2,23 @@ import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { cardNeedsTarget, isMultiTargetCard, getCardDamagePreview } from '../utils/cardUtils';
 import { calculateDamage } from '../utils/statusEffects';
-import { MonsterCardPreview } from './MonsterCardPreview';
-import { MonsterCard } from '../types/game';
+import MonsterCardPreview from './MonsterCardPreview';
+import { MonsterCard, Card, Enemy, StatusEffect } from '../types/game';
 
 interface EnemyAreaProps {
-  selectedCard: any;
-  confirmingCard?: any;
+  selectedCard: Card | null;
+  confirmingCard?: Card | null;
   onEnemyTarget: (enemyId: string) => void;
 }
 
 export const EnemyArea: React.FC<EnemyAreaProps> = ({ selectedCard, confirmingCard, onEnemyTarget }) => {
   const { enemies, player } = useGameStore();
-  const [hoveredStatusEffect, setHoveredStatusEffect] = useState<any>(null);
+  const [hoveredStatusEffect, setHoveredStatusEffect] = useState<StatusEffect | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [hoveredMonsterCard, setHoveredMonsterCard] = useState<MonsterCard | null>(null);
   const [monsterCardPosition, setMonsterCardPosition] = useState({ x: 0, y: 0 });
 
-  const handleStatusEffectMouseEnter = (effect: any, event: React.MouseEvent) => {
+  const handleStatusEffectMouseEnter = (effect: StatusEffect, event: React.MouseEvent) => {
     setHoveredStatusEffect(effect);
     setMousePosition({ x: event.clientX, y: event.clientY });
   };
@@ -86,7 +86,7 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({ selectedCard, confirmingCa
 
   const needsTarget = selectedCard && cardNeedsTarget(selectedCard);
 
-  const getDamagePreview = (enemy: any) => {
+  const getDamagePreview = (enemy: Enemy) => {
     // Show damage preview for selected card (targeting) or confirming card (confirmation phase)
     const cardToPreview = selectedCard || confirmingCard;
     if (!cardToPreview) return null;
@@ -97,13 +97,13 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({ selectedCard, confirmingCa
     
     // For Whirlwind, calculate damage correctly using energy multiplier
     if (cardToPreview.id === 'whirlwind') {
-      const energyEffect = cardToPreview.effects?.find((effect: any) => effect.type === 'damage_multiplier_energy');
+      const energyEffect = cardToPreview.effects?.find((effect: { type: string; value: number }) => effect.type === 'damage_multiplier_energy');
       if (energyEffect) {
         const hitsCount = player.energy;
         const damagePerHit = calculateDamage(energyEffect.value, player, enemy, false);
         const totalDamage = damagePerHit * hitsCount;
         const actualDamage = Math.max(0, totalDamage - enemy.block);
-        const isVulnerable = enemy.statusEffects.some((effect: any) => effect.type === 'vulnerable');
+        const isVulnerable = enemy.statusEffects.some((effect: StatusEffect) => effect.type === 'vulnerable');
         const wouldKill = actualDamage >= enemy.health;
         
         return {
@@ -436,7 +436,7 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({ selectedCard, confirmingCa
         <MonsterCardPreview
           card={hoveredMonsterCard}
           position={monsterCardPosition}
-          onClose={handleMonsterCardMouseLeave}
+          _onClose={handleMonsterCardMouseLeave}
         />
       )}
     </div>

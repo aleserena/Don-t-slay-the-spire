@@ -1,4 +1,4 @@
-import { Player, Enemy, PowerTrigger, EffectType, TargetType } from '../types/game';
+import { Player, Enemy, PowerTrigger, EffectType, TargetType, PowerCardEffect } from '../types/game';
 import { applyStatusEffect } from './statusEffects';
 
 export const processPowerCardEffects = (
@@ -24,7 +24,7 @@ export const processPowerCardEffects = (
 };
 
 const applyPowerCardEffect = (
-  effect: any,
+  effect: PowerCardEffect,
   player: Player,
   enemies: Enemy[]
 ): { player: Player; enemies: Enemy[] } => {

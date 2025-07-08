@@ -1,7 +1,7 @@
-import { Event, ConsequenceType } from '../types/map';
+import { Event, ConsequenceType, EventConsequence } from '../types/map';
+import { RelicRarity, GameState } from '../types/game';
+import { getAllRelics, getRandomRelic } from './relics';
 import { getAllCards } from './cards';
-import { getRandomRelic, getAllRelics } from './relics';
-import { RelicRarity } from '../types/game';
 
 export const getAllEvents = (): Event[] => {
   return [
@@ -211,14 +211,14 @@ export const getRandomEvent = (): Event => {
   return events[Math.floor(Math.random() * events.length)];
 };
 
-export const processEventConsequence = (consequence: any, gameState: any) => {
+export const processEventConsequence = (consequence: EventConsequence, gameState: GameState) => {
   switch (consequence.type) {
     case ConsequenceType.GAIN_GOLD:
       return {
         ...gameState,
         player: {
           ...gameState.player,
-          gold: gameState.player.gold + consequence.value
+          gold: gameState.player.gold + (consequence.value || 0)
         }
       };
       
@@ -227,7 +227,7 @@ export const processEventConsequence = (consequence: any, gameState: any) => {
         ...gameState,
         player: {
           ...gameState.player,
-          gold: Math.max(0, gameState.player.gold - consequence.value)
+          gold: Math.max(0, gameState.player.gold - (consequence.value || 0))
         }
       };
       
@@ -238,7 +238,7 @@ export const processEventConsequence = (consequence: any, gameState: any) => {
           ...gameState.player,
           health: Math.min(
             gameState.player.maxHealth,
-            gameState.player.health + consequence.value
+            gameState.player.health + (consequence.value || 0)
           )
         }
       };
@@ -248,7 +248,7 @@ export const processEventConsequence = (consequence: any, gameState: any) => {
         ...gameState,
         player: {
           ...gameState.player,
-          health: Math.max(0, gameState.player.health - consequence.value)
+          health: Math.max(0, gameState.player.health - (consequence.value || 0))
         }
       };
       
@@ -257,12 +257,12 @@ export const processEventConsequence = (consequence: any, gameState: any) => {
         ...gameState,
         player: {
           ...gameState.player,
-          maxHealth: gameState.player.maxHealth + consequence.value,
-          health: gameState.player.health + consequence.value
+          maxHealth: gameState.player.maxHealth + (consequence.value || 0),
+          health: gameState.player.health + (consequence.value || 0)
         }
       };
       
-    case ConsequenceType.GAIN_RELIC:
+    case ConsequenceType.GAIN_RELIC: {
       let relic;
       if (consequence.relicId === 'random_common') {
         relic = getRandomRelic(RelicRarity.COMMON);
@@ -284,8 +284,9 @@ export const processEventConsequence = (consequence: any, gameState: any) => {
         };
       }
       return gameState;
+    }
       
-    case ConsequenceType.GAIN_CARD:
+    case ConsequenceType.GAIN_CARD: {
       let card;
       if (consequence.cardId === 'random_attack') {
         const attackCards = getAllCards().filter(c => c.type === 'attack');
@@ -304,6 +305,7 @@ export const processEventConsequence = (consequence: any, gameState: any) => {
         };
       }
       return gameState;
+    }
       
     default:
       return gameState;

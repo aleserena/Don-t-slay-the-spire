@@ -1,4 +1,4 @@
-import { Card, Player, Enemy, EffectType } from '../types/game';
+import { Card, Player, Enemy, EffectType, StatusEffect, IntentType } from '../types/game';
 import { calculateDamage } from './statusEffects';
 import { getAllCards } from '../data/cards';
 
@@ -56,16 +56,18 @@ export const calculateCardEffectDamage = (
           totalDamage += calculateDamage(effect.value, player, enemy, isFirstAttack && totalDamage === 0);
           break;
           
-        case EffectType.DAMAGE_MULTIPLIER_BLOCK:
+        case EffectType.DAMAGE_MULTIPLIER_BLOCK: {
           const blockDamage = player.block * (effect.multiplier || 1);
           totalDamage += calculateDamage(blockDamage, player, enemy, isFirstAttack);
           break;
+        }
           
-        case EffectType.DAMAGE_MULTIPLIER_ENERGY:
+        case EffectType.DAMAGE_MULTIPLIER_ENERGY: {
           const energyHits = player.energy;
           const damagePerHit = calculateDamage(effect.value, player, enemy, isFirstAttack);
           totalDamage += damagePerHit * energyHits;
           break;
+        }
       }
     }
   }
@@ -149,7 +151,7 @@ export const getCardDamagePreview = (
   const previews = enemies.map(enemy => {
     const totalDamage = calculateCardDamage(card, player, enemy);
     const damageAfterBlock = Math.max(0, totalDamage - enemy.block);
-    const isVulnerable = enemy.statusEffects.some((effect: any) => effect.type === 'vulnerable');
+    const isVulnerable = enemy.statusEffects.some((effect: StatusEffect) => effect.type === 'vulnerable');
     const wouldKill = damageAfterBlock >= enemy.health;
     
     const preview = {
@@ -190,7 +192,7 @@ export const getCardDisplayDamage = (card: Card, player: Player, enemies: Enemy[
   if (card.effects) {
     for (const effect of card.effects) {
       switch (effect.type) {
-        case EffectType.DAMAGE:
+        case EffectType.DAMAGE: {
           if (effect.target === 'all_enemies') {
             // For multi-target effects, show base damage
             if (enemies.length === 0) {
@@ -211,12 +213,13 @@ export const getCardDisplayDamage = (card: Card, player: Player, enemies: Enemy[
             }
           }
           break;
+        }
           
         case EffectType.DAMAGE_MULTIPLIER_BLOCK:
           totalDamage += player.block * (effect.multiplier || 1);
           break;
           
-        case EffectType.DAMAGE_MULTIPLIER_ENERGY:
+        case EffectType.DAMAGE_MULTIPLIER_ENERGY: {
           if (enemies.length === 0) {
             totalDamage += 0;
           } else {
@@ -224,6 +227,7 @@ export const getCardDisplayDamage = (card: Card, player: Player, enemies: Enemy[
             totalDamage += damagePerHit * player.energy;
           }
           break;
+        }
       }
     }
   }
@@ -267,7 +271,8 @@ export const getActualCardDamage = (card: Card, player: Player, target?: Enemy):
     maxHealth: 100,
     block: 0,
     statusEffects: [],
-    intent: { type: 'attack' as any, value: 5 }
+    intent: { type: IntentType.ATTACK, value: 5 },
+    deck: []
   };
   
   // Calculate actual damage with all modifiers
@@ -275,7 +280,7 @@ export const getActualCardDamage = (card: Card, player: Player, target?: Enemy):
 };
 
 export const getEnhancedCardDescription = (card: Card, player: Player, selectedTarget?: Enemy): string => {
-  let description = card.description;
+  const description = card.description;
   
   // Only enhance attack cards that deal damage
   if (card.type !== 'attack') {

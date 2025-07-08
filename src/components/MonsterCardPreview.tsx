@@ -1,13 +1,12 @@
-import React from 'react';
 import { MonsterCard } from '../types/game';
 
 interface MonsterCardPreviewProps {
   card: MonsterCard;
   position: { x: number; y: number };
-  onClose: () => void;
+  _onClose: () => void;
 }
 
-export const MonsterCardPreview: React.FC<MonsterCardPreviewProps> = ({ card, position, onClose }) => {
+export default function MonsterCardPreview({ card, position }: MonsterCardPreviewProps) {
   const getCardTypeColor = (type: string): string => {
     switch (type) {
       case 'attack': return '#e74c3c';
@@ -30,15 +29,16 @@ export const MonsterCardPreview: React.FC<MonsterCardPreviewProps> = ({ card, po
     }
   };
 
-  const formatEffectDescription = (effect: any): string => {
+  const formatEffectDescription = (effect: { type: string; value?: number; statusType?: string }): string => {
     switch (effect.type) {
       case 'damage':
         return `Deal ${effect.value} damage`;
       case 'block':
         return `Gain ${effect.value} Block`;
-      case 'apply_status':
-        const statusName = effect.statusType?.charAt(0).toUpperCase() + effect.statusType?.slice(1);
+      case 'apply_status': {
+        const statusName = effect.statusType ? effect.statusType.charAt(0).toUpperCase() + effect.statusType.slice(1) : 'Unknown';
         return `Apply ${effect.value} ${statusName}`;
+      }
       case 'heal':
         return `Heal ${effect.value} HP`;
       default:
@@ -196,4 +196,4 @@ export const MonsterCardPreview: React.FC<MonsterCardPreviewProps> = ({ card, po
       )}
     </div>
   );
-}; 
+} 

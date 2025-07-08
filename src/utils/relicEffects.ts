@@ -1,11 +1,15 @@
-import { Player, Enemy, Relic, RelicTrigger, EffectType, StatusType } from '../types/game';
+import { Player, Enemy, Relic, RelicTrigger, EffectType, StatusType, RelicEffect } from '../types/game';
 import { applyStatusEffect } from './statusEffects';
+
+interface RelicContext {
+  shouldDrawCards?: number;
+}
 
 export const processRelicEffects = (
   trigger: RelicTrigger,
   player: Player,
   enemies: Enemy[],
-  _context?: any
+  _context?: RelicContext
 ): { player: Player; enemies: Enemy[] } => {
   let newPlayer = { ...player };
   let newEnemies = [...enemies];
@@ -25,7 +29,9 @@ export const processRelicEffects = (
           // Centennial Puzzle: Draw 3 cards on first damage taken
           // This would need to be handled in the game store to actually draw cards
           // For now, we'll mark that cards should be drawn
-          _context.shouldDrawCards = 3;
+          if (_context) {
+            _context.shouldDrawCards = 3;
+          }
         } else {
           // Apply standard relic effect
           const result = applyRelicEffect(effect, newPlayer, newEnemies, _context);
@@ -40,10 +46,10 @@ export const processRelicEffects = (
 };
 
 const applyRelicEffect = (
-  effect: any,
+  effect: RelicEffect,
   player: Player,
   enemies: Enemy[],
-  _context?: any
+  _context?: RelicContext
 ): { player: Player; enemies: Enemy[] } => {
   let newPlayer = { ...player };
   let newEnemies = [...enemies];
@@ -100,7 +106,7 @@ export const getRelicDescription = (relic: Relic): string => {
 export const shouldTriggerRelic = (
   relic: Relic,
   trigger: RelicTrigger,
-  _context?: any
+  _context?: RelicContext
 ): boolean => {
   // Check if any of the relic's effects should trigger
   return relic.effects.some(effect => effect.trigger === trigger);

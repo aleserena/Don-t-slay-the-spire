@@ -3,6 +3,7 @@ import { useGameStore } from '../store/gameStore';
 import { generateMap, completeNode } from '../utils/mapGeneration';
 import { GamePhase, TurnPhase, CardType, StatusType, IntentType, EffectType, TargetType, Card } from '../types/game';
 import { calculateDamage, getStatusEffectDescription, getStatusEffectName } from '../utils/statusEffects';
+import { getEnemyDeck } from '../data/monsterCards';
 
 describe('Bug Fixes', () => {
   beforeEach(() => {
@@ -465,11 +466,15 @@ describe('Bug Fixes', () => {
         enemies: [{
           id: 'test_enemy',
           name: 'Test Enemy',
-          health: 20,
-          maxHealth: 20,
+          health: 50,
+          maxHealth: 50,
           block: 0,
-          intent: { type: IntentType.ATTACK, value: 5 },
-          statusEffects: []
+          intent: {
+            type: IntentType.ATTACK,
+            value: 10
+          },
+          statusEffects: [],
+          deck: getEnemyDeck('cultist')
         }],
         hand: [angerCard],
         drawPile: [],
@@ -518,11 +523,15 @@ describe('Bug Fixes', () => {
         enemies: [{
           id: 'test_enemy',
           name: 'Test Enemy',
-          health: 1, // Low health so we can defeat it easily
-          maxHealth: 10,
+          health: 50,
+          maxHealth: 50,
           block: 0,
-          intent: { type: IntentType.ATTACK, value: 5 },
-          statusEffects: []
+          intent: {
+            type: IntentType.ATTACK,
+            value: 10
+          },
+          statusEffects: [],
+          deck: getEnemyDeck('cultist')
         }],
         hand: initialState.drawPile.slice(0, 5), // Draw 5 cards
         drawPile: initialState.drawPile.slice(5), // Remaining 5 in draw pile

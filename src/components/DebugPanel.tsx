@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { StatusType, GamePhase } from '../types/game';
+import { StatusType, GamePhase, CardType, CardRarity, TurnPhase } from '../types/game';
 import { getAllCards } from '../data/cards';
 import { getAllRelics } from '../data/relics';
 import { Card } from '../types/game';
@@ -131,8 +131,8 @@ export const DebugPanel: React.FC = () => {
             randomPowerCardId === 'demon_form' ? 'Demon Form' :
             'Inflame',
       cost: randomPowerCardId === 'demon_form' ? 3 : 1,
-      type: 'power' as any,
-      rarity: 'uncommon' as any,
+      type: 'power' as CardType,
+      rarity: 'uncommon' as CardRarity,
       description: randomPowerCardId === 'metallicize' ? 'At the end of your turn, gain 3 Block.' :
                    randomPowerCardId === 'demon_form' ? 'At the start of each turn, gain 2 Strength.' :
                    'Gain 2 Strength.',
@@ -184,7 +184,7 @@ export const DebugPanel: React.FC = () => {
       hand: [],
       drawPile: [...drawPile, ...discardPile, ...hand],
       discardPile: [],
-      currentTurn: 'player_turn' as any
+      currentTurn: 'player_turn' as TurnPhase
     });
     
     setTimeout(() => drawCards(5), 100);
@@ -352,7 +352,7 @@ export const DebugPanel: React.FC = () => {
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as 'player' | 'enemies' | 'cards' | 'game' | 'debug')}
             style={{
               ...tabButtonStyle,
               background: activeTab === tab.id ? '#e74c3c' : '#555',
@@ -533,7 +533,7 @@ export const DebugPanel: React.FC = () => {
             <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '8px' }}>
               <div><strong>Debug Info:</strong></div>
               <div>Debug Mode: {debugMode ? '✅ ON' : '❌ OFF'}</div>
-              <div>Press 'D' to toggle debug mode</div>
+              <div>Press D to toggle debug mode</div>
               <div style={{ marginTop: '8px' }}>
                 <strong>Available Debug Features:</strong>
                 <div>• Player stats manipulation</div>
@@ -542,6 +542,9 @@ export const DebugPanel: React.FC = () => {
                 <div>• Game state controls</div>
               </div>
             </div>
+            <span style={{ color: 'red' }}>
+              DEBUG MODE - For development only!
+            </span>
           </>
         )}
 

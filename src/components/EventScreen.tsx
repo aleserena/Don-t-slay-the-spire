@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
+import { EventConsequence } from '../types/map';
 
 export const EventScreen: React.FC = () => {
   const { currentEvent, selectEventChoice } = useGameStore();
@@ -106,7 +107,7 @@ export const EventScreen: React.FC = () => {
   );
 };
 
-const getConsequencePreview = (consequence: any): string => {
+const getConsequencePreview = (consequence: EventConsequence): string => {
   switch (consequence.type) {
     case 'gain_gold':
       return `💰 Gain ${consequence.value} gold`;

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { getStatusEffectIcon, getStatusEffectColor, getStatusEffectDescription, getStatusEffectName } from '../utils/statusEffects';
+import { StatusEffect } from '../types/game';
 
 export const PlayerArea: React.FC = () => {
   const { player } = useGameStore();
-  const [hoveredStatusEffect, setHoveredStatusEffect] = useState<any>(null);
+  const [hoveredStatusEffect, setHoveredStatusEffect] = useState<StatusEffect | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-  const handleStatusEffectMouseEnter = (effect: any, event: React.MouseEvent) => {
+  const handleStatusEffectMouseEnter = (effect: StatusEffect, event: React.MouseEvent) => {
     setHoveredStatusEffect(effect);
     setMousePosition({ x: event.clientX, y: event.clientY });
   };
