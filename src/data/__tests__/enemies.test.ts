@@ -12,7 +12,7 @@ import {
   getRandomEnemy,
   getRandomEnemyEncounter,
 } from "../enemies";
-import { IntentType, Enemy } from '../../types/game';
+import { IntentType, Enemy } from "../../types/game";
 
 describe("Enemies Data", () => {
   describe("Enemy Creation Functions", () => {
