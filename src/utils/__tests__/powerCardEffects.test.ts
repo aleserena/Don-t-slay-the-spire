@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { processPowerCardEffects } from '../powerCardEffects';
-import { PowerTrigger, EffectType, TargetType, StatusType, Player, Enemy } from '../../types/game';
+import { PowerTrigger, EffectType, TargetType, StatusType, Player, Enemy, IntentType } from '../../types/game';
 
 describe('Power Card Effects', () => {
   let mockPlayer: Player;
@@ -26,8 +26,9 @@ describe('Power Card Effects', () => {
         health: 50,
         maxHealth: 50,
         block: 0,
-        intent: { type: 'attack' as any, value: 10 },
-        statusEffects: []
+        intent: { type: IntentType.ATTACK, value: 10 },
+        statusEffects: [],
+        deck: []
       }
     ];
   });

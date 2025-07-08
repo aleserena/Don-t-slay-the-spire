@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { processRelicEffects } from '../relicEffects';
-import { RelicTrigger, EffectType, StatusType, Player, Enemy, Relic, RelicRarity } from '../../types/game';
+import { RelicTrigger, EffectType, StatusType, Player, Enemy, Relic, RelicRarity, IntentType } from '../../types/game';
 
 describe('Relic Effects', () => {
   let mockPlayer: Player;
@@ -26,8 +26,9 @@ describe('Relic Effects', () => {
         health: 50,
         maxHealth: 50,
         block: 0,
-        intent: { type: 'attack' as any, value: 10 },
-        statusEffects: []
+        intent: { type: IntentType.ATTACK, value: 10 },
+        statusEffects: [],
+        deck: []
       }
     ];
   });
@@ -174,7 +175,7 @@ describe('Relic Effects', () => {
       };
 
       mockPlayer.relics = [centennialPuzzle];
-      const context: any = {};
+      const context: Record<string, unknown> = {};
 
       const result = processRelicEffects(RelicTrigger.DAMAGE_TAKEN, mockPlayer, mockEnemies, context);
       
@@ -207,8 +208,9 @@ describe('Relic Effects', () => {
         health: 30,
         maxHealth: 30,
         block: 0,
-        intent: { type: 'attack' as any, value: 5 },
-        statusEffects: []
+        intent: { type: IntentType.ATTACK, value: 5 },
+        statusEffects: [],
+        deck: []
       });
 
       const result = processRelicEffects(RelicTrigger.COMBAT_START, mockPlayer, mockEnemies);

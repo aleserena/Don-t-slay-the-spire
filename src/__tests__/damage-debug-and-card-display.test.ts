@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore';
-import { StatusType, CardType, EffectType, TargetType } from '../types/game';
+import { StatusType, CardType, EffectType, TargetType, CardRarity } from '../types/game';
 import { getActualCardDamage, getEnhancedCardDescription } from '../utils/cardUtils';
 
 describe('Damage Debug and Card Display', () => {
@@ -20,7 +20,7 @@ describe('Damage Debug and Card Display', () => {
         name: 'Bash',
         cost: 2,
         type: CardType.ATTACK,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Deal 8 damage. Apply 2 Vulnerable.',
         upgraded: false,
         effects: [{
@@ -59,7 +59,7 @@ describe('Damage Debug and Card Display', () => {
         name: 'Bash',
         cost: 2,
         type: CardType.ATTACK,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Deal 8 damage. Apply 2 Vulnerable.',
         upgraded: false,
         effects: [{
@@ -98,7 +98,7 @@ describe('Damage Debug and Card Display', () => {
         name: 'Strike',
         cost: 1,
         type: CardType.ATTACK,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Deal 6 damage.',
         damage: 6,
         upgraded: false
@@ -131,7 +131,7 @@ describe('Damage Debug and Card Display', () => {
         name: 'Strike',
         cost: 1,
         type: CardType.ATTACK,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Deal 6 damage.',
         damage: 6,
         upgraded: false

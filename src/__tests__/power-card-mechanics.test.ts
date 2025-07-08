@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore';
-import { StatusType, CardType } from '../types/game';
+import { StatusType, CardType, CardRarity, Card } from '../types/game';
 import { getAllCards } from '../data/cards';
 
 describe('Power Card Mechanics', () => {
@@ -22,7 +22,7 @@ describe('Power Card Mechanics', () => {
       
       // Get actual inflame card from the card definitions
       const allCards = getAllCards();
-      const inflameTemplate = allCards.find((c: any) => c.baseId === 'inflame');
+      const inflameTemplate = allCards.find((c: Card) => c.baseId === 'inflame');
       
       if (!inflameTemplate) {
         throw new Error('Inflame card not found in card definitions');
@@ -72,7 +72,7 @@ describe('Power Card Mechanics', () => {
         name: 'Inflame',
         cost: 1,
         type: CardType.POWER,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Gain 2 Strength.',
         upgraded: false
       };
@@ -83,7 +83,7 @@ describe('Power Card Mechanics', () => {
         name: 'Inflame',
         cost: 1,
         type: CardType.POWER,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Gain 2 Strength.',
         upgraded: false
       };
@@ -133,7 +133,7 @@ describe('Power Card Mechanics', () => {
       
       // Get actual inflame cards from the card definitions
       const allCards = getAllCards();
-      const inflameTemplate = allCards.find((c: any) => c.baseId === 'inflame');
+      const inflameTemplate = allCards.find((c: Card) => c.baseId === 'inflame');
       
       if (!inflameTemplate) {
         throw new Error('Inflame card not found in card definitions');
@@ -287,7 +287,7 @@ describe('Power Card Mechanics', () => {
         name: 'Inflame',
         cost: 1,
         type: CardType.POWER,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Gain 2 Strength.',
         upgraded: false
       };
@@ -319,7 +319,7 @@ describe('Power Card Mechanics', () => {
         name: 'Strike',
         cost: 1,
         type: CardType.ATTACK,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Deal 6 damage.',
         damage: 6,
         upgraded: false
@@ -358,7 +358,7 @@ describe('Power Card Mechanics', () => {
         name: 'Inflame',
         cost: 1,
         type: CardType.POWER,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Gain 2 Strength.',
         upgraded: false
       };
@@ -395,7 +395,7 @@ describe('Power Card Mechanics', () => {
           name: 'Strike',
           cost: 1,
           type: CardType.ATTACK,
-          rarity: 'common' as any,
+          rarity: CardRarity.COMMON,
           description: 'Deal 6 damage.',
           damage: 6,
           upgraded: false
@@ -433,7 +433,7 @@ describe('Power Card Mechanics', () => {
         name: 'Inflame',
         cost: 1,
         type: CardType.POWER,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Gain 2 Strength.',
         upgraded: false
       };
@@ -466,7 +466,7 @@ describe('Power Card Mechanics', () => {
           name: 'Strike',
           cost: 1,
           type: CardType.ATTACK,
-          rarity: 'common' as any,
+          rarity: CardRarity.COMMON,
           description: 'Deal 6 damage.',
           damage: 6,
           upgraded: false

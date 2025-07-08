@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore';
-import { GamePhase, TurnPhase, CardType, IntentType } from '../types/game';
+import { GamePhase, TurnPhase, IntentType, CardType, CardRarity, EffectType, TargetType, StatusType } from '../types/game';
 import { createInitialDeck } from '../data/cards';
 import { generateMap } from '../utils/mapGeneration';
 
@@ -50,7 +50,8 @@ describe('Integration Tests', () => {
           maxHealth: 20,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 8 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         }],
         currentTurn: TurnPhase.PLAYER_TURN
       });
@@ -126,7 +127,8 @@ describe('Integration Tests', () => {
           maxHealth: 50,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         }],
         hand: [{
           id: 'bash_test',
@@ -134,15 +136,15 @@ describe('Integration Tests', () => {
           name: 'Bash',
           cost: 2,
           type: CardType.ATTACK,
-          rarity: 'common' as any,
+          rarity: CardRarity.COMMON,
           description: 'Deal 8 damage. Apply 2 Vulnerable.',
           damage: 8,
           upgraded: false,
           effects: [{
-            type: 'apply_status' as any,
+            type: EffectType.APPLY_STATUS,
             value: 2,
-            target: 'enemy' as any,
-            statusType: 'vulnerable' as any
+            target: TargetType.ENEMY,
+            statusType: StatusType.VULNERABLE
           }]
         }],
         currentTurn: TurnPhase.PLAYER_TURN,
@@ -169,7 +171,7 @@ describe('Integration Tests', () => {
         name: 'Test Reward',
         cost: 1,
         type: CardType.ATTACK,
-        rarity: 'common' as any,
+        rarity: CardRarity.COMMON,
         description: 'Test card',
         damage: 5,
         upgraded: false

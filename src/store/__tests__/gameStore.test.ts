@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../gameStore';
-import { TurnPhase, GamePhase, StatusType, IntentType, CardType, CardRarity, EffectType, TargetType } from '../../types/game';
+import { TurnPhase, GamePhase, StatusType, IntentType, CardType, CardRarity, EffectType, TargetType, MonsterCardType, RelicRarity, RelicTrigger } from '../../types/game';
 import { getAllCards } from '../../data/cards';
 
 describe('GameStore', () => {
@@ -58,7 +58,8 @@ describe('GameStore', () => {
           maxHealth: 50,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         }],
         currentTurn: TurnPhase.PLAYER_TURN
       });
@@ -93,7 +94,8 @@ describe('GameStore', () => {
           maxHealth: 50,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         }],
         currentTurn: TurnPhase.PLAYER_TURN,
         player: { ...useGameStore.getState().player, energy: 0 }
@@ -128,7 +130,8 @@ describe('GameStore', () => {
           maxHealth: 50,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         }],
         currentTurn: TurnPhase.ENEMY_TURN
       });
@@ -165,7 +168,8 @@ describe('GameStore', () => {
             maxHealth: 20,
             block: 0,
             intent: { type: IntentType.ATTACK, value: 10 },
-            statusEffects: []
+            statusEffects: [],
+            deck: []
           },
           {
             id: 'enemy2',
@@ -174,7 +178,8 @@ describe('GameStore', () => {
             maxHealth: 20,
             block: 0,
             intent: { type: IntentType.ATTACK, value: 10 },
-            statusEffects: []
+            statusEffects: [],
+            deck: []
           }
         ],
         currentTurn: TurnPhase.PLAYER_TURN,
@@ -222,7 +227,8 @@ describe('GameStore', () => {
             maxHealth: 20,
             block: 0,
             intent: { type: IntentType.ATTACK, value: 10 },
-            statusEffects: []
+            statusEffects: [],
+            deck: []
           }
         ],
         currentTurn: TurnPhase.PLAYER_TURN,
@@ -267,32 +273,19 @@ describe('GameStore', () => {
             block: 0,
             intent: { type: IntentType.ATTACK, value: 5 },
             statusEffects: [],
-            deck: [{
-              id: 'test_attack',
-              baseId: 'test_attack',
-              name: 'Test Attack',
-              type: 'attack' as any,
-              description: 'Deal 5 damage.',
-              damage: 5,
-              priority: 1,
-              effects: [{
-                type: 'damage' as any,
-                value: 5,
-                target: 'enemy' as any
-              }]
-            }],
+            deck: [],
             currentCard: {
               id: 'test_attack',
               baseId: 'test_attack',
               name: 'Test Attack',
-              type: 'attack' as any,
+              type: MonsterCardType.ATTACK,
               description: 'Deal 5 damage.',
               damage: 5,
               priority: 1,
               effects: [{
-                type: 'damage' as any,
+                type: EffectType.DAMAGE,
                 value: 5,
-                target: 'enemy' as any
+                target: TargetType.ENEMY
               }]
             }
           },
@@ -304,32 +297,19 @@ describe('GameStore', () => {
             block: 0,
             intent: { type: IntentType.ATTACK, value: 5 },
             statusEffects: [],
-            deck: [{
-              id: 'test_attack2',
-              baseId: 'test_attack2',
-              name: 'Test Attack 2',
-              type: 'attack' as any,
-              description: 'Deal 5 damage.',
-              damage: 5,
-              priority: 1,
-              effects: [{
-                type: 'damage' as any,
-                value: 5,
-                target: 'enemy' as any
-              }]
-            }],
+            deck: [],
             currentCard: {
               id: 'test_attack2',
               baseId: 'test_attack2',
               name: 'Test Attack 2',
-              type: 'attack' as any,
+              type: MonsterCardType.ATTACK,
               description: 'Deal 5 damage.',
               damage: 5,
               priority: 1,
               effects: [{
-                type: 'damage' as any,
+                type: EffectType.DAMAGE,
                 value: 5,
-                target: 'enemy' as any
+                target: TargetType.ENEMY
               }]
             }
           }
@@ -343,12 +323,12 @@ describe('GameStore', () => {
             id: 'bronze_scales',
             name: 'Bronze Scales',
             description: 'Whenever you take damage, deal 3 damage to ALL enemies.',
-            rarity: 'uncommon' as any,
+            rarity: RelicRarity.UNCOMMON,
             effects: [{
-              trigger: 'damage_taken' as any,
-              effect: 'damage' as any,
+              trigger: RelicTrigger.DAMAGE_TAKEN,
+              effect: EffectType.DAMAGE,
               value: 3,
-              target: 'all_enemies'
+              target: TargetType.ALL_ENEMIES
             }]
           }]
         }
@@ -380,7 +360,8 @@ describe('GameStore', () => {
           maxHealth: 50,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         }],
         currentTurn: TurnPhase.PLAYER_TURN
       });
@@ -482,7 +463,8 @@ describe('GameStore', () => {
           maxHealth: 10,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 5 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         }],
         hand: [{
           id: 'test_strike',
@@ -686,7 +668,8 @@ describe('GameStore', () => {
           maxHealth: 50,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         }],
         hand: [{
           id: 'bash',

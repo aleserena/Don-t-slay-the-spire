@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore';
-import { GamePhase, IntentType } from '../types/game';
+import { GamePhase, IntentType, MonsterCardType, EffectType, TargetType } from '../types/game';
 
 describe('Title Screen and Game Over Functionality', () => {
   beforeEach(() => {
@@ -85,28 +85,28 @@ describe('Title Screen and Game Over Functionality', () => {
             id: 'lethal_attack',
             baseId: 'lethal_attack',
             name: 'Lethal Attack',
-            type: 'attack' as any,
+            type: MonsterCardType.ATTACK,
             description: 'Deal 10 damage.',
             damage: 10,
             priority: 1,
             effects: [{
-              type: 'damage' as any,
+              type: EffectType.DAMAGE,
               value: 10,
-              target: 'enemy' as any
+              target: TargetType.ENEMY
             }]
           }],
           currentCard: {
             id: 'lethal_attack',
             baseId: 'lethal_attack',
             name: 'Lethal Attack',
-            type: 'attack' as any,
+            type: MonsterCardType.ATTACK,
             description: 'Deal 10 damage.',
             damage: 10,
             priority: 1,
             effects: [{
-              type: 'damage' as any,
+              type: EffectType.DAMAGE,
               value: 10,
-              target: 'enemy' as any
+              target: TargetType.ENEMY
             }]
           }
         }]

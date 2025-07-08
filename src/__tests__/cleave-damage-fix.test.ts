@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore';
-import { GamePhase, TurnPhase, IntentType, CardType, CardRarity, EffectType, TargetType } from '../types/game';
+import { GamePhase, TurnPhase, IntentType, CardType, CardRarity, EffectType, TargetType, StatusType } from '../types/game';
 
 describe('Cleave Damage Fix', () => {
   beforeEach(() => {
@@ -21,7 +21,8 @@ describe('Cleave Damage Fix', () => {
           maxHealth: 20,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         },
         {
           id: 'enemy2',
@@ -30,7 +31,8 @@ describe('Cleave Damage Fix', () => {
           maxHealth: 15,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 8 },
-          statusEffects: []
+          statusEffects: [],
+          deck: []
         }
       ],
       currentTurn: TurnPhase.PLAYER_TURN,
@@ -89,7 +91,8 @@ describe('Cleave Damage Fix', () => {
           maxHealth: 20,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
-          statusEffects: [{ type: 'vulnerable' as any, stacks: 2, duration: 2 }]
+          statusEffects: [{ type: StatusType.VULNERABLE, stacks: 2, duration: 2 }],
+          deck: []
         }
       ],
       currentTurn: TurnPhase.PLAYER_TURN,

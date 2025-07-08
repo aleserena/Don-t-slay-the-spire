@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore';
-import { GamePhase } from '../types/game';
+import { GamePhase, IntentType, CardType, CardRarity, RelicRarity } from '../types/game';
 
 describe('Relic Rewards System', () => {
   beforeEach(() => {
@@ -25,7 +25,7 @@ describe('Relic Rewards System', () => {
           health: 1,
           maxHealth: 50,
           block: 0,
-          intent: { type: 'attack' as any, value: 10 },
+          intent: { type: IntentType.ATTACK, value: 10 },
           statusEffects: [],
           isElite: true,
           deck: [],
@@ -39,8 +39,8 @@ describe('Relic Rewards System', () => {
         baseId: 'strike',
         name: 'Strike',
         cost: 1,
-        type: 'attack' as any,
-        rarity: 'common' as any,
+        type: CardType.ATTACK,
+        rarity: CardRarity.COMMON,
         description: 'Deal 6 damage.',
         damage: 10,
         upgraded: false
@@ -80,7 +80,7 @@ describe('Relic Rewards System', () => {
           health: 1,
           maxHealth: 50,
           block: 0,
-          intent: { type: 'attack' as any, value: 10 },
+          intent: { type: IntentType.ATTACK, value: 10 },
           statusEffects: [],
           isElite: false,
           deck: [],
@@ -94,8 +94,8 @@ describe('Relic Rewards System', () => {
         baseId: 'strike',
         name: 'Strike',
         cost: 1,
-        type: 'attack' as any,
-        rarity: 'common' as any,
+        type: CardType.ATTACK,
+        rarity: CardRarity.COMMON,
         description: 'Deal 6 damage.',
         damage: 10,
         upgraded: false
@@ -128,7 +128,7 @@ describe('Relic Rewards System', () => {
         id: 'test_relic',
         name: 'Test Relic',
         description: 'A test relic',
-        rarity: 'common' as any,
+        rarity: RelicRarity.COMMON,
         effects: []
       };
 
@@ -164,7 +164,7 @@ describe('Relic Rewards System', () => {
         id: 'test_relic',
         name: 'Test Relic',
         description: 'A test relic',
-        rarity: 'common' as any,
+        rarity: RelicRarity.COMMON,
         effects: []
       };
 
@@ -202,8 +202,8 @@ describe('Relic Rewards System', () => {
         baseId: 'test_card',
         name: 'Test Card',
         cost: 1,
-        type: 'attack' as any,
-        rarity: 'common' as any,
+        type: CardType.ATTACK,
+        rarity: CardRarity.COMMON,
         description: 'A test card',
         upgraded: false
       };
@@ -212,7 +212,7 @@ describe('Relic Rewards System', () => {
         id: 'test_relic',
         name: 'Test Relic',
         description: 'A test relic',
-        rarity: 'common' as any,
+        rarity: RelicRarity.COMMON,
         effects: []
       };
 
@@ -246,8 +246,8 @@ describe('Relic Rewards System', () => {
         baseId: 'test_card',
         name: 'Test Card',
         cost: 1,
-        type: 'attack' as any,
-        rarity: 'common' as any,
+        type: CardType.ATTACK,
+        rarity: CardRarity.COMMON,
         description: 'A test card',
         upgraded: false
       };
@@ -256,7 +256,7 @@ describe('Relic Rewards System', () => {
         id: 'test_relic',
         name: 'Test Relic',
         description: 'A test relic',
-        rarity: 'common' as any,
+        rarity: RelicRarity.COMMON,
         effects: []
       };
 

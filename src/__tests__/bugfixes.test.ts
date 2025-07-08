@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store/gameStore';
 import { generateMap, completeNode } from '../utils/mapGeneration';
-import { GamePhase, TurnPhase, CardType, StatusType, IntentType, EffectType, TargetType, Card } from '../types/game';
+import { GamePhase, TurnPhase, CardType, StatusType, IntentType, EffectType, TargetType, Card, CardRarity, Player, Enemy } from '../types/game';
+import { NodeType } from '../types/map';
 import { calculateDamage, getStatusEffectDescription, getStatusEffectName } from '../utils/statusEffects';
 import { getEnemyDeck } from '../data/monsterCards';
 
@@ -21,7 +22,7 @@ describe('Bug Fixes', () => {
         name: 'Test Card',
         cost: 1,
         type: CardType.ATTACK,
-        rarity: 'common' as any,
+        rarity: 'common' as CardRarity,
         description: 'A test card',
         damage: 5,
         upgraded: false
@@ -127,7 +128,7 @@ describe('Bug Fixes', () => {
           // Floor 0 - starting node
           {
             id: 'start',
-            type: 'combat' as any,
+            type: 'combat' as NodeType,
             x: 3,
             y: 0,
             connections: ['node1', 'node2'],
@@ -137,7 +138,7 @@ describe('Bug Fixes', () => {
           // Floor 1 - target nodes
           {
             id: 'node1',
-            type: 'combat' as any,
+            type: 'combat' as NodeType,
             x: 2,
             y: 1,
             connections: ['node3'],
@@ -146,7 +147,7 @@ describe('Bug Fixes', () => {
           },
           {
             id: 'node2',
-            type: 'combat' as any,
+            type: 'combat' as NodeType,
             x: 4,
             y: 1,
             connections: ['node3'],
@@ -156,7 +157,7 @@ describe('Bug Fixes', () => {
           // Floor 2 - next level
           {
             id: 'node3',
-            type: 'combat' as any,
+            type: 'combat' as NodeType,
             x: 3,
             y: 2,
             connections: [],
@@ -211,7 +212,7 @@ describe('Bug Fixes', () => {
           // Floor 0 - starting node
           {
             id: 'start',
-            type: 'combat' as any,
+            type: 'combat' as NodeType,
             x: 3,
             y: 0,
             connections: ['node1', 'node2', 'node3'],
@@ -221,7 +222,7 @@ describe('Bug Fixes', () => {
           // Floor 1 - multiple nodes
           {
             id: 'node1',
-            type: 'combat' as any,
+            type: 'combat' as NodeType,
             x: 1,
             y: 1,
             connections: ['node4'],
@@ -230,7 +231,7 @@ describe('Bug Fixes', () => {
           },
           {
             id: 'node2',
-            type: 'elite' as any,
+            type: 'elite' as NodeType,
             x: 3,
             y: 1,
             connections: ['node4'],
@@ -239,7 +240,7 @@ describe('Bug Fixes', () => {
           },
           {
             id: 'node3',
-            type: 'shop' as any,
+            type: 'shop' as NodeType,
             x: 5,
             y: 1,
             connections: ['node4'],
@@ -249,7 +250,7 @@ describe('Bug Fixes', () => {
           // Floor 2 - next level
           {
             id: 'node4',
-            type: 'combat' as any,
+            type: 'combat' as NodeType,
             x: 3,
             y: 2,
             connections: [],
@@ -308,7 +309,7 @@ describe('Bug Fixes', () => {
         ...useGameStore.getState().map!,
         nodes: [{
           id: 'elite_node',
-          type: 'elite' as any,
+          type: 'elite' as NodeType,
           x: 3,
           y: 1,
           connections: [],
@@ -333,19 +334,34 @@ describe('Bug Fixes', () => {
 
   describe('Damage Calculation with Vulnerable', () => {
     it('should correctly calculate damage with vulnerable status', () => {
-      const player = {
-        statusEffects: []
-      } as any;
+      const player: Player = {
+        health: 50,
+        maxHealth: 50,
+        block: 0,
+        energy: 3,
+        maxEnergy: 3,
+        statusEffects: [],
+        gold: 0,
+        relics: [],
+        powerCards: []
+      };
       
-      const enemy = {
+      const enemy: Enemy = {
+        id: 'test_enemy',
+        name: 'Test Enemy',
+        health: 50,
+        maxHealth: 50,
+        block: 0,
+        intent: { type: IntentType.ATTACK, value: 10 },
         statusEffects: [
           {
             type: StatusType.VULNERABLE,
             stacks: 1,
             duration: 3
           }
-        ]
-      } as any;
+        ],
+        deck: []
+      };
       
       const baseDamage = 10;
       const finalDamage = calculateDamage(baseDamage, player, enemy);
@@ -355,24 +371,39 @@ describe('Bug Fixes', () => {
     });
 
     it('should correctly calculate damage with strength and vulnerable', () => {
-      const player = {
+      const player: Player = {
+        health: 50,
+        maxHealth: 50,
+        block: 0,
+        energy: 3,
+        maxEnergy: 3,
         statusEffects: [
           {
             type: StatusType.STRENGTH,
             stacks: 2
           }
-        ]
-      } as any;
+        ],
+        gold: 0,
+        relics: [],
+        powerCards: []
+      };
       
-      const enemy = {
+      const enemy: Enemy = {
+        id: 'test_enemy',
+        name: 'Test Enemy',
+        health: 50,
+        maxHealth: 50,
+        block: 0,
+        intent: { type: IntentType.ATTACK, value: 10 },
         statusEffects: [
           {
             type: StatusType.VULNERABLE,
             stacks: 1,
             duration: 3
           }
-        ]
-      } as any;
+        ],
+        deck: []
+      };
       
       const baseDamage = 10;
       const finalDamage = calculateDamage(baseDamage, player, enemy);
@@ -382,19 +413,34 @@ describe('Bug Fixes', () => {
     });
 
     it('should correctly calculate damage with weak debuff', () => {
-      const player = {
+      const player: Player = {
+        health: 50,
+        maxHealth: 50,
+        block: 0,
+        energy: 3,
+        maxEnergy: 3,
         statusEffects: [
           {
             type: StatusType.WEAK,
             stacks: 1,
             duration: 3
           }
-        ]
-      } as any;
+        ],
+        gold: 0,
+        relics: [],
+        powerCards: []
+      };
       
-      const enemy = {
-        statusEffects: []
-      } as any;
+      const enemy: Enemy = {
+        id: 'test_enemy',
+        name: 'Test Enemy',
+        health: 50,
+        maxHealth: 50,
+        block: 0,
+        intent: { type: IntentType.ATTACK, value: 10 },
+        statusEffects: [],
+        deck: []
+      };
       
       const baseDamage = 10;
       const finalDamage = calculateDamage(baseDamage, player, enemy);
@@ -449,7 +495,7 @@ describe('Bug Fixes', () => {
         name: 'Anger',
         cost: 0,
         type: CardType.ATTACK,
-        rarity: 'common' as any,
+        rarity: 'common' as CardRarity,
         description: 'Deal 6 damage. Add a copy of this card into your discard pile.',
         damage: 6,
         upgraded: false,
