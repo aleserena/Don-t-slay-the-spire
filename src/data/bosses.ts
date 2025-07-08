@@ -1,93 +1,93 @@
-import { Enemy, IntentType } from '../types/game';
-import { getEnemyDeck } from './monsterCards';
+import { Enemy, IntentType } from "../types/game";
+import { getEnemyDeck } from "./monsterCards";
 
 export const createSlimeBoss = (): Enemy => ({
-  id: 'slime_boss',
-  name: 'Slime Boss',
+  id: "slime_boss",
+  name: "Slime Boss",
   health: 140,
   maxHealth: 140,
   block: 0,
   intent: {
     type: IntentType.ATTACK,
-    value: 35
+    value: 35,
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck('slime_boss')
+  deck: getEnemyDeck("slime_boss"),
 });
 
 export const createGuardian = (): Enemy => ({
-  id: 'guardian',
-  name: 'The Guardian',
+  id: "guardian",
+  name: "The Guardian",
   health: 250,
   maxHealth: 250,
   block: 0,
   intent: {
     type: IntentType.ATTACK,
-    value: 32
+    value: 32,
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck('guardian')
+  deck: getEnemyDeck("guardian"),
 });
 
 export const createHexaghost = (): Enemy => ({
-  id: 'hexaghost',
-  name: 'Hexaghost',
+  id: "hexaghost",
+  name: "Hexaghost",
   health: 250,
   maxHealth: 250,
   block: 0,
   intent: {
     type: IntentType.ATTACK,
-    value: 45
+    value: 45,
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck('hexaghost')
+  deck: getEnemyDeck("hexaghost"),
 });
 
 export const createChamp = (): Enemy => ({
-  id: 'champ',
-  name: 'The Champ',
+  id: "champ",
+  name: "The Champ",
   health: 400,
   maxHealth: 400,
   block: 0,
   intent: {
     type: IntentType.ATTACK,
-    value: 22
+    value: 22,
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck('champ')
+  deck: getEnemyDeck("champ"),
 });
 
 export const createCollector = (): Enemy => ({
-  id: 'collector',
-  name: 'The Collector',
+  id: "collector",
+  name: "The Collector",
   health: 300,
   maxHealth: 300,
   block: 0,
   intent: {
-    type: IntentType.DEBUFF
+    type: IntentType.DEBUFF,
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck('collector')
+  deck: getEnemyDeck("collector"),
 });
 
 export const createCityBoss = (): Enemy => ({
-  id: 'automaton',
-  name: 'Bronze Automaton',
+  id: "automaton",
+  name: "Bronze Automaton",
   health: 300,
   maxHealth: 300,
   block: 0,
   intent: {
     type: IntentType.ATTACK,
-    value: 50
+    value: 50,
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck('automaton')
+  deck: getEnemyDeck("automaton"),
 });
 
 export const getAllBosses = (): Enemy[] => [
@@ -96,7 +96,7 @@ export const getAllBosses = (): Enemy[] => [
   createHexaghost(),
   createChamp(),
   createCollector(),
-  createCityBoss()
+  createCityBoss(),
 ];
 
 export const getRandomBoss = (): Enemy => {
@@ -123,8 +123,10 @@ export const getBossForFloor = (floor: number): Enemy => {
       maxHealth: Math.floor(boss.maxHealth * 1.5),
       intent: {
         ...boss.intent,
-        value: boss.intent.value ? Math.floor(boss.intent.value * 1.3) : undefined
-      }
+        value: boss.intent.value
+          ? Math.floor(boss.intent.value * 1.3)
+          : undefined,
+      },
     };
   }
-}; 
+};

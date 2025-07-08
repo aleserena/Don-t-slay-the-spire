@@ -1,10 +1,17 @@
-import { Player, Enemy, PowerTrigger, EffectType, TargetType, PowerCardEffect } from '../types/game';
-import { applyStatusEffect } from './statusEffects';
+import {
+  Player,
+  Enemy,
+  PowerTrigger,
+  EffectType,
+  TargetType,
+  PowerCardEffect,
+} from "../types/game";
+import { applyStatusEffect } from "./statusEffects";
 
 export const processPowerCardEffects = (
   trigger: PowerTrigger,
   player: Player,
-  enemies: Enemy[]
+  enemies: Enemy[],
 ): { player: Player; enemies: Enemy[] } => {
   let newPlayer = { ...player };
   let newEnemies = [...enemies];
@@ -26,7 +33,7 @@ export const processPowerCardEffects = (
 const applyPowerCardEffect = (
   effect: PowerCardEffect,
   player: Player,
-  enemies: Enemy[]
+  enemies: Enemy[],
 ): { player: Player; enemies: Enemy[] } => {
   let newPlayer = { ...player };
   let newEnemies = [...enemies];
@@ -40,23 +47,38 @@ const applyPowerCardEffect = (
 
     case EffectType.HEAL:
       if (effect.target === TargetType.SELF) {
-        newPlayer.health = Math.min(newPlayer.maxHealth, newPlayer.health + effect.value);
+        newPlayer.health = Math.min(
+          newPlayer.maxHealth,
+          newPlayer.health + effect.value,
+        );
       }
       break;
 
     case EffectType.GAIN_ENERGY:
       if (effect.target === TargetType.SELF) {
-        newPlayer.energy = Math.min(newPlayer.maxEnergy + 3, newPlayer.energy + effect.value);
+        newPlayer.energy = Math.min(
+          newPlayer.maxEnergy + 3,
+          newPlayer.energy + effect.value,
+        );
       }
       break;
 
     case EffectType.APPLY_STATUS:
       if (effect.statusType) {
         if (effect.target === TargetType.SELF) {
-          newPlayer = applyStatusEffect(newPlayer, effect.statusType, effect.value) as Player;
+          newPlayer = applyStatusEffect(
+            newPlayer,
+            effect.statusType,
+            effect.value,
+          ) as Player;
         } else if (effect.target === TargetType.ALL_ENEMIES) {
-          newEnemies = newEnemies.map(enemy => 
-            applyStatusEffect(enemy, effect.statusType!, effect.value) as Enemy
+          newEnemies = newEnemies.map(
+            (enemy) =>
+              applyStatusEffect(
+                enemy,
+                effect.statusType!,
+                effect.value,
+              ) as Enemy,
           );
         }
       }
@@ -64,13 +86,13 @@ const applyPowerCardEffect = (
 
     case EffectType.DAMAGE:
       if (effect.target === TargetType.ALL_ENEMIES) {
-        newEnemies = newEnemies.map(enemy => ({
+        newEnemies = newEnemies.map((enemy) => ({
           ...enemy,
-          health: Math.max(0, enemy.health - effect.value)
+          health: Math.max(0, enemy.health - effect.value),
         }));
       }
       break;
   }
 
   return { player: newPlayer, enemies: newEnemies };
-}; 
+};

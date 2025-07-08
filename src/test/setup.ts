@@ -1,6 +1,6 @@
-import '@testing-library/jest-dom' 
-import { Enemy, IntentType } from '../types/game';
-import { getEnemyDeck } from '../data/monsterCards';
+import "@testing-library/jest-dom";
+import { Enemy, IntentType } from "../types/game";
+import { getEnemyDeck } from "../data/monsterCards";
 
 /**
  * Creates a test enemy with all required properties including deck
@@ -8,18 +8,18 @@ import { getEnemyDeck } from '../data/monsterCards';
  * @returns A complete Enemy object suitable for testing
  */
 export const createTestEnemy = (overrides: Partial<Enemy> = {}): Enemy => ({
-  id: 'test_enemy',
-  name: 'Test Enemy',
+  id: "test_enemy",
+  name: "Test Enemy",
   health: 50,
   maxHealth: 50,
   block: 0,
   intent: {
     type: IntentType.ATTACK,
-    value: 10
+    value: 10,
   },
   statusEffects: [],
-  deck: getEnemyDeck('cultist'),
-  ...overrides
+  deck: getEnemyDeck("cultist"),
+  ...overrides,
 });
 
 /**
@@ -28,11 +28,14 @@ export const createTestEnemy = (overrides: Partial<Enemy> = {}): Enemy => ({
  * @param overrides - Optional properties to override defaults
  * @returns Array of Enemy objects
  */
-export const createTestEnemies = (count: number, overrides: Partial<Enemy> = {}): Enemy[] => {
-  return Array.from({ length: count }, (_, index) => 
+export const createTestEnemies = (
+  count: number,
+  overrides: Partial<Enemy> = {},
+): Enemy[] => {
+  return Array.from({ length: count }, (_, index) =>
     createTestEnemy({
       id: `test_enemy_${index + 1}`,
-      ...overrides
-    })
+      ...overrides,
+    }),
   );
-}; 
+};
