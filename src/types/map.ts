@@ -9,13 +9,13 @@ export interface MapNode {
 }
 
 export enum NodeType {
-  COMBAT = 'combat',
-  ELITE = 'elite',
-  BOSS = 'boss',
-  EVENT = 'event',
-  SHOP = 'shop',
-  REST = 'rest',
-  TREASURE = 'treasure'
+  COMBAT = "combat",
+  ELITE = "elite",
+  BOSS = "boss",
+  EVENT = "event",
+  SHOP = "shop",
+  REST = "rest",
+  TREASURE = "treasure",
 }
 
 export interface GameMap {
@@ -47,15 +47,15 @@ export interface EventConsequence {
 }
 
 export enum ConsequenceType {
-  GAIN_GOLD = 'gain_gold',
-  LOSE_GOLD = 'lose_gold',
-  GAIN_HEALTH = 'gain_health',
-  LOSE_HEALTH = 'lose_health',
-  GAIN_MAX_HEALTH = 'gain_max_health',
-  GAIN_CARD = 'gain_card',
-  REMOVE_CARD = 'remove_card',
-  GAIN_RELIC = 'gain_relic',
-  UPGRADE_CARD = 'upgrade_card'
+  GAIN_GOLD = "gain_gold",
+  LOSE_GOLD = "lose_gold",
+  GAIN_HEALTH = "gain_health",
+  LOSE_HEALTH = "lose_health",
+  GAIN_MAX_HEALTH = "gain_max_health",
+  GAIN_CARD = "gain_card",
+  REMOVE_CARD = "remove_card",
+  GAIN_RELIC = "gain_relic",
+  UPGRADE_CARD = "upgrade_card",
 }
 
 export interface Shop {
@@ -65,13 +65,13 @@ export interface Shop {
 }
 
 export interface ShopCard {
-  card: import('./game').Card;
+  card: import("./game").Card;
   cost: number;
   purchased: boolean;
 }
 
 export interface ShopRelic {
-  relic: import('./game').Relic;
+  relic: import("./game").Relic;
   cost: number;
   purchased: boolean;
-} 
+}

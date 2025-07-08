@@ -1,20 +1,20 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { useGameStore } from '../store/gameStore';
-import { GamePhase, CardType } from '../types/game';
-import { getAllCards } from '../data/cards';
+import { describe, it, expect, beforeEach } from "vitest";
+import { useGameStore } from "../store/gameStore";
+import { GamePhase, CardType } from "../types/game";
+import { getAllCards } from "../data/cards";
 
-describe('Component Integration Tests', () => {
+describe("Component Integration Tests", () => {
   beforeEach(() => {
     const store = useGameStore.getState();
     store.startNewRun();
   });
 
-  describe('Card Display Integration', () => {
-    it('should handle card display across different components', () => {
+  describe("Card Display Integration", () => {
+    it("should handle card display across different components", () => {
       const allCards = getAllCards();
-      
+
       // Test that all cards can be properly displayed
-      allCards.forEach(card => {
+      allCards.forEach((card) => {
         expect(card.baseId).toBeDefined();
         expect(card.name).toBeDefined();
         expect(card.description).toBeDefined();
@@ -24,27 +24,41 @@ describe('Component Integration Tests', () => {
       });
     });
 
-    it('should properly handle special card exclusions', () => {
-      const specialCards = ['bash', 'cleave', 'whirlwind', 'twin_strike', 'anger', 'body_slam'];
+    it("should properly handle special card exclusions", () => {
+      const specialCards = [
+        "bash",
+        "cleave",
+        "whirlwind",
+        "twin_strike",
+        "anger",
+        "body_slam",
+      ];
       const allCards = getAllCards();
-      
-      specialCards.forEach(baseId => {
-        const card = allCards.find(c => c.baseId === baseId);
+
+      specialCards.forEach((baseId) => {
+        const card = allCards.find((c) => c.baseId === baseId);
         expect(card).toBeDefined();
-        
+
         // These cards should be excluded from generic damage display
-        const shouldExclude = ['body_slam', 'bash', 'cleave', 'whirlwind', 'twin_strike', 'anger'];
+        const shouldExclude = [
+          "body_slam",
+          "bash",
+          "cleave",
+          "whirlwind",
+          "twin_strike",
+          "anger",
+        ];
         expect(shouldExclude).toContain(baseId);
       });
     });
   });
 
-  describe('Game State Integration', () => {
-    it('should maintain consistent game state across components', () => {
+  describe("Game State Integration", () => {
+    it("should maintain consistent game state across components", () => {
       // Start a new game to transition from TITLE to MAP
       const { startNewGame } = useGameStore.getState();
       startNewGame();
-      
+
       const store = useGameStore.getState();
 
       expect(store.gamePhase).toBe(GamePhase.MAP);
@@ -55,65 +69,77 @@ describe('Component Integration Tests', () => {
       expect(store.player.gold).toBe(99);
     });
 
-    it('should handle deck composition correctly', () => {
+    it("should handle deck composition correctly", () => {
       const store = useGameStore.getState();
-      const totalCards = store.drawPile.length + store.hand.length + store.discardPile.length;
-      
+      const totalCards =
+        store.drawPile.length + store.hand.length + store.discardPile.length;
+
       expect(totalCards).toBeGreaterThan(0);
       expect(store.drawPile.length).toBeGreaterThan(0);
-      
+
       // Check that all cards have required properties
-      [...store.drawPile, ...store.hand, ...store.discardPile].forEach(card => {
-        expect(card.id).toBeDefined();
-        expect(card.baseId).toBeDefined();
-        expect(card.name).toBeDefined();
-      });
+      [...store.drawPile, ...store.hand, ...store.discardPile].forEach(
+        (card) => {
+          expect(card.id).toBeDefined();
+          expect(card.baseId).toBeDefined();
+          expect(card.name).toBeDefined();
+        },
+      );
     });
   });
 
-  describe('Combat Integration', () => {
-    it('should handle combat state transitions', () => {
+  describe("Combat Integration", () => {
+    it("should handle combat state transitions", () => {
       const store = useGameStore.getState();
-      
+
       // Find an available combat node
-      const availableNodes = store.map?.nodes.filter(n => n.available && n.type === 'combat') || [];
+      const availableNodes =
+        store.map?.nodes.filter((n) => n.available && n.type === "combat") ||
+        [];
       expect(availableNodes.length).toBeGreaterThan(0);
-      
+
       const combatNode = availableNodes[0];
-      expect(combatNode.type).toBe('combat');
+      expect(combatNode.type).toBe("combat");
       expect(combatNode.available).toBe(true);
       expect(combatNode.completed).toBe(false);
-      
+
       // Verify the node has an ID
       expect(combatNode.id).toBeDefined();
-      expect(typeof combatNode.id).toBe('string');
+      expect(typeof combatNode.id).toBe("string");
     });
 
-    it('should handle card playing mechanics', () => {
+    it("should handle card playing mechanics", () => {
       const store = useGameStore.getState();
-      
+
       // Find an available combat node
-      const availableNodes = store.map?.nodes.filter(n => n.available && n.type === 'combat') || [];
+      const availableNodes =
+        store.map?.nodes.filter((n) => n.available && n.type === "combat") ||
+        [];
       expect(availableNodes.length).toBeGreaterThan(0);
-      
+
       const combatNode = availableNodes[0];
-      
+
       // Start combat
       store.selectNode(combatNode.id);
-      
+
       const initialHandSize = store.hand.length;
       const initialEnergy = store.player.energy;
-      
+
       // Find a playable card
-      const playableCard = store.hand.find(card => {
-        const cost = typeof card.cost === 'number' ? card.cost : 0;
+      const playableCard = store.hand.find((card) => {
+        const cost = typeof card.cost === "number" ? card.cost : 0;
         return cost <= store.player.energy;
       });
-      
+
       if (playableCard) {
-        const cardCost = typeof playableCard.cost === 'number' ? playableCard.cost : 0;
-        
-        if (playableCard.type === CardType.ATTACK && playableCard.baseId !== 'cleave' && playableCard.baseId !== 'whirlwind') {
+        const cardCost =
+          typeof playableCard.cost === "number" ? playableCard.cost : 0;
+
+        if (
+          playableCard.type === CardType.ATTACK &&
+          playableCard.baseId !== "cleave" &&
+          playableCard.baseId !== "whirlwind"
+        ) {
           // Play targeting card
           const enemyId = store.enemies[0]?.id;
           if (enemyId) {
@@ -131,80 +157,88 @@ describe('Component Integration Tests', () => {
     });
   });
 
-  describe('UI State Management', () => {
-    it('should handle targeting state correctly', () => {
+  describe("UI State Management", () => {
+    it("should handle targeting state correctly", () => {
       const store = useGameStore.getState();
-      
+
       // Find an available combat node
-      const availableNodes = store.map?.nodes.filter(n => n.available && n.type === 'combat') || [];
+      const availableNodes =
+        store.map?.nodes.filter((n) => n.available && n.type === "combat") ||
+        [];
       expect(availableNodes.length).toBeGreaterThan(0);
-      
+
       const combatNode = availableNodes[0];
-      
+
       // Start combat
       store.selectNode(combatNode.id);
-      
+
       // Find a targeting card
-      const targetingCard = store.hand.find(card => 
-        card.type === CardType.ATTACK && 
-        card.baseId !== 'cleave' && 
-        card.baseId !== 'whirlwind'
+      const targetingCard = store.hand.find(
+        (card) =>
+          card.type === CardType.ATTACK &&
+          card.baseId !== "cleave" &&
+          card.baseId !== "whirlwind",
       );
-      
+
       if (targetingCard) {
         // Targeting should work for attack cards
         expect(targetingCard.type).toBe(CardType.ATTACK);
       }
     });
 
-    it('should handle card confirmation state', () => {
+    it("should handle card confirmation state", () => {
       const store = useGameStore.getState();
-      
+
       // Find an available combat node
-      const availableNodes = store.map?.nodes.filter(n => n.available && n.type === 'combat') || [];
+      const availableNodes =
+        store.map?.nodes.filter((n) => n.available && n.type === "combat") ||
+        [];
       expect(availableNodes.length).toBeGreaterThan(0);
-      
+
       const combatNode = availableNodes[0];
-      
+
       // Start combat
       store.selectNode(combatNode.id);
-      
+
       // Find a non-targeting card
-      const nonTargetingCard = store.hand.find(card => 
-        card.type === CardType.SKILL || 
-        card.baseId === 'cleave' || 
-        card.baseId === 'whirlwind'
+      const nonTargetingCard = store.hand.find(
+        (card) =>
+          card.type === CardType.SKILL ||
+          card.baseId === "cleave" ||
+          card.baseId === "whirlwind",
       );
-      
+
       if (nonTargetingCard) {
         // Non-targeting cards should use confirmation system
-        expect(['skill', 'attack', 'power']).toContain(nonTargetingCard.type);
+        expect(["skill", "attack", "power"]).toContain(nonTargetingCard.type);
       }
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle invalid card plays gracefully', () => {
+  describe("Error Handling", () => {
+    it("should handle invalid card plays gracefully", () => {
       const store = useGameStore.getState();
-      
+
       // Find an available combat node
-      const availableNodes = store.map?.nodes.filter(n => n.available && n.type === 'combat') || [];
+      const availableNodes =
+        store.map?.nodes.filter((n) => n.available && n.type === "combat") ||
+        [];
       expect(availableNodes.length).toBeGreaterThan(0);
-      
+
       const combatNode = availableNodes[0];
-      
+
       // Start combat
       store.selectNode(combatNode.id);
-      
+
       const initialState = {
         handSize: store.hand.length,
         energy: store.player.energy,
-        enemyHealth: store.enemies[0]?.health || 0
+        enemyHealth: store.enemies[0]?.health || 0,
       };
-      
+
       // Try to play invalid card
-      store.playCard('invalid_card_id');
-      
+      store.playCard("invalid_card_id");
+
       // State should remain unchanged
       expect(store.hand.length).toBe(initialState.handSize);
       expect(store.player.energy).toBe(initialState.energy);
@@ -213,39 +247,42 @@ describe('Component Integration Tests', () => {
       }
     });
 
-    it('should handle insufficient energy gracefully', () => {
+    it("should handle insufficient energy gracefully", () => {
       const store = useGameStore.getState();
-      
+
       // Find an available combat node
-      const availableNodes = store.map?.nodes.filter(n => n.available && n.type === 'combat') || [];
+      const availableNodes =
+        store.map?.nodes.filter((n) => n.available && n.type === "combat") ||
+        [];
       expect(availableNodes.length).toBeGreaterThan(0);
-      
+
       const combatNode = availableNodes[0];
-      
+
       // Start combat
       store.selectNode(combatNode.id);
-      
+
       // Find an expensive card
-      const expensiveCard = store.hand.find(card => 
-        typeof card.cost === 'number' && card.cost > store.player.energy
+      const expensiveCard = store.hand.find(
+        (card) =>
+          typeof card.cost === "number" && card.cost > store.player.energy,
       );
-      
+
       if (expensiveCard) {
         const initialState = {
           handSize: store.hand.length,
           energy: store.player.energy,
-          enemyHealth: store.enemies[0]?.health || 0
+          enemyHealth: store.enemies[0]?.health || 0,
         };
-        
+
         // Try to play expensive card with insufficient energy
         store.playCard(expensiveCard.id);
-        
+
         // State should remain unchanged (except for whirlwind which can be played with any energy)
-        if (expensiveCard.baseId !== 'whirlwind') {
+        if (expensiveCard.baseId !== "whirlwind") {
           expect(store.hand.length).toBe(initialState.handSize);
           expect(store.player.energy).toBe(initialState.energy);
         }
       }
     });
   });
-}); 
+});

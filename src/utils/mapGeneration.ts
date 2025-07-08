@@ -1,20 +1,20 @@
-import { MapNode, NodeType, GameMap } from '../types/map';
-import { v4 as uuidv4 } from 'uuid';
+import { MapNode, NodeType, GameMap } from "../types/map";
+import { v4 as uuidv4 } from "uuid";
 
 const MAP_WIDTH = 7;
 const MAP_HEIGHT = 15;
 
 export const generateMap = (): GameMap => {
   const nodes: MapNode[] = [];
-  
+
   // Generate nodes for each floor
   for (let y = 0; y < MAP_HEIGHT; y++) {
     const nodesInFloor = getNodesPerFloor(y);
-    
+
     for (let x = 0; x < nodesInFloor; x++) {
       const nodeType = getNodeType(y);
       const nodeX = calculateNodeX(x, nodesInFloor);
-      
+
       const node: MapNode = {
         id: uuidv4(),
         type: nodeType,
@@ -22,27 +22,27 @@ export const generateMap = (): GameMap => {
         y: y,
         connections: [],
         completed: false,
-        available: y === 0 // Only first floor nodes are initially available
+        available: y === 0, // Only first floor nodes are initially available
       };
-      
+
       nodes.push(node);
     }
   }
-  
+
   // Generate connections between nodes
   generateConnections(nodes);
-  
+
   // Make starting nodes available
-  const startingNodes = nodes.filter(n => n.y === 0);
-  startingNodes.forEach(node => {
+  const startingNodes = nodes.filter((n) => n.y === 0);
+  startingNodes.forEach((node) => {
     node.available = true;
   });
-  
+
   return {
     nodes,
     currentNodeId: null,
     floor: 0,
-    maxFloor: MAP_HEIGHT - 1
+    maxFloor: MAP_HEIGHT - 1,
   };
 };
 
@@ -64,22 +64,22 @@ const calculateNodeX = (index: number, totalNodes: number): number => {
 const getNodeType = (floor: number): NodeType => {
   if (floor === 0) return NodeType.COMBAT; // Always start with combat
   if (floor === MAP_HEIGHT - 1) return NodeType.BOSS; // Always end with boss
-  
+
   // Elite floors (every 8 floors)
   if (floor % 8 === 7) {
     return Math.random() < 0.7 ? NodeType.ELITE : NodeType.COMBAT;
   }
-  
+
   // Rest floors (every 6 floors)
   if (floor % 6 === 5) {
     return Math.random() < 0.6 ? NodeType.REST : NodeType.COMBAT;
   }
-  
+
   // Shop floors (every 10 floors)
   if (floor % 10 === 9) {
     return Math.random() < 0.8 ? NodeType.SHOP : NodeType.COMBAT;
   }
-  
+
   // Random distribution for other floors
   const rand = Math.random();
   if (rand < 0.6) return NodeType.COMBAT;
@@ -94,57 +94,64 @@ const generateConnections = (nodes: MapNode[]): void => {
   // Group nodes by floor
   const nodesByFloor: MapNode[][] = [];
   for (let y = 0; y < MAP_HEIGHT; y++) {
-    nodesByFloor[y] = nodes.filter(n => n.y === y);
+    nodesByFloor[y] = nodes.filter((n) => n.y === y);
   }
-  
+
   // Connect each floor to the next
   for (let y = 0; y < MAP_HEIGHT - 1; y++) {
     const currentFloor = nodesByFloor[y];
     const nextFloor = nodesByFloor[y + 1];
-    
+
     if (currentFloor.length === 0 || nextFloor.length === 0) continue;
-    
+
     // First, ensure every node on the next floor has at least one connection
     nextFloor.forEach((nextNode) => {
       // Find the closest node from current floor
       const closestCurrentNode = currentFloor
-        .map(node => ({
+        .map((node) => ({
           node,
-          distance: Math.abs(node.x - nextNode.x)
+          distance: Math.abs(node.x - nextNode.x),
         }))
         .sort((a, b) => a.distance - b.distance)[0];
-      
-      if (closestCurrentNode && !closestCurrentNode.node.connections.includes(nextNode.id)) {
+
+      if (
+        closestCurrentNode &&
+        !closestCurrentNode.node.connections.includes(nextNode.id)
+      ) {
         closestCurrentNode.node.connections.push(nextNode.id);
       }
     });
-    
+
     // Then, add additional connections for variety
-    currentFloor.forEach(currentNode => {
+    currentFloor.forEach((currentNode) => {
       // Skip if this node already has many connections
       if (currentNode.connections.length >= 3) return;
-      
+
       // Each node connects to 1-2 additional nodes on the next floor
       const maxAdditionalConnections = Math.min(2, nextFloor.length);
       const additionalConnections = Math.min(
         Math.floor(Math.random() * 2) + 1,
-        maxAdditionalConnections
+        maxAdditionalConnections,
       );
-      
+
       // Find the closest nodes to connect to (excluding already connected ones)
-      const availableNextNodes = nextFloor.filter(node => 
-        !currentNode.connections.includes(node.id)
+      const availableNextNodes = nextFloor.filter(
+        (node) => !currentNode.connections.includes(node.id),
       );
-      
+
       const sortedNextNodes = availableNextNodes
-        .map(node => ({
+        .map((node) => ({
           node,
-          distance: Math.abs(node.x - currentNode.x)
+          distance: Math.abs(node.x - currentNode.x),
         }))
         .sort((a, b) => a.distance - b.distance);
-      
+
       // Connect to additional closest nodes
-      for (let i = 0; i < Math.min(additionalConnections, sortedNextNodes.length); i++) {
+      for (
+        let i = 0;
+        i < Math.min(additionalConnections, sortedNextNodes.length);
+        i++
+      ) {
         const targetNode = sortedNextNodes[i].node;
         if (!currentNode.connections.includes(targetNode.id)) {
           currentNode.connections.push(targetNode.id);
@@ -155,18 +162,22 @@ const generateConnections = (nodes: MapNode[]): void => {
 };
 
 export const getAvailableNodes = (map: GameMap): MapNode[] => {
-  return map.nodes.filter(node => node.available && !node.completed);
+  return map.nodes.filter((node) => node.available && !node.completed);
 };
 
 export const completeNode = (map: GameMap, nodeId: string): GameMap => {
-  const nodeToComplete = map.nodes.find(n => n.id === nodeId);
-  
+  const nodeToComplete = map.nodes.find((n) => n.id === nodeId);
+
   // Don't modify if node doesn't exist, is already completed, or is not available
-  if (!nodeToComplete || nodeToComplete.completed || !nodeToComplete.available) {
+  if (
+    !nodeToComplete ||
+    nodeToComplete.completed ||
+    !nodeToComplete.available
+  ) {
     return map;
   }
-  
-  const updatedNodes = map.nodes.map(node => {
+
+  const updatedNodes = map.nodes.map((node) => {
     if (node.id === nodeId) {
       return { ...node, completed: true };
     }
@@ -176,30 +187,36 @@ export const completeNode = (map: GameMap, nodeId: string): GameMap => {
     }
     return node;
   });
-  
+
   // Make connected nodes available ONLY if they are on the immediate next floor
-  nodeToComplete.connections.forEach(connectionId => {
-    const nodeIndex = updatedNodes.findIndex(n => n.id === connectionId);
+  nodeToComplete.connections.forEach((connectionId) => {
+    const nodeIndex = updatedNodes.findIndex((n) => n.id === connectionId);
     if (nodeIndex !== -1) {
       const connectedNode = updatedNodes[nodeIndex];
       // Only make available if it's on the immediate next floor (y = current node's y + 1)
       if (connectedNode.y === nodeToComplete.y + 1) {
-        updatedNodes[nodeIndex] = { ...updatedNodes[nodeIndex], available: true };
+        updatedNodes[nodeIndex] = {
+          ...updatedNodes[nodeIndex],
+          available: true,
+        };
       }
     }
   });
-  
+
   // Update floor to the next floor
   const newFloor = nodeToComplete.y + 1;
-  
+
   return {
     ...map,
     nodes: updatedNodes,
     currentNodeId: nodeId,
-    floor: newFloor
+    floor: newFloor,
   };
 };
 
-export const getNodeById = (map: GameMap, nodeId: string): MapNode | undefined => {
-  return map.nodes.find(node => node.id === nodeId);
-}; 
+export const getNodeById = (
+  map: GameMap,
+  nodeId: string,
+): MapNode | undefined => {
+  return map.nodes.find((node) => node.id === nodeId);
+};
