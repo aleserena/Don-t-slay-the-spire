@@ -1,3 +1,29 @@
+/**
+ * @fileoverview Core Game State Management
+ * 
+ * This file contains the main game store using Zustand for state management.
+ * It handles all game logic including combat, progression, card playing, and UI state.
+ * 
+ * Key responsibilities:
+ * - Game state management (player, enemies, deck, hand, etc.)
+ * - Combat mechanics (turns, damage calculation, status effects)
+ * - Progression system (map navigation, rewards, shops)
+ * - UI state management (modals, card selection, debug mode)
+ * 
+ * @example
+ * ```typescript
+ * // Access game state
+ * const { player, enemies, hand } = useGameStore();
+ * 
+ * // Perform actions
+ * const { playCard, endTurn, startNewGame } = useGameStore();
+ * playCard('strike', 'enemy_1');
+ * ```
+ * 
+ * @since v1.0.0
+ * @author Development Team
+ */
+
 import { create } from 'zustand';
 import { GameState, Player, Enemy, TurnPhase, EffectType, TargetType, StatusType, IntentType, GamePhase, Relic, RelicTrigger, Card, CardType, PowerTrigger, MonsterCardType } from '../types/game';
 import { createInitialDeck, getAllCards } from '../data/cards';
@@ -20,59 +46,203 @@ import { upgradeCard } from '../utils/cardUpgrades';
 import { getRandomEnemyEncounter } from '../data/enemies';
 import { debugConsole } from '../utils/debugUtils';
 
+/**
+ * Extended game store interface that includes UI state and actions.
+ * 
+ * This interface extends the base GameState with additional UI-specific state
+ * and all the actions that can be performed in the game.
+ * 
+ * @interface GameStore
+ * @extends {GameState} - Base game state (player, enemies, deck, etc.)
+ */
 interface GameStore extends GameState {
   // Additional state
+  /** Tracks if this is the first attack in the current combat */
   firstAttackThisCombat: boolean;
+  /** Currently selected card for targeting */
   selectedCard: Card | null;
+  /** Whether the card removal modal is open */
   showCardRemovalModal: boolean;
+  /** Whether the card upgrade modal is open */
   showCardUpgradeModal: boolean;
+  /** Whether debug mode is enabled */
   debugMode: boolean;
+  /** Current floor number in the spire */
   currentFloor: number;
+  /** Whether there's a saved game available */
   hasSavedGame: boolean;
   
   // Actions
+  /**
+   * Plays a card from the player's hand
+   * @param cardId - ID of the card to play
+   * @param targetId - Optional target ID for targeting cards
+   */
   playCard: (cardId: string, targetId?: string) => void;
+  
+  /**
+   * Ends the current player turn and starts enemy turn
+   */
   endTurn: () => void;
+  
+  /**
+   * Starts a new combat encounter
+   */
   startCombat: () => void;
+  
+  /**
+   * Draws a specified number of cards from draw pile to hand
+   * @param count - Number of cards to draw
+   */
   drawCards: (count: number) => void;
+  
+  /**
+   * Shuffles the discard pile back into the draw pile
+   */
   shuffleDiscardIntoDraw: () => void;
+  
+  /**
+   * Processes the enemy turn (AI actions, damage calculation)
+   */
   processEnemyTurn: () => void;
   
   // Progression actions
+  /**
+   * Starts a completely new run (resets all progress)
+   */
   startNewRun: () => void;
+  
+  /**
+   * Starts a new game from the title screen
+   */
   startNewGame: () => void;
+  
+  /**
+   * Returns to the title screen
+   */
   returnToTitle: () => void;
+  
+  /**
+   * Loads a previously saved game
+   */
   loadSavedGame: () => void;
+  
+  /**
+   * Selects a node on the map to progress
+   * @param nodeId - ID of the node to select
+   */
   selectNode: (nodeId: string) => void;
+  
+  /**
+   * Selects a card reward after combat
+   * @param cardId - ID of the card to add to deck
+   */
   selectCardReward: (cardId: string) => void;
+  
+  /**
+   * Skips the card reward (removes all options)
+   */
   skipCardReward: () => void;
+  
+  /**
+   * Selects a choice in an event
+   * @param choiceId - ID of the choice to make
+   */
   selectEventChoice: (choiceId: string) => void;
+  
+  /**
+   * Returns to the map view
+   */
   returnToMap: () => void;
   
   // Shop actions
+  /**
+   * Purchases a card from the shop
+   * @param index - Index of the card in the shop inventory
+   */
   purchaseShopCard: (index: number) => void;
+  
+  /**
+   * Purchases a relic from the shop
+   * @param index - Index of the relic in the shop inventory
+   */
   purchaseShopRelic: (index: number) => void;
+  
+  /**
+   * Removes a card from the player's deck
+   * @param cardId - Optional card ID to remove (if not specified, opens modal)
+   */
   removeCardFromDeck: (cardId?: string) => void;
+  
+  /**
+   * Opens the card removal modal
+   */
   openCardRemovalModal: () => void;
+  
+  /**
+   * Closes the card removal modal
+   */
   closeCardRemovalModal: () => void;
   
   // Rest site actions
+  /**
+   * Rests and heals the player
+   */
   restAndHeal: () => void;
+  
+  /**
+   * Upgrades a card at the rest site
+   * @param cardId - Optional card ID to upgrade (if not specified, opens modal)
+   */
   upgradeCardAtRest: (cardId?: string) => void;
+  
+  /**
+   * Opens the card upgrade modal
+   */
   openCardUpgradeModal: () => void;
+  
+  /**
+   * Closes the card upgrade modal
+   */
   closeCardUpgradeModal: () => void;
   
   // Card selection
+  /**
+   * Sets the currently selected card for targeting
+   * @param card - Card to select, or null to deselect
+   */
   setSelectedCard: (card: Card | null) => void;
   
   // Debug actions
+  /**
+   * Toggles debug mode on/off
+   */
   toggleDebugMode: () => void;
   
   // Relic reward actions
+  /**
+   * Selects a relic reward
+   */
   selectRelicReward: () => void;
+  
+  /**
+   * Skips the relic reward
+   */
   skipRelicReward: () => void;
 }
 
+/**
+ * Creates a new player with default starting stats and the starter relic.
+ * 
+ * @returns {Player} A new player with 80 HP, 3 energy, 99 gold, and starter relic
+ * 
+ * @example
+ * ```typescript
+ * const player = createInitialPlayer();
+ * console.log(player.health); // 80
+ * console.log(player.relics.length); // 1 (starter relic)
+ * ```
+ */
 const createInitialPlayer = (): Player => ({
   health: 80,
   maxHealth: 80,
@@ -85,6 +255,18 @@ const createInitialPlayer = (): Player => ({
   powerCards: []
 });
 
+/**
+ * Creates the initial game state with a fresh deck and empty combat state.
+ * 
+ * @returns {GameState} Complete initial game state ready for a new run
+ * 
+ * @example
+ * ```typescript
+ * const initialState = createInitialGameState();
+ * console.log(initialState.gamePhase); // GamePhase.TITLE
+ * console.log(initialState.drawPile.length); // 10 (starter deck)
+ * ```
+ */
 const createInitialGameState = (): GameState => {
   const deck = createInitialDeck();
   return {
@@ -100,6 +282,29 @@ const createInitialGameState = (): GameState => {
   };
 };
 
+/**
+ * Main game store using Zustand for state management.
+ * 
+ * This is the central store that manages all game state and provides
+ * actions for all game interactions. It uses Zustand for efficient
+ * state updates and React integration.
+ * 
+ * @example
+ * ```typescript
+ * // Access state
+ * const { player, enemies, hand } = useGameStore();
+ * 
+ * // Access actions
+ * const { playCard, endTurn } = useGameStore();
+ * 
+ * // Perform actions
+ * playCard('strike', 'enemy_1');
+ * endTurn();
+ * ```
+ * 
+ * @since v1.0.0
+ * @author Development Team
+ */
 export const useGameStore = create<GameStore>((set, get) => ({
   ...createInitialGameState(),
   firstAttackThisCombat: true,
@@ -110,6 +315,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
   currentFloor: 1,
   hasSavedGame: false,
 
+  /**
+   * Starts a completely new run, resetting all progress but preserving debug mode.
+   * 
+   * This action resets the entire game state to initial values, including:
+   * - Player stats and deck
+   * - Map progress
+   * - Combat state
+   * - All UI modals and selections
+   * 
+   * @example
+   * ```typescript
+   * const { startNewRun } = useGameStore();
+   * startNewRun(); // Resets everything to initial state
+   * ```
+   */
   startNewRun: () => {
     set((state) => ({
       ...createInitialGameState(),
@@ -121,6 +341,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Selects a node on the map to progress the game.
+   * 
+   * This action handles all node types (combat, boss, elite, event, rest, shop)
+   * and transitions the game to the appropriate phase. It also:
+   * - Validates node availability
+   * - Updates map completion status
+   * - Sets up appropriate game state for the node type
+   * 
+   * @param nodeId - The ID of the node to select
+   * 
+   * @example
+   * ```typescript
+   * const { selectNode } = useGameStore();
+   * selectNode('combat_1'); // Starts a combat encounter
+   * selectNode('shop_1');   // Opens the shop
+   * ```
+   */
   selectNode: (nodeId: string) => {
     const state = get();
     if (!state.map) return;
@@ -283,6 +521,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
+  /**
+   * Selects a card reward after combat
+   * @param cardId - ID of the card to add to deck
+   */
   selectCardReward: (cardId: string) => {
     set((state) => {
       const card = state.combatReward?.cardRewards.find(c => c.id === cardId);
@@ -323,6 +565,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Skips the card reward (removes all options)
+   */
   skipCardReward: () => {
     set((state) => {
       // Check if there's a relic reward to show next
@@ -359,6 +604,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Selects a choice in an event
+   * @param choiceId - ID of the choice to make
+   */
   selectEventChoice: (choiceId: string) => {
     const state = get();
     if (!state.currentEvent) return;
@@ -383,6 +632,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Returns to the map view
+   */
   returnToMap: () => {
     set((state) => {
       // Combine ALL cards back into the draw pile, but filter out cards created during combat
@@ -406,6 +658,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Plays a card from the player's hand
+   * @param cardId - ID of the card to play
+   * @param targetId - Optional target ID for targeting cards
+   */
   playCard: (cardId: string, targetId?: string) => {
     const state = get();
     const card = state.hand.find(c => c.id === cardId);
@@ -716,6 +973,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Processes the enemy turn (AI actions, damage calculation)
+   */
   processEnemyTurn: () => {
     set((state) => {
       let newPlayer = { ...state.player };
@@ -842,6 +1102,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().drawCards(5);
   },
 
+  /**
+   * Ends the current player turn and starts enemy turn
+   */
   endTurn: () => {
     const state = get();
     
@@ -877,6 +1140,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
+  /**
+   * Starts a new combat encounter
+   */
   startCombat: () => {
     // Preserve current player state and deck, but reset combat-specific state
     set((state) => ({
@@ -901,6 +1167,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().drawCards(5);
   },
 
+  /**
+   * Draws a specified number of cards from draw pile to hand
+   * @param count - Number of cards to draw
+   */
   drawCards: (count: number) => {
     set((state) => {
       let newDrawPile = [...state.drawPile];
@@ -930,6 +1200,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Shuffles the discard pile back into the draw pile
+   */
   shuffleDiscardIntoDraw: () => {
     set((state) => ({
       ...state,
@@ -939,6 +1212,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Purchases a card from the shop
+   * @param index - Index of the card in the shop inventory
+   */
   purchaseShopCard: (index: number) => {
     set((state) => {
       if (!state.currentShop || index >= state.currentShop.cards.length) return state;
@@ -963,6 +1240,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Purchases a relic from the shop
+   * @param index - Index of the relic in the shop inventory
+   */
   purchaseShopRelic: (index: number) => {
     set((state) => {
       if (!state.currentShop || index >= state.currentShop.relics.length) return state;
@@ -987,6 +1268,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Removes a card from the player's deck
+   * @param cardId - Optional card ID to remove (if not specified, opens modal)
+   */
   removeCardFromDeck: (cardId?: string) => {
     set((state) => {
       if (!state.currentShop || state.player.gold < state.currentShop.removeCardCost) return state;
@@ -1034,6 +1319,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Sets the currently selected card for targeting
+   * @param card - Card to select, or null to deselect
+   */
   setSelectedCard: (card: Card | null) => {
     set((state) => ({
       ...state,
@@ -1041,6 +1330,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Opens the card removal modal
+   */
   openCardRemovalModal: () => {
     set((state) => ({
       ...state,
@@ -1049,6 +1341,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Closes the card removal modal
+   */
   closeCardRemovalModal: () => {
     set((state) => ({
       ...state,
@@ -1057,6 +1352,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Toggles debug mode on/off
+   */
   toggleDebugMode: () => {
     set((state) => ({
       ...state,
@@ -1064,6 +1362,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Rests and heals the player
+   */
   restAndHeal: () => {
     set((state) => ({
       ...state,
@@ -1076,6 +1377,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Upgrades a card at the rest site
+   * @param cardId - Optional card ID to upgrade (if not specified, opens modal)
+   */
   upgradeCardAtRest: (cardId?: string) => {
     set((state) => {
       if (!cardId) {
@@ -1118,6 +1423,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Opens the card upgrade modal
+   */
   openCardUpgradeModal: () => {
     set((state) => ({
       ...state,
@@ -1126,6 +1434,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Closes the card upgrade modal
+   */
   closeCardUpgradeModal: () => {
     set((state) => ({
       ...state,
@@ -1134,6 +1445,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Starts a new game from the title screen
+   */
   startNewGame: () => {
     set((state) => ({
       ...createInitialGameState(),
@@ -1148,6 +1462,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Returns to the title screen
+   */
   returnToTitle: () => {
     set((state) => ({
       ...state,
@@ -1156,6 +1473,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  /**
+   * Loads a previously saved game
+   */
   loadSavedGame: () => {
     // For now, just start a new game - in the future this could load from localStorage
     const state = get();
@@ -1167,7 +1487,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  // Relic reward actions
+  /**
+   * Selects a relic reward
+   */
   selectRelicReward: () => {
     set((state) => {
       const relic = state.combatReward?.relicReward;
@@ -1195,6 +1517,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
+  /**
+   * Skips the relic reward
+   */
   skipRelicReward: () => {
     set((state) => {
       // Combine ALL cards back into the draw pile, but filter out cards created during combat

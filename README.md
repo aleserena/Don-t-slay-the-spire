@@ -1,215 +1,300 @@
-# Slay the Spire Clone
+# Don't Slay the Spire 🗡️
 
 A roguelike deck-building card game inspired by Slay the Spire, built with React, TypeScript, and modern web technologies.
 
-## 🎮 Game Features
+## 🎮 Game Overview
 
-### Current Implementation (Phase 2 - Enhanced Combat)
-- ✅ **Core Game Architecture**: Complete game state management with Zustand
-- ✅ **Advanced Card System**: Attack, Skill, and Power cards with complex effects
-- ✅ **Enhanced Combat System**: Turn-based combat with status effects and targeting
-- ✅ **Status Effects**: Vulnerable, Weak, Strength, Poison, and more
-- ✅ **Targeting System**: Click-to-target with damage preview and vulnerable calculations
-- ✅ **Map System**: Node-based progression with different encounter types (Combat, Elite, Boss, Shop, Rest, Events)
-- ✅ **Deck Building**: Card rewards, deck persistence, and proper state management
-- ✅ **Relics System**: Passive abilities with floating tooltips and rarity-based effects
-- ✅ **UI Components**: Modern, responsive game interface with visual feedback
-- ✅ **Player Management**: Health, energy, block, gold, and relic tracking
-- ✅ **Enemy System**: Advanced enemy AI with intent display and elite encounters
-- ✅ **Hand Management**: Proper card drawing, playing, and deck preservation
+**Don't Slay the Spire** is a strategic card game where you:
+- Build a deck of powerful cards through your journey
+- Battle increasingly difficult enemies with unique abilities
+- Collect relics that provide permanent passive effects
+- Navigate a branching map to choose your path
+- Experience procedurally generated runs with different strategies
 
-### Latest Updates
-For detailed information about all changes, bug fixes, and improvements, see [CHANGELOG.md](CHANGELOG.md).
-
-**Recent Highlights:**
-- 🔧 **Critical Bug Fixes**: Deck preservation, map progression, and targeting issues resolved
-- ✨ **Enhanced Tooltips**: Comprehensive tooltip system for all game elements
-- 🎯 **Improved UX**: Better visual feedback and information accessibility
-- 🧪 **Robust Testing**: 176 tests ensuring game reliability
-
-### Planned Features (Future Phases)
-- 🔄 **More Content**: Additional cards, enemies, and encounters
-- 🔄 **Visual Polish**: Animations, particle effects, and improved graphics
-- 🔄 **Audio**: Sound effects and background music
-- 🔄 **Save System**: Progress persistence and multiple save slots
-- 🔄 **Multiple Characters**: Different character classes with unique cards
-
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
+- **Node.js** 18.0.0 or higher
+- **npm** 9.0.0 or higher
+- **Git** 2.30.0 or higher
 
 ### Installation
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open your browser and navigate to `http://localhost:3000`
-
-### Running Tests
 ```bash
-npm test
+# Clone the repository
+git clone <repository-url>
+cd "Don't slay the spire"
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Open http://localhost:5173 in your browser
 ```
 
-### Building for Production
+### Available Scripts
 ```bash
-npm run build
+# Development
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+
+# Testing
+npm test             # Run all tests
+npm run test:watch   # Run tests in watch mode
+npm run test:coverage # Run tests with coverage report
+
+# Code Quality
+npm run lint         # Run ESLint
+npm run lint:fix     # Fix ESLint issues
+npm run format       # Format code with Prettier
+npm run format:check # Check code formatting
+npm run type-check   # Run TypeScript type checking
+npm run validate     # Run all quality checks
+
+# Documentation
+npm run docs         # Generate documentation
+npm run docs:serve   # Serve documentation locally
+
+# Analysis
+npm run analyze      # Analyze bundle size
 ```
 
-## 🎯 How to Play
+## 🏗️ Architecture Overview
 
-### Basic Gameplay
-1. **Map Navigation**: Click on available nodes to progress through the spire
-2. **Energy**: You start each turn with 3 energy to spend on cards
-3. **Combat**: Use attack cards to damage enemies, skill cards for defense and utility
-4. **Targeting**: Click attack cards, then click enemies to target them
-5. **Status Effects**: Apply and manage various status effects for strategic advantage
-6. **Deck Building**: Choose card rewards after combat to improve your deck
-7. **Relics**: Collect powerful relics that provide passive benefits
-
-### Card Types
-- **Attack Cards** (Red): Deal damage to enemies, some with special effects
-- **Skill Cards** (Blue): Provide utility effects like block, card draw, or status effects
-- **Power Cards** (Yellow): Permanent effects that last the entire combat
-
-### Node Types
-- **Combat** (⚔️): Fight regular enemies
-- **Elite** (⭐): Fight stronger enemies for better rewards
-- **Boss** (👑): Major encounters with powerful foes
-- **Rest** (🔥): Heal or upgrade cards
-- **Shop** (💰): Buy cards, relics, or remove cards from your deck
-- **Event** (❓): Random encounters with choices and consequences
-
-### Status Effects
-- **Vulnerable**: Take 50% more damage
-- **Weak**: Deal 25% less damage
-- **Strength**: Increase damage dealt
-- **Poison**: Take damage at turn start
-- **Block**: Absorb incoming damage
-
-### Controls
-- **Click cards** to select them for targeting
-- **Click enemies** to target them with attack cards
-- **Click "End Turn"** to end your turn
-- **Hover over relics** to see detailed descriptions
-
-## 🏗️ Project Structure
+### Core Components
 
 ```
 src/
 ├── components/          # React UI components
-│   ├── GameBoard.tsx   # Main game layout with targeting system
-│   ├── PlayerArea.tsx  # Player stats with relic tooltips
-│   ├── EnemyArea.tsx   # Enemy display with damage preview
-│   ├── HandArea.tsx    # Card hand with targeting mechanics
-│   ├── GameUI.tsx      # Top bar with game controls
-│   ├── MapView.tsx     # Map navigation interface
-│   ├── CardRewardScreen.tsx  # Card selection after combat
-│   ├── ShopScreen.tsx  # Shop interface
-│   ├── RestScreen.tsx  # Rest site options
-│   └── EventScreen.tsx # Random event handling
-├── store/              # State management
-│   └── gameStore.ts    # Zustand store with comprehensive game logic
-├── types/              # TypeScript type definitions
-│   ├── game.ts         # Core game interfaces and enums
-│   └── map.ts          # Map and progression types
-├── data/               # Game content
-│   ├── cards.ts        # Comprehensive card definitions
-│   ├── enemies.ts      # Enemy definitions with AI
-│   ├── bosses.ts       # Boss encounters
-│   ├── relics.ts       # Relic definitions and effects
-│   └── events.ts       # Random event definitions
-├── utils/              # Utility functions
-│   ├── statusEffects.ts     # Status effect calculations
-│   ├── mapGeneration.ts     # Map generation algorithms
-│   ├── relicEffects.ts      # Relic effect processing
-│   └── cardUpgrades.ts      # Card upgrade logic
-├── __tests__/          # Test suites
-│   ├── bugfixes.test.ts     # Bug fix verification tests
-│   └── integration.test.ts  # Integration tests
-├── App.tsx             # Main application component
-└── main.tsx           # Application entry point
+│   ├── GameBoard.tsx    # Main game interface
+│   ├── PlayerArea.tsx   # Player stats and hand
+│   ├── EnemyArea.tsx    # Enemy display and intents
+│   ├── MapView.tsx      # Map navigation
+│   └── ...              # Other UI components
+├── store/
+│   └── gameStore.ts     # Main game state management (Zustand)
+├── data/                # Game data definitions
+│   ├── cards.ts         # Player card definitions
+│   ├── enemies.ts       # Enemy definitions
+│   ├── relics.ts        # Relic definitions
+│   └── ...              # Other game data
+├── types/
+│   ├── game.ts          # Core game type definitions
+│   └── map.ts           # Map-related types
+├── utils/               # Game logic utilities
+│   ├── statusEffects.ts # Status effect processing
+│   ├── cardUtils.ts     # Card-related utilities
+│   └── ...              # Other utilities
+└── __tests__/           # Test files
 ```
 
-## 🧪 Testing
+### Key Technologies
 
-The project includes comprehensive test coverage:
-- **176 tests** across 15 test files
-- **Bug fix verification**: Tests for all major bug fixes
-- **Integration tests**: End-to-end game flow testing
-- **Unit tests**: Individual component and utility testing
+- **React 18** - UI framework with hooks
+- **TypeScript** - Type-safe JavaScript
+- **Zustand** - Lightweight state management
+- **Vite** - Fast build tool and dev server
+- **Vitest** - Unit testing framework
+- **ESLint + Prettier** - Code quality and formatting
 
-Run tests with:
+### State Management
+
+The game uses **Zustand** for state management with a single store (`gameStore.ts`) that contains:
+
+- **Game State**: Player, enemies, deck, hand, current phase
+- **UI State**: Modals, card selection, debug mode
+- **Actions**: All game interactions (play cards, end turn, etc.)
+
+```typescript
+// Example usage
+const { player, enemies, hand } = useGameStore();
+const { playCard, endTurn } = useGameStore();
+
+// Play a card
+playCard('strike', 'enemy_1');
+```
+
+## 🧪 Testing Strategy
+
+### Test Coverage Requirements
+- **Minimum 90% coverage** for all new features
+- **TDD approach** - write tests first, then implementation
+- **Comprehensive testing** of game logic, edge cases, and UI interactions
+
+### Test Categories
+- **Unit Tests**: Individual functions and utilities
+- **Integration Tests**: Component interactions
+- **Game Logic Tests**: Combat mechanics, card effects, status effects
+- **Edge Case Tests**: Error conditions and boundary cases
+
+### Running Tests
 ```bash
+# Run all tests
 npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run specific test file
+npm test -- src/__tests__/gameStore.test.ts
+
+# Watch mode for development
+npm run test:watch
 ```
 
-## 🛠️ Technology Stack
+## 📚 Development Guidelines
 
-- **React 18**: Modern React with hooks and functional components
-- **TypeScript**: Type-safe development with comprehensive type coverage
-- **Zustand**: Lightweight state management for complex game state
-- **Vite**: Fast development build tool with HMR
-- **Vitest**: Fast unit testing framework
-- **UUID**: Unique identifier generation for game entities
+### Code Quality Standards
+- **ESLint** enforces code style and catches errors
+- **Prettier** ensures consistent formatting
+- **TypeScript** provides type safety
+- **Pre-commit hooks** run quality checks automatically
 
-## 🎨 Design Philosophy
+### Documentation Standards
+- **JSDoc comments** for all public APIs
+- **README files** for major components
+- **Inline comments** for complex logic
+- **Type definitions** for all data structures
 
-This project recreates the core mechanics of Slay the Spire while maintaining:
-- **Clean Architecture**: Modular, maintainable code structure
-- **Type Safety**: Full TypeScript coverage for robust development
-- **Modern UI**: Responsive design with smooth interactions and visual feedback
-- **Performance**: Optimized rendering and state management
-- **Extensibility**: Easy to add new cards, enemies, and features
-- **Test Coverage**: Comprehensive testing for reliability
+### Git Workflow
+1. **Feature branches** for new development
+2. **Conventional commits** for clear history
+3. **Pull requests** with comprehensive reviews
+4. **Automated CI/CD** for quality assurance
+
+### Automated Quality Checks
+The project includes automated quality checks that run:
+- **On every commit** (pre-commit hooks)
+- **On every push** (GitHub Actions CI)
+- **Before merging** (PR checks)
+
+These checks ensure:
+- ✅ All tests pass
+- ✅ Code is properly formatted
+- ✅ No linting errors
+- ✅ TypeScript compilation succeeds
+- ✅ Test coverage meets requirements
+
+## 🎯 Game Mechanics
+
+### Core Systems
+
+#### Cards
+- **Attack Cards**: Deal damage to enemies
+- **Skill Cards**: Provide utility, block, or status effects
+- **Power Cards**: Provide ongoing effects across turns
+
+#### Combat
+- **Turn-based system** with player and enemy phases
+- **Energy system** for playing cards
+- **Block system** for damage reduction
+- **Status effects** for buffs and debuffs
+
+#### Progression
+- **Map navigation** with different node types
+- **Card rewards** after combat victories
+- **Relic collection** for permanent bonuses
+- **Shop system** for purchasing upgrades
+
+### Status Effects
+- **Poison**: Deals damage over time
+- **Weak**: Reduces damage dealt
+- **Vulnerable**: Increases damage taken
+- **Strength**: Increases damage dealt
+- **Dexterity**: Increases block generated
+
+## 🔧 Development Workflow
+
+### For New Developers
+
+1. **Setup Environment**
+   ```bash
+   git clone <repository-url>
+   cd "Don't slay the spire"
+   npm install
+   npm run dev
+   ```
+
+2. **Understand the Codebase**
+   - Start with `src/types/game.ts` for data structures
+   - Review `src/store/gameStore.ts` for game logic
+   - Explore `src/components/` for UI components
+
+3. **Make Changes**
+   - Create a feature branch: `git checkout -b feature/new-feature`
+   - Write tests first (TDD approach)
+   - Implement functionality
+   - Ensure all quality checks pass
+
+4. **Submit Changes**
+   - Commit with conventional format: `feat: add new card type`
+   - Push and create a pull request
+   - Ensure CI checks pass
+
+### For Contributors
+
+- **Follow the development rules** in `DEVELOPMENT_RULES.md`
+- **Write comprehensive tests** for all new features
+- **Document all public APIs** with JSDoc
+- **Maintain 90%+ test coverage**
+- **Use conventional commits** for clear history
+
+## 📖 Documentation
+
+### Key Documents
+- **[DEVELOPMENT_RULES.md](DEVELOPMENT_RULES.md)** - Comprehensive development standards
+- **[DEVELOPMENT_TOOLS.md](DEVELOPMENT_TOOLS.md)** - Tools and automation setup
+- **[QUICK_START_GUIDE.md](QUICK_START_GUIDE.md)** - Quick implementation guide
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+
+### API Documentation
+- **TypeScript definitions** in `src/types/`
+- **JSDoc comments** throughout the codebase
+- **Generated docs** via `npm run docs`
+
+## 🐛 Debugging
+
+### Debug Mode
+Enable debug mode in the game to access:
+- **Damage calculation details**
+- **Status effect processing**
+- **Card effect debugging**
+- **State inspection tools**
+
+### Common Issues
+- **Type errors**: Run `npm run type-check`
+- **Linting issues**: Run `npm run lint:fix`
+- **Test failures**: Check test output for specific errors
+- **Build issues**: Ensure all dependencies are installed
 
 ## 🤝 Contributing
 
-This is a learning project, but contributions are welcome! Areas where help would be appreciated:
-- Additional card implementations
-- Enemy AI improvements
-- UI/UX enhancements
-- Bug fixes and optimizations
-- Test coverage improvements
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
-## 📝 Development Roadmap
+### Before Contributing
+1. Read the [Development Rules](DEVELOPMENT_RULES.md)
+2. Set up your development environment
+3. Familiarize yourself with the codebase
+4. Write tests for your changes
 
-### Phase 1: Core Foundation ✅
-- Basic game loop and state management
-- Card playing mechanics
-- Simple combat system
-
-### Phase 2: Enhanced Combat ✅
-- Status effects (Poison, Weak, Vulnerable, etc.)
-- Advanced card effects and targeting
-- Enemy variety and behaviors
-- Map progression system
-- Deck building mechanics
-- Relic system
-
-### Phase 3: Content Expansion 🔄
-- More cards, enemies, and encounters
-- Multiple character classes
-- Advanced relics and synergies
-
-### Phase 4: Polish & Features 🔄
-- Visual effects and animations
-- Sound and music integration
-- Save/load system
-- Endless mode and challenges
+### Code Review Process
+1. **Automated checks** must pass
+2. **Test coverage** must remain above 90%
+3. **Documentation** must be updated
+4. **Code review** by maintainers
 
 ## 📄 License
 
-MIT License - feel free to use this project for learning and experimentation!
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Inspired by **Slay the Spire** by MegaCrit
+- Built with modern web technologies
+- Community-driven development
 
 ---
 
-**Note**: This is a fan project inspired by Slay the Spire and is not affiliated with Mega Crit Games. 
+**Happy coding! 🎮✨** 

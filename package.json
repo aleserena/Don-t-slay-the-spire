@@ -21,10 +21,11 @@
     "docs": "typedoc --out docs src",
     "docs:serve": "npx serve docs",
     "clean": "rm -rf dist coverage docs",
-    "prepare": "husky install"
+    "prepare": "if [ \"$CI\" != \"true\" ]; then husky install; else echo \"Skipping husky install in CI\"; fi"
   },
   "dependencies": {
     "framer-motion": "^10.16.16",
+    "husky": "^9.1.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "uuid": "^9.0.1",
