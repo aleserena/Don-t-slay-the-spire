@@ -42,7 +42,7 @@ import {
   PowerTrigger,
   MonsterCardType,
 } from "../types/game";
-import { createInitialDeck, getAllCards } from "../data/cards";
+import { createInitialDeck, generateCardRewards } from "../data/cards";
 import { getBossForFloor } from "../data/bosses";
 import { getStarterRelic, getAllRelics } from "../data/relics";
 import { generateMap, completeNode } from "../utils/mapGeneration";
@@ -493,20 +493,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
 
         case "shop": {
-          const shopCards = getAllCards()
-            .filter(() => Math.random() < 0.3)
-            .slice(0, 5)
-            .map((card) => ({
-              card,
-              cost:
-                50 +
-                (card.rarity === "uncommon"
-                  ? 25
-                  : card.rarity === "rare"
-                    ? 50
-                    : 0),
-              purchased: false,
-            }));
+          const shopCards = generateCardRewards(5).map((card) => ({
+            card,
+            cost:
+              50 +
+              (card.rarity === "uncommon"
+                ? 25
+                : card.rarity === "rare"
+                  ? 50
+                  : 0),
+            purchased: false,
+          }));
 
           const shopRelics = getAllRelics()
             .filter((r: Relic) => r.rarity !== "starter" && Math.random() < 0.2)
@@ -1085,9 +1082,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Check for combat end
       if (newEnemies.length === 0) {
         const rewardGold = 10 + Math.floor(Math.random() * 20);
-        const rewardCards = getAllCards()
-          .filter(() => Math.random() < 0.4)
-          .slice(0, 3);
+        const rewardCards = generateCardRewards(3);
 
         // Check if any defeated enemy was an elite
         const hadEliteEnemy = state.enemies.some((enemy) => enemy.isElite);

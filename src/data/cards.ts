@@ -19,7 +19,7 @@ export const createInitialDeck = (): Card[] => {
       name: "Strike",
       cost: 1,
       type: CardType.ATTACK,
-      rarity: CardRarity.COMMON,
+      rarity: CardRarity.BASE,
       description: "Deal 6 damage.",
       damage: 6,
       upgraded: false,
@@ -34,7 +34,7 @@ export const createInitialDeck = (): Card[] => {
       name: "Defend",
       cost: 1,
       type: CardType.SKILL,
-      rarity: CardRarity.COMMON,
+      rarity: CardRarity.BASE,
       description: "Gain 5 Block.",
       block: 5,
       upgraded: false,
@@ -78,7 +78,7 @@ export const getAllCards = (): Card[] => {
       name: "Strike",
       cost: 1,
       type: CardType.ATTACK,
-      rarity: CardRarity.COMMON,
+      rarity: CardRarity.BASE,
       description: "Deal 6 damage.",
       damage: 6,
       upgraded: false,
@@ -89,7 +89,7 @@ export const getAllCards = (): Card[] => {
       name: "Defend",
       cost: 1,
       type: CardType.SKILL,
-      rarity: CardRarity.COMMON,
+      rarity: CardRarity.BASE,
       description: "Gain 5 Block.",
       block: 5,
       upgraded: false,
@@ -709,4 +709,63 @@ export const getAllCards = (): Card[] => {
       ],
     },
   ];
+};
+
+/**
+ * Gets cards that can appear as rewards, excluding base cards (strike, defend)
+ * and applying rarity-based weighting for selection.
+ *
+ * @returns Array of cards that can be offered as rewards
+ */
+export const getRewardCards = (): Card[] => {
+  return getAllCards().filter((card) => card.rarity !== CardRarity.BASE);
+};
+
+/**
+ * Generates a random selection of cards for rewards with proper rarity weighting.
+ *
+ * @param count - Number of cards to select (default: 3)
+ * @returns Array of randomly selected cards for rewards
+ */
+export const generateCardRewards = (count: number = 3): Card[] => {
+  const rewardCards = getRewardCards();
+
+  // Rarity weights for selection (higher = more likely)
+  const rarityWeights: Record<CardRarity, number> = {
+    [CardRarity.BASE]: 0, // Base cards never appear as rewards
+    [CardRarity.COMMON]: 70, // 70% chance
+    [CardRarity.UNCOMMON]: 25, // 25% chance
+    [CardRarity.RARE]: 5, // 5% chance
+  };
+
+  const selectedCards: Card[] = [];
+  const availableCards = [...rewardCards];
+
+  for (let i = 0; i < count && availableCards.length > 0; i++) {
+    // Calculate total weight for available cards
+    const totalWeight = availableCards.reduce((sum, card) => {
+      return sum + (rarityWeights[card.rarity] || 0);
+    }, 0);
+
+    // Generate random number
+    const random = Math.random() * totalWeight;
+
+    // Select card based on weighted random
+    let currentWeight = 0;
+    let selectedIndex = 0;
+
+    for (let j = 0; j < availableCards.length; j++) {
+      currentWeight += rarityWeights[availableCards[j].rarity] || 0;
+      if (random <= currentWeight) {
+        selectedIndex = j;
+        break;
+      }
+    }
+
+    // Add selected card and remove from available
+    selectedCards.push(availableCards[selectedIndex]);
+    availableCards.splice(selectedIndex, 1);
+  }
+
+  return selectedCards;
 };

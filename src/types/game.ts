@@ -167,11 +167,13 @@ export enum MonsterCardType {
  * Defines the rarity levels of cards, affecting their appearance in rewards.
  *
  * Rarer cards are generally more powerful but appear less frequently
- * in card rewards and shops.
+ * in card rewards and shops. Base cards (strike, defend) never appear as rewards.
  *
  * @enum {string}
  */
 export enum CardRarity {
+  /** Base cards that start in the deck (strike, defend) - never appear as rewards */
+  BASE = "base",
   /** Most common cards, appear frequently in rewards */
   COMMON = "common",
   /** Uncommon cards, appear occasionally in rewards */

@@ -23,6 +23,8 @@ export const CardRewardScreen: React.FC = () => {
 
   const getRarityColor = (rarity: string): string => {
     switch (rarity) {
+      case "base":
+        return "#34495e"; // Dark gray for base cards (shouldn't appear as rewards)
       case "common":
         return "#95a5a6";
       case "uncommon":
