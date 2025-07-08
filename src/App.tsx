@@ -2,6 +2,7 @@ import { useGameStore } from './store/gameStore';
 import { GameBoard } from './components/GameBoard';
 import { MapView } from './components/MapView';
 import { CardRewardScreen } from './components/CardRewardScreen';
+import { RelicRewardScreen } from './components/RelicRewardScreen';
 import { EventScreen } from './components/EventScreen';
 import { RestScreen } from './components/RestScreen';
 import { ShopScreen } from './components/ShopScreen';
@@ -23,6 +24,8 @@ function App() {
         return <GameBoard />;
       case GamePhase.CARD_REWARD:
         return <CardRewardScreen />;
+      case GamePhase.RELIC_REWARD:
+        return <RelicRewardScreen />;
       case GamePhase.EVENT:
         return <EventScreen />;
       case GamePhase.REST:

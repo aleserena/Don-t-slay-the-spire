@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GameState, Player, Enemy, TurnPhase, EffectType, TargetType, StatusType, IntentType, GamePhase, Relic, RelicTrigger, Card, CardType, PowerTrigger } from '../types/game';
+import { GameState, Player, Enemy, TurnPhase, EffectType, TargetType, StatusType, IntentType, GamePhase, Relic, RelicTrigger, Card, CardType, PowerTrigger, MonsterCardType } from '../types/game';
 import { createInitialDeck, getAllCards } from '../data/cards';
 import { getBossForFloor } from '../data/bosses';
 import { getStarterRelic, getAllRelics } from '../data/relics';
@@ -8,6 +8,8 @@ import { getRandomEvent, processEventConsequence } from '../data/events';
 import { processRelicEffects } from '../utils/relicEffects';
 import { processPowerCardEffects } from '../utils/powerCardEffects';
 import { getPowerCardDefinition } from '../data/powerCards';
+import { selectEnemyCard } from '../data/monsterCards';
+import { processMonsterCardEffects } from '../utils/monsterCardEffects';
 import { 
   applyStatusEffect, 
   processStatusEffects, 
@@ -65,6 +67,10 @@ interface GameStore extends GameState {
   
   // Debug actions
   toggleDebugMode: () => void;
+  
+  // Relic reward actions
+  selectRelicReward: () => void;
+  skipRelicReward: () => void;
 }
 
 const createInitialPlayer = (): Player => ({
@@ -282,41 +288,74 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const card = state.combatReward?.cardRewards.find(c => c.id === cardId);
       if (!card) return state;
 
-      // Combine ALL cards back into the draw pile, but filter out cards created during combat
-      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand]
-        .filter(c => !c.id.includes('_copy_')); // Remove cards created during combat
+      // Check if there's a relic reward to show next
+      const hasRelicReward = state.combatReward?.relicReward;
       
-      return {
-        ...state,
-        drawPile: [...allCards, { ...card, id: `${card.baseId}_${Date.now()}` }],
-        discardPile: [],
-        exhaustPile: [],
-        hand: [],
-        gamePhase: GamePhase.MAP,
-        combatReward: undefined,
-        currentTurn: TurnPhase.PLAYER_TURN,
-        selectedCard: null
-      };
+      if (hasRelicReward) {
+        // Go to relic reward screen, keep the relic in combatReward
+        return {
+          ...state,
+          drawPile: [...state.drawPile, { ...card, id: `${card.baseId}_${Date.now()}` }],
+          gamePhase: GamePhase.RELIC_REWARD,
+          combatReward: {
+            ...state.combatReward!,
+            cardRewards: [] // Clear card rewards since one was selected
+          },
+          selectedCard: null
+        };
+      } else {
+        // No relic reward, go back to map
+        const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand]
+          .filter(c => !c.id.includes('_copy_')); // Remove cards created during combat
+        
+        return {
+          ...state,
+          drawPile: [...allCards, { ...card, id: `${card.baseId}_${Date.now()}` }],
+          discardPile: [],
+          exhaustPile: [],
+          hand: [],
+          gamePhase: GamePhase.MAP,
+          combatReward: undefined,
+          currentTurn: TurnPhase.PLAYER_TURN,
+          selectedCard: null
+        };
+      }
     });
   },
 
   skipCardReward: () => {
     set((state) => {
-      // Combine ALL cards back into the draw pile, but filter out cards created during combat
-      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand]
-        .filter(c => !c.id.includes('_copy_')); // Remove cards created during combat
+      // Check if there's a relic reward to show next
+      const hasRelicReward = state.combatReward?.relicReward;
       
-      return {
-        ...state,
-        drawPile: allCards,
-        discardPile: [],
-        exhaustPile: [],
-        hand: [],
-        gamePhase: GamePhase.MAP,
-        combatReward: undefined,
-        currentTurn: TurnPhase.PLAYER_TURN,
-        selectedCard: null
-      };
+      if (hasRelicReward) {
+        // Go to relic reward screen
+        return {
+          ...state,
+          gamePhase: GamePhase.RELIC_REWARD,
+          combatReward: {
+            ...state.combatReward!,
+            cardRewards: [] // Clear card rewards since they were skipped
+          },
+          selectedCard: null
+        };
+      } else {
+        // No relic reward, go back to map
+        const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand]
+          .filter(c => !c.id.includes('_copy_')); // Remove cards created during combat
+        
+        return {
+          ...state,
+          drawPile: allCards,
+          discardPile: [],
+          exhaustPile: [],
+          hand: [],
+          gamePhase: GamePhase.MAP,
+          combatReward: undefined,
+          currentTurn: TurnPhase.PLAYER_TURN,
+          selectedCard: null
+        };
+      }
     });
   },
 
@@ -622,6 +661,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
           .filter(() => Math.random() < 0.4)
           .slice(0, 3);
 
+        // Check if any defeated enemy was an elite
+        const hadEliteEnemy = state.enemies.some(enemy => enemy.isElite);
+        let relicReward = undefined;
+        
+        if (hadEliteEnemy) {
+          // Get a random relic for elite reward
+          const availableRelics = getAllRelics().filter((r: Relic) => 
+            r.rarity === 'common' || r.rarity === 'uncommon' || r.rarity === 'rare'
+          );
+          if (availableRelics.length > 0) {
+            relicReward = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+          }
+        }
+
         // Clear temporary status effects and power cards at end of combat
         const clearedPlayer = {
           ...newPlayer,
@@ -644,7 +697,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           gamePhase: GamePhase.CARD_REWARD,
           combatReward: {
             gold: rewardGold,
-            cardRewards: rewardCards
+            cardRewards: rewardCards,
+            relicReward: relicReward
           },
           selectedCard: null
         };
@@ -698,95 +752,78 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const relicResult = processRelicEffects(RelicTrigger.TURN_START, newPlayer, newEnemies);
       newPlayer = relicResult.player;
       newEnemies = relicResult.enemies;
-      
-      // Enemy block is NOT reset here - it persists until start of their next turn
 
-      // Each enemy performs their intended action
+      // Each enemy plays their current card
       for (let i = 0; i < newEnemies.length; i++) {
         const enemy = newEnemies[i];
         
-        switch (enemy.intent.type) {
-          case 'attack':
-            if (enemy.intent.value) {
-              const damage = calculateDamage(enemy.intent.value, enemy, newPlayer);
-              const damageAfterBlock = Math.max(0, damage - newPlayer.block);
-              
-              // Debug logging for enemy damage
-              debugConsole.log('Enemy Attack Debug:', {
-                enemy: enemy.name,
-                baseDamage: enemy.intent.value,
-                calculatedDamage: damage,
-                playerBlock: newPlayer.block,
-                damageAfterBlock,
-                playerHealthBefore: newPlayer.health,
-                playerHealthAfter: newPlayer.health - damageAfterBlock
-              });
-              
-              // Apply damage to player
-              newPlayer = {
-                ...newPlayer,
-                health: newPlayer.health - damageAfterBlock,
-                block: Math.max(0, newPlayer.block - damage)
-              };
-              
-              // Check for game over
-              if (newPlayer.health <= 0) {
-                return {
-                  ...state,
-                  player: { ...newPlayer, health: 0 },
-                  gamePhase: GamePhase.GAME_OVER,
-                  selectedCard: null
-                };
-              }
-              
-              // Process damage taken relic effects if player took damage
-              if (damageAfterBlock > 0) {
-                const context: any = { damage: damageAfterBlock };
-                const relicResult = processRelicEffects(RelicTrigger.DAMAGE_TAKEN, newPlayer, newEnemies, context);
-                newPlayer = relicResult.player;
-                newEnemies = relicResult.enemies;
-                
-                // Remove dead enemies after relic effects (e.g., Bronze Scales)
-                newEnemies = newEnemies.filter(enemy => enemy.health > 0);
-                
-                // Handle Centennial Puzzle card drawing
-                if (context.shouldDrawCards) {
-                  setTimeout(() => get().drawCards(context.shouldDrawCards), 100);
-                }
-              }
-            }
-            break;
+        if (enemy.currentCard) {
+          // Process the monster card effects
+          const cardResult = processMonsterCardEffects(enemy.currentCard, newPlayer, enemy);
+          newPlayer = cardResult.player;
+          newEnemies[i] = cardResult.enemy;
           
-          case 'defend':
-            newEnemies[i] = {
-              ...enemy,
-              block: enemy.block + (enemy.intent.value || 5)
+          // Check for game over after each enemy action
+          if (newPlayer.health <= 0) {
+            return {
+              ...state,
+              player: { ...newPlayer, health: 0 },
+              gamePhase: GamePhase.GAME_OVER,
+              selectedCard: null
             };
-            break;
+          }
           
-          case 'buff':
-            newEnemies[i] = applyStatusEffect(enemy, StatusType.STRENGTH, 1) as Enemy;
-            break;
-          
-          case 'debuff':
-            newPlayer = applyStatusEffect(newPlayer, StatusType.WEAK, 2) as Player;
-            break;
+          // Process damage taken relic effects if player took damage
+          const initialHealth = state.player.health;
+          const damageDealt = initialHealth - newPlayer.health;
+          if (damageDealt > 0) {
+            const context: any = { damage: damageDealt };
+            const relicResult = processRelicEffects(RelicTrigger.DAMAGE_TAKEN, newPlayer, newEnemies, context);
+            newPlayer = relicResult.player;
+            newEnemies = relicResult.enemies;
+            
+            // Remove dead enemies after relic effects (e.g., Bronze Scales)
+            newEnemies = newEnemies.filter(enemy => enemy.health > 0);
+            
+            // Handle Centennial Puzzle card drawing
+            if (context.shouldDrawCards) {
+              setTimeout(() => get().drawCards(context.shouldDrawCards), 100);
+            }
+          }
         }
 
-        // Generate new intent for next turn
-        const intents = [
-          { type: IntentType.ATTACK, value: Math.floor(Math.random() * 8) + 5 },
-          { type: IntentType.ATTACK, value: Math.floor(Math.random() * 6) + 8 },
-          { type: IntentType.DEFEND, value: Math.floor(Math.random() * 5) + 5 },
-          { type: IntentType.BUFF },
-          { type: IntentType.DEBUFF }
-        ];
-        
-        const newIntent = intents[Math.floor(Math.random() * intents.length)];
-        newEnemies[i] = {
-          ...newEnemies[i],
-          intent: newIntent
-        };
+        // Select new card for next turn if enemy is still alive
+        if (newEnemies[i] && newEnemies[i].health > 0) {
+          const newCard = selectEnemyCard(newEnemies[i].deck, newEnemies[i].health, newEnemies[i].maxHealth);
+          
+          // Convert card type to intent type for UI display
+          const convertCardTypeToIntentType = (cardType: MonsterCardType): IntentType => {
+            switch (cardType) {
+              case MonsterCardType.ATTACK:
+                return IntentType.ATTACK;
+              case MonsterCardType.DEFEND:
+                return IntentType.DEFEND;
+              case MonsterCardType.BUFF:
+                return IntentType.BUFF;
+              case MonsterCardType.DEBUFF:
+                return IntentType.DEBUFF;
+              case MonsterCardType.SPECIAL:
+                return IntentType.UNKNOWN;
+              default:
+                return IntentType.UNKNOWN;
+            }
+          };
+          
+          newEnemies[i] = {
+            ...newEnemies[i],
+            currentCard: newCard,
+            intent: {
+              type: convertCardTypeToIntentType(newCard.type),
+              value: newCard.damage || newCard.block,
+              card: newCard
+            }
+          };
+        }
       }
 
       // Check if combat should end (all enemies dead)
@@ -1128,5 +1165,53 @@ export const useGameStore = create<GameStore>((set, get) => ({
         gamePhase: GamePhase.MAP
       }));
     }
+  },
+
+  // Relic reward actions
+  selectRelicReward: () => {
+    set((state) => {
+      const relic = state.combatReward?.relicReward;
+      if (!relic) return state;
+
+      // Combine ALL cards back into the draw pile, but filter out cards created during combat
+      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand]
+        .filter(c => !c.id.includes('_copy_')); // Remove cards created during combat
+      
+      return {
+        ...state,
+        drawPile: allCards,
+        discardPile: [],
+        exhaustPile: [],
+        hand: [],
+        player: {
+          ...state.player,
+          relics: [...state.player.relics, relic]
+        },
+        gamePhase: GamePhase.MAP,
+        combatReward: undefined,
+        currentTurn: TurnPhase.PLAYER_TURN,
+        selectedCard: null
+      };
+    });
+  },
+
+  skipRelicReward: () => {
+    set((state) => {
+      // Combine ALL cards back into the draw pile, but filter out cards created during combat
+      const allCards = [...state.drawPile, ...state.discardPile, ...state.exhaustPile, ...state.hand]
+        .filter(c => !c.id.includes('_copy_')); // Remove cards created during combat
+      
+      return {
+        ...state,
+        drawPile: allCards,
+        discardPile: [],
+        exhaustPile: [],
+        hand: [],
+        gamePhase: GamePhase.MAP,
+        combatReward: undefined,
+        currentTurn: TurnPhase.PLAYER_TURN,
+        selectedCard: null
+      };
+    });
   }
 })); 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
 import { Card, CardType } from '../types/game';
+import { UnifiedHeader } from './UnifiedHeader';
 
 export const CardRewardScreen: React.FC = () => {
   const { combatReward, selectCardReward, skipCardReward } = useGameStore();
@@ -35,49 +36,53 @@ export const CardRewardScreen: React.FC = () => {
 
   return (
     <div style={{
-      width: '100%',
-      height: '100%',
-      background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       color: 'white',
       display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
+      flexDirection: 'column'
     }}>
+      <UnifiedHeader />
+      
       <div style={{
-        background: 'rgba(0, 0, 0, 0.8)',
-        padding: '40px',
-        borderRadius: '20px',
-        border: '3px solid #ffd700',
-        textAlign: 'center',
-        maxWidth: '900px',
-        width: '100%'
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 20px'
       }}>
-        <h1 style={{ 
-          fontSize: '36px', 
-          color: '#ffd700', 
-          marginBottom: '10px',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
-        }}>
-          Victory!
-        </h1>
-        
-        <p style={{ 
-          fontSize: '18px', 
+        {/* Victory Message */}
+        <div style={{
+          fontSize: '48px',
+          fontWeight: 'bold',
           marginBottom: '20px',
-          color: '#4ecdc4'
+          textAlign: 'center',
+          textShadow: '3px 3px 6px rgba(0,0,0,0.5)',
+          background: 'linear-gradient(45deg, #f39c12, #e74c3c)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text'
+        }}>
+          🎉 Victory! 🎉
+        </div>
+
+        <div style={{
+          fontSize: '24px',
+          marginBottom: '20px',
+          textAlign: 'center',
+          opacity: 0.9
         }}>
           You earned {combatReward.gold} gold!
-        </p>
+        </div>
 
-        <h2 style={{ 
-          fontSize: '24px', 
-          marginBottom: '30px',
-          color: '#ffd700'
+        <div style={{
+          fontSize: '20px',
+          marginBottom: '40px',
+          textAlign: 'center'
         }}>
-          Choose a Card Reward
-        </h2>
+          Choose a card to add to your deck:
+        </div>
 
         <div style={{
           display: 'flex',

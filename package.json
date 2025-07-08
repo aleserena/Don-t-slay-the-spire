@@ -10,7 +10,18 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "type-check": "tsc --noEmit",
+    "validate": "npm run lint && npm run format:check && npm run type-check && npm run test:coverage",
+    "pre-commit": "npm run validate",
+    "analyze": "npm run build && npx vite-bundle-analyzer dist",
+    "docs": "typedoc --out docs src",
+    "docs:serve": "npx serve docs",
+    "clean": "rm -rf dist coverage docs",
+    "prepare": "husky install"
   },
   "dependencies": {
     "framer-motion": "^10.16.16",

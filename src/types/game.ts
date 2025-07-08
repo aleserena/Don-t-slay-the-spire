@@ -12,10 +12,30 @@ export interface Card {
   upgraded?: boolean;
 }
 
+export interface MonsterCard {
+  id: string;
+  baseId: string;
+  name: string;
+  type: MonsterCardType;
+  description: string;
+  damage?: number;
+  block?: number;
+  effects?: CardEffect[];
+  priority: number; // Higher priority cards are more likely to be chosen
+}
+
 export enum CardType {
   ATTACK = 'attack',
   SKILL = 'skill',
   POWER = 'power'
+}
+
+export enum MonsterCardType {
+  ATTACK = 'attack',
+  DEFEND = 'defend',
+  BUFF = 'buff',
+  DEBUFF = 'debuff',
+  SPECIAL = 'special'
 }
 
 export enum CardRarity {
@@ -62,11 +82,14 @@ export interface Enemy {
   statusEffects: StatusEffect[];
   isElite?: boolean;
   isBoss?: boolean;
+  deck: MonsterCard[];
+  currentCard?: MonsterCard;
 }
 
 export interface EnemyIntent {
   type: IntentType;
   value?: number;
+  card?: MonsterCard; // The card that will be played this turn
 }
 
 export enum IntentType {
@@ -124,6 +147,7 @@ export enum GamePhase {
   MAP = 'map',
   COMBAT = 'combat',
   CARD_REWARD = 'card_reward',
+  RELIC_REWARD = 'relic_reward',
   EVENT = 'event',
   SHOP = 'shop',
   REST = 'rest',

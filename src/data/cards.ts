@@ -370,6 +370,291 @@ export const getAllCards = (): Card[] => {
           target: TargetType.ALL_ENEMIES
         }
       ]
+    },
+
+    // New Attack Cards
+    {
+      id: 'heavy_blade',
+      baseId: 'heavy_blade',
+      name: 'Heavy Blade',
+      cost: 2,
+      type: CardType.ATTACK,
+      rarity: CardRarity.COMMON,
+      description: 'Deal 14 damage. Strength affects this card 3 times.',
+      damage: 14,
+      upgraded: false
+    },
+    {
+      id: 'sword_boomerang',
+      baseId: 'sword_boomerang',
+      name: 'Sword Boomerang',
+      cost: 1,
+      type: CardType.ATTACK,
+      rarity: CardRarity.COMMON,
+      description: 'Deal 3 damage to a random enemy 3 times.',
+      upgraded: false,
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 3,
+          target: TargetType.ENEMY
+        },
+        {
+          type: EffectType.DAMAGE,
+          value: 3,
+          target: TargetType.ENEMY
+        },
+        {
+          type: EffectType.DAMAGE,
+          value: 3,
+          target: TargetType.ENEMY
+        }
+      ]
+    },
+    {
+      id: 'perfected_strike',
+      baseId: 'perfected_strike',
+      name: 'Perfected Strike',
+      cost: 2,
+      type: CardType.ATTACK,
+      rarity: CardRarity.COMMON,
+      description: 'Deal 6 damage. Deals 2 additional damage for every Strike in your deck.',
+      damage: 6,
+      upgraded: false
+    },
+    {
+      id: 'thunderclap',
+      baseId: 'thunderclap',
+      name: 'Thunderclap',
+      cost: 1,
+      type: CardType.ATTACK,
+      rarity: CardRarity.COMMON,
+      description: 'Deal 4 damage and apply 1 Vulnerable to ALL enemies.',
+      upgraded: false,
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 4,
+          target: TargetType.ALL_ENEMIES
+        },
+        {
+          type: EffectType.APPLY_STATUS,
+          value: 1,
+          target: TargetType.ALL_ENEMIES,
+          statusType: StatusType.VULNERABLE
+        }
+      ]
+    },
+    {
+      id: 'uppercut',
+      baseId: 'uppercut',
+      name: 'Uppercut',
+      cost: 2,
+      type: CardType.ATTACK,
+      rarity: CardRarity.UNCOMMON,
+      description: 'Deal 13 damage. Apply 1 Weak and 1 Vulnerable.',
+      damage: 13,
+      upgraded: false,
+      effects: [
+        {
+          type: EffectType.APPLY_STATUS,
+          value: 1,
+          target: TargetType.ENEMY,
+          statusType: StatusType.WEAK
+        },
+        {
+          type: EffectType.APPLY_STATUS,
+          value: 1,
+          target: TargetType.ENEMY,
+          statusType: StatusType.VULNERABLE
+        }
+      ]
+    },
+
+    // New Skill Cards
+    {
+      id: 'shrug_it_off',
+      baseId: 'shrug_it_off',
+      name: 'Shrug It Off',
+      cost: 1,
+      type: CardType.SKILL,
+      rarity: CardRarity.COMMON,
+      description: 'Gain 8 Block. Draw 1 card.',
+      block: 8,
+      upgraded: false,
+      effects: [{
+        type: EffectType.DRAW_CARDS,
+        value: 1,
+        target: TargetType.SELF
+      }]
+    },
+    {
+      id: 'seeing_red',
+      baseId: 'seeing_red',
+      name: 'Seeing Red',
+      cost: 1,
+      type: CardType.SKILL,
+      rarity: CardRarity.UNCOMMON,
+      description: 'Gain 2 Energy. Exhaust.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.GAIN_ENERGY,
+        value: 2,
+        target: TargetType.SELF
+      }]
+    },
+    {
+      id: 'intimidate',
+      baseId: 'intimidate',
+      name: 'Intimidate',
+      cost: 0,
+      type: CardType.SKILL,
+      rarity: CardRarity.UNCOMMON,
+      description: 'Apply 1 Weak to ALL enemies. Exhaust.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.APPLY_STATUS,
+        value: 1,
+        target: TargetType.ALL_ENEMIES,
+        statusType: StatusType.WEAK
+      }]
+    },
+    {
+      id: 'flex',
+      baseId: 'flex',
+      name: 'Flex',
+      cost: 0,
+      type: CardType.SKILL,
+      rarity: CardRarity.COMMON,
+      description: 'Gain 2 Strength. At the end of this turn, lose 2 Strength.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.APPLY_STATUS,
+        value: 2,
+        target: TargetType.SELF,
+        statusType: StatusType.STRENGTH
+      }]
+    },
+    {
+      id: 'entrench',
+      baseId: 'entrench',
+      name: 'Entrench',
+      cost: 2,
+      type: CardType.SKILL,
+      rarity: CardRarity.UNCOMMON,
+      description: 'Double your Block.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.BLOCK,
+        value: 0, // Special handling needed
+        multiplier: 2,
+        target: TargetType.SELF
+      }]
+    },
+
+    // New Power Cards
+    {
+      id: 'combust',
+      baseId: 'combust',
+      name: 'Combust',
+      cost: 1,
+      type: CardType.POWER,
+      rarity: CardRarity.UNCOMMON,
+      description: 'At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.DAMAGE,
+        value: 5,
+        target: TargetType.ALL_ENEMIES
+      }]
+    },
+    {
+      id: 'feel_no_pain',
+      baseId: 'feel_no_pain',
+      name: 'Feel No Pain',
+      cost: 1,
+      type: CardType.POWER,
+      rarity: CardRarity.UNCOMMON,
+      description: 'Whenever a card is Exhausted, gain 3 Block.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.BLOCK,
+        value: 3,
+        target: TargetType.SELF
+      }]
+    },
+    {
+      id: 'barricade',
+      baseId: 'barricade',
+      name: 'Barricade',
+      cost: 3,
+      type: CardType.POWER,
+      rarity: CardRarity.RARE,
+      description: 'Block is not removed at the start of your turn.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.BLOCK,
+        value: 0,
+        target: TargetType.SELF
+      }]
+    },
+    {
+      id: 'juggernaut',
+      baseId: 'juggernaut',
+      name: 'Juggernaut',
+      cost: 2,
+      type: CardType.POWER,
+      rarity: CardRarity.RARE,
+      description: 'Whenever you gain Block, deal 5 damage to a random enemy.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.DAMAGE,
+        value: 5,
+        target: TargetType.ENEMY
+      }]
+    },
+
+    // Rare Attack Cards
+    {
+      id: 'bludgeon',
+      baseId: 'bludgeon',
+      name: 'Bludgeon',
+      cost: 3,
+      type: CardType.ATTACK,
+      rarity: CardRarity.RARE,
+      description: 'Deal 32 damage.',
+      damage: 32,
+      upgraded: false
+    },
+    {
+      id: 'immolate',
+      baseId: 'immolate',
+      name: 'Immolate',
+      cost: 2,
+      type: CardType.ATTACK,
+      rarity: CardRarity.RARE,
+      description: 'Deal 21 damage to ALL enemies. Add a Burn into your discard pile.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.DAMAGE,
+        value: 21,
+        target: TargetType.ALL_ENEMIES
+      }]
+    },
+    {
+      id: 'reaper',
+      baseId: 'reaper',
+      name: 'Reaper',
+      cost: 2,
+      type: CardType.ATTACK,
+      rarity: CardRarity.RARE,
+      description: 'Deal 4 damage to ALL enemies. Heal HP equal to unblocked damage dealt.',
+      upgraded: false,
+      effects: [{
+        type: EffectType.DAMAGE,
+        value: 4,
+        target: TargetType.ALL_ENEMIES
+      }]
     }
   ];
 }; 

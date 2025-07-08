@@ -63,14 +63,15 @@ describe('Title Screen and Game Over Functionality', () => {
     it('should transition to GAME_OVER when player health reaches 0', () => {
       const store = useGameStore.getState();
       
-      // Set up a game state with low health
+      // Set up a game state with low health and an enemy that will deal lethal damage
       useGameStore.setState({
         ...store,
         gamePhase: GamePhase.COMBAT,
         player: {
           ...store.player,
           health: 1,
-          maxHealth: 80
+          maxHealth: 80,
+          block: 0 // Ensure no block to prevent damage
         },
         enemies: [{
           id: 'test-enemy',
@@ -79,7 +80,35 @@ describe('Title Screen and Game Over Functionality', () => {
           maxHealth: 10,
           block: 0,
           intent: { type: IntentType.ATTACK, value: 5 },
-          statusEffects: []
+          statusEffects: [],
+          deck: [{
+            id: 'lethal_attack',
+            baseId: 'lethal_attack',
+            name: 'Lethal Attack',
+            type: 'attack' as any,
+            description: 'Deal 10 damage.',
+            damage: 10,
+            priority: 1,
+            effects: [{
+              type: 'damage' as any,
+              value: 10,
+              target: 'enemy' as any
+            }]
+          }],
+          currentCard: {
+            id: 'lethal_attack',
+            baseId: 'lethal_attack',
+            name: 'Lethal Attack',
+            type: 'attack' as any,
+            description: 'Deal 10 damage.',
+            damage: 10,
+            priority: 1,
+            effects: [{
+              type: 'damage' as any,
+              value: 10,
+              target: 'enemy' as any
+            }]
+          }
         }]
       });
 

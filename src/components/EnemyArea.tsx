@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { cardNeedsTarget, isMultiTargetCard, getCardDamagePreview } from '../utils/cardUtils';
 import { calculateDamage } from '../utils/statusEffects';
+import { MonsterCardPreview } from './MonsterCardPreview';
+import { MonsterCard } from '../types/game';
 
 interface EnemyAreaProps {
   selectedCard: any;
@@ -13,6 +15,8 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({ selectedCard, confirmingCa
   const { enemies, player } = useGameStore();
   const [hoveredStatusEffect, setHoveredStatusEffect] = useState<any>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [hoveredMonsterCard, setHoveredMonsterCard] = useState<MonsterCard | null>(null);
+  const [monsterCardPosition, setMonsterCardPosition] = useState({ x: 0, y: 0 });
 
   const handleStatusEffectMouseEnter = (effect: any, event: React.MouseEvent) => {
     setHoveredStatusEffect(effect);
@@ -25,6 +29,19 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({ selectedCard, confirmingCa
 
   const handleStatusEffectMouseMove = (event: React.MouseEvent) => {
     setMousePosition({ x: event.clientX, y: event.clientY });
+  };
+
+  const handleMonsterCardMouseEnter = (card: MonsterCard, event: React.MouseEvent) => {
+    setHoveredMonsterCard(card);
+    setMonsterCardPosition({ x: event.clientX, y: event.clientY });
+  };
+
+  const handleMonsterCardMouseLeave = () => {
+    setHoveredMonsterCard(null);
+  };
+
+  const handleMonsterCardMouseMove = (event: React.MouseEvent) => {
+    setMonsterCardPosition({ x: event.clientX, y: event.clientY });
   };
 
   const getStatusEffectIcon = (type: string): string => {
@@ -258,15 +275,38 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({ selectedCard, confirmingCa
 
             {/* Intent */}
             {enemy.intent && (
-              <div style={{
-                background: 'rgba(231, 76, 60, 0.8)',
-                padding: '8px',
-                borderRadius: '8px',
-                marginBottom: '10px',
-                border: '2px solid rgba(255,255,255,0.3)'
-              }}>
+              <div 
+                style={{
+                  background: 'rgba(231, 76, 60, 0.8)',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  marginBottom: '10px',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  cursor: enemy.intent.card ? 'help' : 'default',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (enemy.intent.card) {
+                    handleMonsterCardMouseEnter(enemy.intent.card, e);
+                    e.currentTarget.style.background = 'rgba(231, 76, 60, 1)';
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (enemy.intent.card) {
+                    handleMonsterCardMouseLeave();
+                    e.currentTarget.style.background = 'rgba(231, 76, 60, 0.8)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }
+                }}
+                onMouseMove={(e) => {
+                  if (enemy.intent.card) {
+                    handleMonsterCardMouseMove(e);
+                  }
+                }}
+              >
                 <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>
-                  Next Turn:
+                  Next Turn: {enemy.intent.card ? '' : ''}
                 </div>
                 <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
                   {enemy.intent.type === 'attack' && '⚔️'}
@@ -281,6 +321,16 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({ selectedCard, confirmingCa
                   {enemy.intent.type === 'debuff' && 'Debuff'}
                   {enemy.intent.type === 'unknown' && 'Unknown'}
                 </div>
+                {enemy.intent.card && (
+                  <div style={{ 
+                    fontSize: '10px', 
+                    color: 'rgba(255, 255, 255, 0.8)', 
+                    marginTop: '4px',
+                    fontStyle: 'italic'
+                  }}>
+                    {enemy.intent.card.name}
+                  </div>
+                )}
               </div>
             )}
 
@@ -379,6 +429,15 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({ selectedCard, confirmingCa
             </div>
           )}
         </div>
+      )}
+
+      {/* Monster Card Preview */}
+      {hoveredMonsterCard && (
+        <MonsterCardPreview
+          card={hoveredMonsterCard}
+          position={monsterCardPosition}
+          onClose={handleMonsterCardMouseLeave}
+        />
       )}
     </div>
   );

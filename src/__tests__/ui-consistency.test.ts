@@ -113,7 +113,7 @@ describe('UI Consistency Tests', () => {
       const validEffectTypes = [
         'damage', 'block', 'draw_cards', 'apply_status', 'upgrade_card',
         'add_card_to_discard', 'damage_multiplier_block', 'damage_multiplier_energy',
-        'lose_energy'
+        'lose_energy', 'gain_energy', 'heal'
       ];
 
       allCards.forEach(card => {

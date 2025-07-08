@@ -36,7 +36,9 @@ describe('Enemies Data', () => {
       expect(enemy.health).toBe(40);
       expect(enemy.maxHealth).toBe(40);
       expect(enemy.intent.type).toBe(IntentType.ATTACK);
-      expect(enemy.intent.value).toBe(11);
+      expect(enemy.intent.value).toBeGreaterThan(0);
+      expect(enemy.deck).toBeDefined();
+      expect(enemy.currentCard).toBeDefined();
     });
 
     it('should create red louse with correct properties', () => {
@@ -68,7 +70,10 @@ describe('Enemies Data', () => {
       expect(enemy.name).toBe('Acid Slime');
       expect(enemy.health).toBe(65);
       expect(enemy.maxHealth).toBe(65);
-      expect(enemy.intent.type).toBe(IntentType.DEBUFF);
+      // Acid slime can have ATTACK, DEBUFF, or BUFF intent types based on its cards
+      expect([IntentType.ATTACK, IntentType.DEBUFF, IntentType.BUFF]).toContain(enemy.intent.type);
+      expect(enemy.deck).toBeDefined();
+      expect(enemy.currentCard).toBeDefined();
     });
 
     it('should create spike slime with correct properties', () => {
@@ -78,8 +83,11 @@ describe('Enemies Data', () => {
       expect(enemy.name).toBe('Spike Slime');
       expect(enemy.health).toBe(28);
       expect(enemy.maxHealth).toBe(28);
-      expect(enemy.intent.type).toBe(IntentType.ATTACK);
-      expect(enemy.intent.value).toBe(5);
+      // Spike slime can have ATTACK or DEBUFF intent types based on its cards
+      expect([IntentType.ATTACK, IntentType.DEBUFF]).toContain(enemy.intent.type);
+      expect(enemy.intent.value).toBeGreaterThan(0);
+      expect(enemy.deck).toBeDefined();
+      expect(enemy.currentCard).toBeDefined();
     });
 
     it('should create fungi beast with correct properties', () => {
@@ -89,7 +97,9 @@ describe('Enemies Data', () => {
       expect(enemy.name).toBe('Fungi Beast');
       expect(enemy.health).toBe(22);
       expect(enemy.maxHealth).toBe(22);
-      expect(enemy.intent.type).toBe(IntentType.BUFF);
+      expect([IntentType.ATTACK, IntentType.BUFF, IntentType.DEBUFF]).toContain(enemy.intent.type);
+      expect(enemy.deck).toBeDefined();
+      expect(enemy.currentCard).toBeDefined();
     });
 
     it('should create looter with correct properties', () => {
@@ -99,8 +109,10 @@ describe('Enemies Data', () => {
       expect(enemy.name).toBe('Looter');
       expect(enemy.health).toBe(44);
       expect(enemy.maxHealth).toBe(44);
-      expect(enemy.intent.type).toBe(IntentType.ATTACK);
-      expect(enemy.intent.value).toBe(10);
+      expect([IntentType.ATTACK, IntentType.DEFEND]).toContain(enemy.intent.type);
+      expect(enemy.intent.value).toBeGreaterThan(0);
+      expect(enemy.deck).toBeDefined();
+      expect(enemy.currentCard).toBeDefined();
     });
   });
 
@@ -109,7 +121,7 @@ describe('Enemies Data', () => {
       const enemies = getAllEnemies();
       
       expect(Array.isArray(enemies)).toBe(true);
-      expect(enemies).toHaveLength(8);
+      expect(enemies).toHaveLength(13);
     });
 
     it('should include all enemy types', () => {
@@ -124,6 +136,11 @@ describe('Enemies Data', () => {
       expect(enemyNames).toContain('Spike Slime');
       expect(enemyNames).toContain('Fungi Beast');
       expect(enemyNames).toContain('Looter');
+      expect(enemyNames).toContain('Gremlin Nob');
+      expect(enemyNames).toContain('Sentry');
+      expect(enemyNames).toContain('Fat Gremlin');
+      expect(enemyNames).toContain('Mad Gremlin');
+      expect(enemyNames).toContain('Sneaky Gremlin');
     });
 
     it('should have enemies with valid properties', () => {
@@ -192,7 +209,7 @@ describe('Enemies Data', () => {
       
       expect(Array.isArray(encounter)).toBe(true);
       expect(encounter.length).toBeGreaterThan(0);
-      expect(encounter.length).toBeLessThanOrEqual(2);
+      expect(encounter.length).toBeLessThanOrEqual(3);
     });
 
     it('should return valid enemies in encounter', () => {
