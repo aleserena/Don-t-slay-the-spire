@@ -21,7 +21,7 @@
     "docs": "typedoc --out docs src",
     "docs:serve": "npx serve docs",
     "clean": "rm -rf dist coverage docs",
-    "prepare": "if [ \"$CI\" != \"true\" ]; then husky install; else echo \"Skipping husky install in CI\"; fi"
+    "prepare": "husky"
   },
   "dependencies": {
     "framer-motion": "^10.16.16",
