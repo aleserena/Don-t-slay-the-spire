@@ -5,6 +5,7 @@ import {
   EffectType,
   TargetType,
 } from "../types/game";
+import { getCardEffects, takeDamage } from "../engine/effects";
 import {
   applyStatusEffect,
   calculateDamage,
@@ -16,111 +17,71 @@ export interface MonsterCardResult {
   enemy: Enemy;
 }
 
+/**
+ * Resolves a card an enemy plays. Targets are from the enemy's point of view:
+ * `ENEMY` is the player and `SELF` is the enemy playing the card.
+ */
 export const processMonsterCardEffects = (
   card: MonsterCard,
   player: Player,
   enemy: Enemy,
 ): MonsterCardResult => {
-  let newPlayer = { ...player };
-  let newEnemy = { ...enemy };
+  let newPlayer = player;
+  let newEnemy = enemy;
 
-  if (card.effects) {
-    for (const effect of card.effects) {
-      switch (effect.type) {
-        case EffectType.DAMAGE:
-          if (effect.target === TargetType.ENEMY) {
-            // From monster perspective, ENEMY target is the player
-            const finalDamage = calculateDamage(
-              effect.value,
-              newEnemy,
-              newPlayer,
-            );
-            const blockUsed = Math.min(newPlayer.block, finalDamage);
-            const damageAfterBlock = Math.max(0, finalDamage - newPlayer.block);
+  for (const effect of getCardEffects(card)) {
+    switch (effect.type) {
+      case EffectType.DAMAGE:
+        if (effect.target === TargetType.ENEMY) {
+          newPlayer = takeDamage(
+            newPlayer,
+            calculateDamage(effect.value, newEnemy, newPlayer),
+          );
+        }
+        break;
 
-            newPlayer = {
-              ...newPlayer,
-              health: newPlayer.health - damageAfterBlock,
-              block: newPlayer.block - blockUsed,
-            };
-          }
-          break;
+      case EffectType.BLOCK:
+        if (effect.target === TargetType.SELF) {
+          newEnemy = {
+            ...newEnemy,
+            block: newEnemy.block + calculateBlock(effect.value, newEnemy),
+          };
+        }
+        break;
 
-        case EffectType.BLOCK:
-          if (effect.target === TargetType.SELF) {
-            // Monster gains block
-            const finalBlock = calculateBlock(effect.value, newEnemy);
-            newEnemy.block += finalBlock;
-          }
-          break;
+      case EffectType.APPLY_STATUS:
+        if (!effect.statusType) break;
+        if (effect.target === TargetType.SELF) {
+          newEnemy = applyStatusEffect(
+            newEnemy,
+            effect.statusType,
+            effect.value,
+          ) as Enemy;
+        } else if (effect.target === TargetType.ENEMY) {
+          newPlayer = applyStatusEffect(
+            newPlayer,
+            effect.statusType,
+            effect.value,
+          ) as Player;
+        }
+        break;
 
-        case EffectType.APPLY_STATUS:
-          if (effect.statusType) {
-            if (effect.target === TargetType.SELF) {
-              // Apply status to the monster
-              newEnemy = applyStatusEffect(
-                newEnemy,
-                effect.statusType,
-                effect.value,
-              ) as Enemy;
-            } else if (effect.target === TargetType.ENEMY) {
-              // From monster perspective, ENEMY target is the player
-              newPlayer = applyStatusEffect(
-                newPlayer,
-                effect.statusType,
-                effect.value,
-              ) as Player;
-            }
-          }
-          break;
-
-        case EffectType.HEAL:
-          if (effect.target === TargetType.SELF) {
-            newEnemy.health = Math.min(
+      case EffectType.HEAL:
+        if (effect.target === TargetType.SELF) {
+          newEnemy = {
+            ...newEnemy,
+            health: Math.min(
               newEnemy.maxHealth,
               newEnemy.health + effect.value,
-            );
-          }
-          break;
+            ),
+          };
+        }
+        break;
 
-        // Add more effect types as needed
-        default:
-          break;
-      }
+      default:
+        break;
     }
   }
 
-  // Legacy support: Handle cards with direct damage property
-  if (
-    card.damage &&
-    card.damage > 0 &&
-    (!card.effects ||
-      !card.effects.some((effect) => effect.type === EffectType.DAMAGE))
-  ) {
-    const finalDamage = calculateDamage(card.damage, newEnemy, newPlayer);
-    const blockUsed = Math.min(newPlayer.block, finalDamage);
-    const damageAfterBlock = Math.max(0, finalDamage - newPlayer.block);
-
-    newPlayer = {
-      ...newPlayer,
-      health: newPlayer.health - damageAfterBlock,
-      block: newPlayer.block - blockUsed,
-    };
-  }
-
-  // Legacy support: Handle cards with direct block property
-  if (
-    card.block &&
-    card.block > 0 &&
-    (!card.effects ||
-      !card.effects.some((effect) => effect.type === EffectType.BLOCK))
-  ) {
-    const finalBlock = calculateBlock(card.block, newEnemy);
-    newEnemy.block += finalBlock;
-  }
-
-  return {
-    player: newPlayer,
-    enemy: newEnemy,
-  };
+  return { player: newPlayer, enemy: newEnemy };
 };

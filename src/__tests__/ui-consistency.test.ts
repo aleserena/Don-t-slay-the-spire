@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getAllCards } from "../data/cards";
-import { CardType, CardRarity } from "../types/game";
+import { CardType, CardRarity, EffectType } from "../types/game";
 
 describe("UI Consistency Tests", () => {
   const allCards = getAllCards();
@@ -126,19 +126,7 @@ describe("UI Consistency Tests", () => {
 
   describe("Card Effect Types", () => {
     it("should have valid effect types for all cards with effects", () => {
-      const validEffectTypes = [
-        "damage",
-        "block",
-        "draw_cards",
-        "apply_status",
-        "upgrade_card",
-        "add_card_to_discard",
-        "damage_multiplier_block",
-        "damage_multiplier_energy",
-        "lose_energy",
-        "gain_energy",
-        "heal",
-      ];
+      const validEffectTypes: string[] = Object.values(EffectType);
 
       allCards.forEach((card) => {
         if (card.effects) {

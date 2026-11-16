@@ -4,6 +4,7 @@ import {
   RelicTrigger,
   EffectType,
   StatusType,
+  CardType,
 } from "../types/game";
 import { pickRandom } from "../utils/random";
 
@@ -33,7 +34,7 @@ export const getAllRelics = (): Relic[] => {
       effects: [
         {
           trigger: RelicTrigger.CARD_PLAYED,
-          effect: EffectType.DAMAGE,
+          effect: EffectType.FIRST_ATTACK_DAMAGE,
           value: 8,
         },
       ],
@@ -62,6 +63,8 @@ export const getAllRelics = (): Relic[] => {
           trigger: RelicTrigger.TURN_END,
           effect: EffectType.GAIN_ENERGY,
           value: 1,
+          ifNoAttacksThisTurn: true,
+          nextTurn: true,
         },
       ],
     },
@@ -106,6 +109,7 @@ export const getAllRelics = (): Relic[] => {
           trigger: RelicTrigger.DAMAGE_TAKEN,
           effect: EffectType.GAIN_ENERGY,
           value: 1,
+          nextTurn: true,
         },
       ],
     },
@@ -132,6 +136,7 @@ export const getAllRelics = (): Relic[] => {
           trigger: RelicTrigger.DAMAGE_TAKEN,
           effect: EffectType.DRAW_CARDS,
           value: 3,
+          oncePerCombat: true,
         },
       ],
     },
@@ -161,6 +166,7 @@ export const getAllRelics = (): Relic[] => {
           trigger: RelicTrigger.CARD_PLAYED,
           effect: EffectType.HEAL,
           value: 2,
+          cardType: CardType.POWER,
         },
       ],
     },
@@ -185,11 +191,8 @@ export const getAllRelics = (): Relic[] => {
         "Whenever you Exhaust a card, add a random card to your hand.",
       rarity: RelicRarity.RARE,
       effects: [
-        {
-          trigger: RelicTrigger.CARD_PLAYED,
-          effect: EffectType.DRAW_CARDS,
-          value: 1,
-        },
+        // Not implemented: adding a random card to the hand needs its own
+        // mechanic. Listed in the data consistency test.
       ],
     },
 

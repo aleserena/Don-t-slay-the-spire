@@ -1,23 +1,21 @@
-import {
-  CardType,
-  GamePhase,
-  PowerTrigger,
-  RelicTrigger,
-  TurnPhase,
-} from "../../types/game";
+import { CardType, GamePhase, TurnPhase } from "../../types/game";
 import { getEnergyCost, resolveCardPlay } from "../../engine/cardPlay";
 import {
   chooseNextCard,
   createCombatState,
   createVictoryState,
+  endPlayerTurn,
   resolveEnemyCard,
   startPlayerTurn,
   tickEnemies,
 } from "../../engine/combat";
 import { HAND_SIZE } from "../../engine/constants";
 import { drawCards } from "../../engine/deck";
-import { processPowerCardEffects } from "../../utils/powerCardEffects";
-import { processRelicEffects } from "../../utils/relicEffects";
+import {
+  createBattle,
+  createCombatCounters,
+  dispatch,
+} from "../../engine/triggers";
 import { cardNeedsTarget } from "../../utils/cardUtils";
 import { tickDebuffs, tickPoison } from "../../utils/statusEffects";
 import { shuffle } from "../../utils/random";
@@ -41,29 +39,36 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
     const { persistentDeck, player } = get();
     const combatState = createCombatState(persistentDeck, player, enemies);
 
-    const relicResult = processRelicEffects(
-      RelicTrigger.COMBAT_START,
-      combatState.player,
-      combatState.enemies,
+    const battle = dispatch(
+      createBattle(combatState.player, combatState.enemies, combatState.combat),
+      { type: "combat_start" },
     );
 
     set({
       ...combatState,
       ...NO_STEP,
-      player: relicResult.player,
-      enemies: relicResult.enemies,
+      player: battle.player,
+      enemies: battle.enemies,
+      combat: battle.counters,
     });
+    if (battle.cardsToDraw > 0) get().drawCards(battle.cardsToDraw);
     get().startPlayerTurn();
   },
 
   startPlayerTurn: () => {
     const state = get();
     const turn = (state.playerTurnThisCombat || 0) + 1;
-    const result = startPlayerTurn(state.player, state.enemies, turn);
+    const result = startPlayerTurn(
+      state.player,
+      state.enemies,
+      turn,
+      state.combat ?? createCombatCounters(),
+    );
 
     set({
       player: result.player,
       enemies: result.enemies,
+      combat: result.counters,
       currentTurn: TurnPhase.PLAYER_TURN,
       playerTurnThisCombat: turn,
       selectedCard: null,
@@ -100,6 +105,7 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
       enemies: state.enemies,
       hand: state.hand.filter((c) => c.id !== cardId),
       isFirstAttack,
+      counters: state.combat ?? createCombatCounters(),
     });
 
     const survivors = result.enemies.filter((enemy) => enemy.health > 0);
@@ -112,13 +118,17 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
 
     set({
       hand: result.hand,
-      // Played cards go to the discard pile, except power cards, which
-      // leave play for the rest of the combat
+      // A played card is discarded, exhausted, or (power cards) leaves play
       discardPile: [
         ...state.discardPile,
-        ...(card.type === CardType.POWER ? [] : [card]),
+        ...(result.destination === "discard" ? [card] : []),
         ...result.createdCards,
       ],
+      exhaustPile:
+        result.destination === "exhaust"
+          ? [...state.exhaustPile, card]
+          : state.exhaustPile,
+      combat: result.counters,
       player: result.player,
       enemies: survivors,
       firstAttackThisCombat: isFirstAttack
@@ -137,11 +147,19 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
     const state = get();
     if (state.currentTurn !== TurnPhase.PLAYER_TURN) return;
 
-    const powerResult = processPowerCardEffects(
-      PowerTrigger.TURN_END,
+    const result = endPlayerTurn(
       state.player,
       state.enemies,
+      state.combat ?? createCombatCounters(),
     );
+
+    const survivors = result.enemies.filter((enemy) => enemy.health > 0);
+    if (survivors.length === 0) {
+      set(
+        createVictoryState(state.persistentDeck, result.player, state.enemies),
+      );
+      return;
+    }
 
     set({
       // The remaining hand is discarded. Block is kept: it resets at the
@@ -149,10 +167,20 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
       hand: [],
       discardPile: [...state.discardPile, ...state.hand],
       currentTurn: TurnPhase.ENEMY_TURN,
-      player: powerResult.player,
-      enemies: powerResult.enemies,
+      player: result.player,
+      enemies: survivors,
+      combat: result.counters,
       selectedCard: null,
     });
+    if (result.cardsToDraw > 0) get().drawCards(result.cardsToDraw);
+    if (result.player.health <= 0) {
+      set({
+        ...NO_STEP,
+        player: { ...result.player, health: 0 },
+        gamePhase: GamePhase.GAME_OVER,
+      });
+      return;
+    }
 
     await get().processEnemyTurn();
   },
@@ -165,6 +193,7 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
     const enemiesAtTurnStart = get().enemies;
     let player = tickPoison(get().player);
     let enemies = tickEnemies(enemiesAtTurnStart);
+    let counters = get().combat ?? createCombatCounters();
     // Debuffs the player receives during this enemy turn must last until
     // the next one, so only the ones they already have tick at its end
     const debuffsAtTurnStart = new Set(
@@ -210,14 +239,20 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
         if (STEP_DELAY_MS > 0 && (await combatEndedWhileWaiting())) return;
         showStep("attack");
 
-        const result = resolveEnemyCard(enemy.currentCard, player, enemy);
+        const result = resolveEnemyCard(
+          enemy.currentCard,
+          player,
+          enemy,
+          counters,
+        );
         player = result.player;
+        counters = result.counters;
         // The enemy may have died from retaliation damage
         enemies = enemies
           .map((e) => (e.id === enemyId ? result.enemy : e))
           .filter((e) => e.health > 0);
 
-        set({ player, enemies });
+        set({ player, enemies, combat: counters });
         if (isPlayerDead()) return;
         if (result.cardsToDraw > 0) get().drawCards(result.cardsToDraw);
       }

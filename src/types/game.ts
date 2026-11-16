@@ -78,6 +78,8 @@ export interface Card {
   block?: number;
   effects?: CardEffect[];
   upgraded?: boolean;
+  /** The card goes to the exhaust pile when played, not the discard pile */
+  exhaust?: boolean;
 }
 
 /**
@@ -213,6 +215,13 @@ export interface CardEffect {
   target: TargetType;
   statusType?: StatusType;
   strengthMultiplier?: number; // Special property for cards like Heavy Blade
+  /**
+   * Makes this an ongoing effect of a power card: it is not applied when
+   * the card is played, but every time the trigger fires afterwards.
+   */
+  trigger?: PowerTrigger;
+  /** A status applied to the player that is removed at the end of the turn */
+  untilEndOfTurn?: boolean;
 }
 
 /**
@@ -248,6 +257,10 @@ export enum EffectType {
   UPGRADE_CARD = "upgrade_card",
   /** Relic effect: lose at most `value` block at turn start instead of all */
   LIMIT_BLOCK_LOSS = "limit_block_loss",
+  /** The player loses health directly; block does not help */
+  LOSE_HP = "lose_hp",
+  /** Relic effect: the first attack of each combat deals `value` more */
+  FIRST_ATTACK_DAMAGE = "first_attack_damage",
 }
 
 /**
@@ -264,6 +277,8 @@ export enum TargetType {
   ENEMY = "enemy",
   /** Target all enemies */
   ALL_ENEMIES = "all_enemies",
+  /** One living enemy picked at random each time the effect applies */
+  RANDOM_ENEMY = "random_enemy",
 }
 
 /**
@@ -380,6 +395,20 @@ export enum IntentType {
  * };
  * ```
  */
+/**
+ * Bookkeeping that lasts for one combat and that effects depend on.
+ */
+export interface CombatCounters {
+  /** Attack cards played since the current player turn started */
+  attacksPlayedThisTurn: number;
+  /** Keys of once-per-combat effects that have already fired */
+  usedEffects: string[];
+  /** Extra energy to grant at the start of the next player turn */
+  energyNextTurn: number;
+  /** Status stacks on the player to remove when the turn ends */
+  expiringStatuses: { type: StatusType; stacks: number }[];
+}
+
 export interface StatusEffect {
   type: StatusType;
   stacks: number;
@@ -513,6 +542,8 @@ export interface GameState {
   stepInProgress: boolean;
   stepType?: "before" | "attack" | "after";
   persistentDeck: Card[];
+  /** Bookkeeping for the current combat, reset when a combat starts */
+  combat?: CombatCounters;
 }
 
 /**
@@ -655,6 +686,14 @@ export interface RelicEffect {
   statusType?: StatusType;
   target?: string;
   onTurn?: number;
+  /** Only fires for a played or exhausted card of this type */
+  cardType?: CardType;
+  /** Fires at most once in each combat */
+  oncePerCombat?: boolean;
+  /** Energy gained arrives at the start of the next player turn */
+  nextTurn?: boolean;
+  /** Only fires if no attack card was played this turn */
+  ifNoAttacksThisTurn?: boolean;
 }
 
 /**
@@ -680,6 +719,7 @@ export enum RelicTrigger {
   ENEMY_DEATH = "enemy_death",
   /** When resting at a rest site */
   REST = "rest",
+  CARD_EXHAUSTED = "card_exhausted",
 }
 
 /**
@@ -785,4 +825,6 @@ export enum PowerTrigger {
   CARD_PLAYED = "card_played",
   /** When the player takes damage */
   DAMAGE_TAKEN = "damage_taken",
+  CARD_EXHAUSTED = "card_exhausted",
+  BLOCK_GAINED = "block_gained",
 }

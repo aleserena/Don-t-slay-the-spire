@@ -3,12 +3,11 @@ import {
   Enemy,
   Relic,
   RelicTrigger,
-  EffectType,
   StatusType,
   RelicEffect,
 } from "../types/game";
 import { applyStatusEffect } from "./statusEffects";
-import { debugConsole } from "./debugUtils";
+import { createBattle, runRelicTrigger } from "../engine/triggers";
 
 /**
  * Extra information about the moment a relic trigger fires.
@@ -27,16 +26,12 @@ interface RelicResult {
   enemies: Enemy[];
 }
 
-const targetsAllEnemies = (target?: string): boolean =>
-  !target || target.toLowerCase() === "all_enemies";
-
-/** Whether an effect's own conditions (beyond its trigger) are met. */
-const isEffectActive = (effect: RelicEffect, context?: RelicContext): boolean =>
-  effect.onTurn === undefined ||
-  effect.onTurn === context?.playerTurnThisCombat;
-
 /**
  * Applies every relic effect the player owns that matches `trigger`.
+ *
+ * Kept for callers that only have a player and enemies; combat itself raises
+ * events through `dispatch` in `src/engine/triggers.ts`, which runs the same
+ * code and also tracks per-combat conditions.
  *
  * `enemies` is the set of enemies the trigger concerns: every enemy in combat
  * for combat/turn triggers, or just the attacker for `DAMAGE_TAKEN`.
@@ -47,90 +42,21 @@ export const processRelicEffects = (
   enemies: Enemy[],
   context?: RelicContext,
 ): RelicResult => {
-  let result: RelicResult = { player: { ...player }, enemies: [...enemies] };
+  const battle = runRelicTrigger(createBattle(player, enemies), trigger, {
+    turn: context?.playerTurnThisCombat,
+  });
 
-  for (const relic of player.relics) {
-    for (const effect of relic.effects) {
-      if (effect.trigger !== trigger || !isEffectActive(effect, context)) {
-        continue;
-      }
-      debugConsole.log(
-        `[DEBUG] Relic triggered: ${relic.name} - ${effect.effect} (${effect.value})`,
-      );
-      result = applyRelicEffect(effect, result.player, result.enemies, context);
-    }
+  if (context && battle.cardsToDraw > 0) {
+    context.shouldDrawCards =
+      (context.shouldDrawCards || 0) + battle.cardsToDraw;
   }
-
-  return result;
+  return { player: battle.player, enemies: battle.enemies };
 };
 
-const applyRelicEffect = (
-  effect: RelicEffect,
-  player: Player,
-  enemies: Enemy[],
-  context?: RelicContext,
-): RelicResult => {
-  let newPlayer = { ...player };
-  let newEnemies = [...enemies];
-
-  const amount = effect.value || 0;
-
-  switch (effect.effect) {
-    case EffectType.HEAL:
-      newPlayer.health = Math.min(
-        newPlayer.maxHealth,
-        newPlayer.health + amount,
-      );
-      break;
-
-    case EffectType.BLOCK:
-      newPlayer.block = Math.max(0, newPlayer.block + amount);
-      break;
-
-    case EffectType.GAIN_ENERGY:
-      newPlayer.energy = Math.min(
-        newPlayer.maxEnergy + 3,
-        newPlayer.energy + amount,
-      );
-      break;
-
-    case EffectType.DRAW_CARDS:
-      if (context) {
-        context.shouldDrawCards = (context.shouldDrawCards || 0) + amount;
-      }
-      break;
-
-    case EffectType.APPLY_STATUS: {
-      const statusType = effect.statusType;
-      if (!statusType) break;
-
-      if (effect.target === "self") {
-        newPlayer = applyStatusEffect(
-          newPlayer,
-          statusType,
-          effect.value || 1,
-        ) as Player;
-      } else if (targetsAllEnemies(effect.target)) {
-        newEnemies = newEnemies.map(
-          (enemy) =>
-            applyStatusEffect(enemy, statusType, effect.value || 1) as Enemy,
-        );
-      }
-      break;
-    }
-
-    case EffectType.DAMAGE:
-      if (targetsAllEnemies(effect.target)) {
-        newEnemies = newEnemies.map((enemy) => ({
-          ...enemy,
-          health: Math.max(0, enemy.health - amount),
-        }));
-      }
-      break;
-  }
-
-  return { player: newPlayer, enemies: newEnemies };
-};
+/** Whether an effect's own conditions (beyond its trigger) are met. */
+const isEffectActive = (effect: RelicEffect, context?: RelicContext): boolean =>
+  effect.onTurn === undefined ||
+  effect.onTurn === context?.playerTurnThisCombat;
 
 export const getRelicDescription = (relic: Relic): string => {
   return relic.description;

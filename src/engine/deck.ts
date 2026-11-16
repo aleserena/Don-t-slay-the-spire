@@ -9,6 +9,7 @@
 import { Card } from "../types/game";
 import { createInstanceId } from "../utils/ids";
 import { shuffle, Rng } from "../utils/random";
+import { MAX_HAND_SIZE } from "./constants";
 
 /** Id tag that marks a card created during combat that must not persist. */
 const TEMPORARY_TAG = "copy";
@@ -38,7 +39,7 @@ export const withoutTemporaryCards = (cards: Card[]): Card[] =>
 /**
  * Draws up to `count` cards from the top (end) of the draw pile into the
  * hand. When the draw pile runs out the discard pile is shuffled into it.
- * Draws fewer cards if both piles are empty.
+ * Draws fewer cards if both piles are empty or the hand is full.
  */
 export const drawCards = (
   piles: CombatPiles,
@@ -50,6 +51,7 @@ export const drawCards = (
   const hand = [...piles.hand];
 
   for (let drawn = 0; drawn < count; drawn++) {
+    if (hand.length >= MAX_HAND_SIZE) break;
     if (drawPile.length === 0) {
       if (discardPile.length === 0) break;
       drawPile = shuffle(discardPile, rng);

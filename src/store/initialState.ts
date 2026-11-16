@@ -3,6 +3,7 @@ import { createInitialDeck } from "../data/cards";
 import { getStarterRelic } from "../data/relics";
 import { generateMap } from "../utils/mapGeneration";
 import { withoutTemporaryCards } from "../engine/deck";
+import { createCombatCounters } from "../engine/triggers";
 import { StoreState } from "./types";
 
 /** A new player with starting stats and the starter relic. */
@@ -53,6 +54,7 @@ export const createNewRunState = (): Omit<StoreState, "debugMode"> => ({
   currentFloor: 1,
   hasSavedGame: false,
   playerTurnThisCombat: 0,
+  combat: createCombatCounters(),
 });
 
 /**

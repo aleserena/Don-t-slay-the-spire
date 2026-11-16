@@ -8,6 +8,7 @@ import {
   getActualCardDamage,
 } from "../utils/cardUtils";
 import { getEnergyCost } from "../engine/cardPlay";
+import { getFirstAttackBonus } from "../utils/statusEffects";
 import { getCardCostLabel, getCardTypeGradient } from "../utils/cardDisplay";
 
 interface HandAreaProps {
@@ -48,12 +49,9 @@ export const HandArea: React.FC<HandAreaProps> = ({
   const getCardDamage = (card: Card): number => {
     let baseDamage = getCardDisplayDamage(card, player, enemies);
 
-    // Add Akabeko damage for attack cards if it's the first attack
+    // Add the first-attack bonus for attack cards
     if (card.type === "attack" && firstAttackThisCombat) {
-      const hasAkabeko = player.relics.some((r) => r.id === "akabeko");
-      if (hasAkabeko) {
-        baseDamage += 8;
-      }
+      baseDamage += getFirstAttackBonus(player);
     }
 
     return baseDamage;

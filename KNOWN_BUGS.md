@@ -5,17 +5,18 @@ This file tracks known bugs in the game that need to be fixed.
 ## Known Bugs
 
 ### Card Mechanics
-- Metallicize grants 3 Block immediately when played (its card effect) in addition to the intended 3 Block at the end of each turn
-- Nothing is ever exhausted: cards whose text says "Exhaust" go to the discard pile, and the exhaust pile is never used
-- Flex never removes its Strength; Entrench does not double Block; Battle Trance does not stop further draws
-- Sword Boomerang needs a target instead of hitting random enemies; Perfected Strike, Reaper and Immolate only deal their base damage
-- Combust, Barricade, Juggernaut and Feel No Pain have no ongoing effect; their card effect fires once when played
-- Upgrading Demon Form or Metallicize changes the card's numbers but not the attached power
+These cards need a mechanic of their own. They are listed in `src/data/__tests__/dataConsistency.test.ts`, which fails if an entry is fixed but still listed.
+- True Grit does not exhaust a random card from the hand
+- Battle Trance does not stop further draws this turn
+- Perfected Strike does not count Strikes in the deck
+- Entrench does not double Block
+- Immolate does not add a Burn
+- Reaper does not heal for the damage dealt
 
 ### Engine gaps
-- Relic triggers `CARD_PLAYED`, `ENEMY_DEATH`, `TURN_END` and `REST` are defined but never fired, so Art of War, Bird-Faced Urn and Dead Branch do nothing
-- Relic effects that react to damage fire on every hit; there is no "first time each combat" condition yet (Centennial Puzzle draws 3 cards on every hit)
-- Effects that react to damage during the enemy turn are applied immediately: cards are drawn into the next hand, and energy gained (Blue Candle) is lost to the turn refill
+- Dead Branch has no effect (adding a random card to the hand is not implemented)
+- The relic trigger `REST` is defined but never fired (no relic uses it)
+- An enemy's retaliation and random-target effects during the enemy turn only see the enemy that is acting
 - The event reward `random_curse` resolves to nothing
 - Map node types are rolled independently (a floor can be all shops, and there is no guaranteed rest before the boss); encounters do not scale with the floor
 - Saving and loading a run is not implemented (`loadSavedGame` only resumes the in-memory run)
@@ -23,6 +24,17 @@ This file tracks known bugs in the game that need to be fixed.
 - The hand view (`HandArea.tsx`) still has per-card markup for a few cards; the other card views read everything from card data
 
 ## Fixed
+
+### Effect and trigger pipeline (unreleased)
+- Relic triggers for cards played, turn end, cards exhausted and enemy deaths fire; relic effects can be limited to a card type, to once per combat, or to turns without attacks
+- Energy granted "next turn" arrives after the turn's refill instead of being lost
+- "First time each combat" effects fire once per combat
+- Cards whose text says "Exhaust." go to the exhaust pile for the rest of the combat
+- Power cards apply their ongoing effect only through its trigger (Metallicize no longer also gives Block when played), and an upgraded power is upgraded in play
+- Powers that had no ongoing effect now have one: turn-end damage and health loss, Block when a card is exhausted, damage when Block is gained, keeping Block between turns
+- Temporary Strength is removed at the end of the turn; the random-target attack no longer asks for a target
+- Damage from relics and powers is absorbed by enemy Block
+- The hand holds at most 10 cards
 
 ### Engine correctness pass (unreleased)
 - Weak and Vulnerable lose a stack after the affected side has acted, so 1 stack lasts one turn (it used to expire before the enemy attacked)

@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Trigger pipeline** (`src/engine/triggers.ts`): combat raises events (`combat_start`, `turn_start`, `turn_end`, `card_played`, `card_exhausted`, `hp_lost`, `block_gained`, `enemy_died`) and `dispatch` applies every power and relic effect that listens, powers first. Effects can raise further events; chains stop at a fixed depth
+- **Combat counters**: per-combat bookkeeping in the store (`combat`) for attacks played this turn, once-per-combat effects, energy owed next turn and statuses that expire at turn end
+- **Effect primitives** (`src/engine/effects.ts`): `takeDamage` and `getCardEffects`, shared by player cards, enemy cards, powers and relics
+- **Data primitives**: `Card.exhaust`, `CardEffect.trigger` (ongoing power effect), `CardEffect.untilEndOfTurn`, `TargetType.RANDOM_ENEMY`, `EffectType.LOSE_HP`, `EffectType.FIRST_ATTACK_DAMAGE`, and relic conditions `cardType`, `oncePerCombat`, `nextTurn`, `ifNoAttacksThisTurn`
+- **Data consistency test**: card and relic data may only use effect types and triggers the engine implements; entries whose text is not implemented are listed explicitly
+- **Hand limit**: 10 cards
+
+### Changed
+- **Power cards**: the power left in play is derived from the card's triggered effects, so `src/data/powerCards.ts` no longer keeps a second copy of them
+- **Legacy `damage`/`block` fields**: read in one place (`getCardEffects`) when resolving a card
+- **`cardNeedsTarget`**: decided from card effects instead of a list of card ids
+- **Relic and power damage**: goes through enemy Block
+- `processRelicEffects` and `processPowerCardEffects` delegate to the pipeline
+
 ### Fixed
 - **Status timing**: Weak and Vulnerable tick after the affected side has acted (enemies after their action, the player at the end of the enemy turn), so 1 stack lasts one turn
 - **Block**: Combat-start block survives the first turn; block-loss limits (Calipers) are a relic effect type (`LIMIT_BLOCK_LOSS`) instead of negative block
