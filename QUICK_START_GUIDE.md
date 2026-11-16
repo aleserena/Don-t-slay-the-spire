@@ -33,7 +33,7 @@ Add these scripts to your `package.json`:
 
 ### 3. Create Configuration Files
 Copy the configuration files from `DEVELOPMENT_TOOLS.md`:
-- `.eslintrc.js`
+- `.eslintrc.cjs`
 - `.prettierrc`
 - `.commitlintrc.js`
 - `vitest.config.ts`
