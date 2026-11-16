@@ -3,6 +3,9 @@
 /** Cards drawn at the start of each player turn. */
 export const HAND_SIZE = 5;
 
+/** The hand never holds more cards than this; further draws are skipped. */
+export const MAX_HAND_SIZE = 10;
+
 /** Energy can exceed the player's maximum by at most this much. */
 export const MAX_BONUS_ENERGY = 3;
 

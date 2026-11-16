@@ -1,4 +1,10 @@
-import { StatusType, StatusEffect, Player, Enemy } from "../types/game";
+import {
+  EffectType,
+  StatusType,
+  StatusEffect,
+  Player,
+  Enemy,
+} from "../types/game";
 import { debugConsole } from "./debugUtils";
 
 export const applyStatusEffect = (
@@ -123,6 +129,16 @@ export const tickDebuffs = <T extends Combatant>(
 export const processStatusEffects = (entity: Combatant): Combatant =>
   tickDebuffs(tickPoison(entity));
 
+/** Extra damage the first attack of each combat deals, from relics. */
+export const getFirstAttackBonus = (attacker: Player | Enemy): number => {
+  if (!("relics" in attacker) || !attacker.relics) return 0;
+
+  return attacker.relics
+    .flatMap((relic) => relic?.effects ?? [])
+    .filter((effect) => effect.effect === EffectType.FIRST_ATTACK_DAMAGE)
+    .reduce((total, effect) => total + (effect.value ?? 0), 0);
+};
+
 export const calculateDamage = (
   baseDamage: number,
   attacker: Player | Enemy,
@@ -173,13 +189,10 @@ export const calculateDamage = (
     }
   }
 
-  // Flat bonus for the first attack of a combat (Akabeko), added before
-  // the percentage modifiers
-  if (isFirstAttack && "relics" in attacker) {
-    if (attacker.relics?.some((r) => r && r.id === "akabeko")) {
-      damage += 8;
-    }
-  }
+  // Flat bonus for the first attack of a combat, added before the
+  // percentage modifiers
+  const firstAttackBonus = isFirstAttack ? getFirstAttackBonus(attacker) : 0;
+  damage += firstAttackBonus;
 
   // Apply weak debuff (reduces damage by 25%)
   const weak = attacker.statusEffects.find((e) => e.type === StatusType.WEAK);
@@ -220,12 +233,9 @@ export const calculateDamage = (
         strength: strength?.stacks || 0,
         weak: weak ? "applied (-25%)" : "none",
         vulnerable: vulnerable ? "applied (+50%)" : "none",
-        akabeko:
-          isFirstAttack &&
-          "relics" in attacker &&
-          (attacker as Player).relics?.some((r) => r?.id === "akabeko")
-            ? "applied (+8)"
-            : "none",
+        firstAttack: firstAttackBonus
+          ? `applied (+${firstAttackBonus})`
+          : "none",
       },
       calculation: `${originalDamage} → ${finalDamage}`,
     });

@@ -5,24 +5,34 @@
 
 import {
   Card,
+  CardEffect,
   CardType,
+  CombatCounters,
   EffectType,
   Enemy,
   Player,
-  PowerTrigger,
+  PowerCard,
   TargetType,
 } from "../types/game";
-import { getPowerCardDefinition } from "../data/powerCards";
+import { getAllCards } from "../data/cards";
 import { upgradeCard } from "../utils/cardUpgrades";
-import { processPowerCardEffects } from "../utils/powerCardEffects";
 import {
   applyStatusEffect,
   calculateBlock,
   calculateDamage,
 } from "../utils/statusEffects";
-import { pickRandom } from "../utils/random";
+import { pickRandom, Rng } from "../utils/random";
 import { MAX_BONUS_ENERGY } from "./constants";
 import { createTemporaryCopy } from "./deck";
+import { getCardEffects, takeDamage } from "./effects";
+import {
+  Battle,
+  createBattle,
+  createCombatCounters,
+  dispatch,
+  gainBlock,
+  loseHp,
+} from "./triggers";
 
 export interface CardPlayInput {
   card: Card;
@@ -37,7 +47,13 @@ export interface CardPlayInput {
   hand: Card[];
   /** Whether this is the first attack card played this combat. */
   isFirstAttack: boolean;
+  /** Bookkeeping of the current combat. */
+  counters?: CombatCounters;
+  rng?: Rng;
 }
+
+/** Where a card goes once it has been played. */
+export type CardDestination = "discard" | "exhaust" | "removed";
 
 export interface CardPlayResult {
   player: Player;
@@ -48,26 +64,68 @@ export interface CardPlayResult {
   createdCards: Card[];
   /** Cards to draw once the played card has left the hand. */
   cardsToDraw: number;
+  counters: CombatCounters;
+  /**
+   * `exhaust` for cards that exhaust, `removed` for power cards (they stay
+   * in play as a power), `discard` for everything else.
+   */
+  destination: CardDestination;
 }
+
+/** Effect types a player card can use. */
+export const SUPPORTED_CARD_EFFECTS: EffectType[] = [
+  EffectType.DAMAGE,
+  EffectType.DAMAGE_MULTIPLIER_BLOCK,
+  EffectType.DAMAGE_MULTIPLIER_ENERGY,
+  EffectType.BLOCK,
+  EffectType.APPLY_STATUS,
+  EffectType.DRAW_CARDS,
+  EffectType.HEAL,
+  EffectType.GAIN_ENERGY,
+  EffectType.LOSE_ENERGY,
+  EffectType.LOSE_HP,
+  EffectType.ADD_CARD_TO_DISCARD,
+  EffectType.UPGRADE_CARD,
+];
 
 /** Energy a card costs to play right now. X-cost cards spend everything. */
 export const getEnergyCost = (card: Card, player: Player): number =>
   card.cost === "X" ? player.energy : card.cost;
 
 /** Applies attack damage to a target, removing block first. */
-export const applyDamage = <T extends Player | Enemy>(
-  target: T,
-  damage: number,
-): T => ({
-  ...target,
-  health: target.health - Math.max(0, damage - target.block),
-  block: Math.max(0, target.block - damage),
-});
+export const applyDamage = takeDamage;
 
-const isDamageEffect = (type: EffectType): boolean =>
-  type === EffectType.DAMAGE ||
-  type === EffectType.DAMAGE_MULTIPLIER_BLOCK ||
-  type === EffectType.DAMAGE_MULTIPLIER_ENERGY;
+/**
+ * The effects of a card being played. A power card created without effects
+ * of its own uses those of the card definition it is an instance of.
+ */
+const getPlayedEffects = (card: Card): CardEffect[] => {
+  const effects = getCardEffects(card);
+  if (effects.length > 0 || card.type !== CardType.POWER) return effects;
+
+  const definition = getAllCards().find((c) => c.baseId === card.baseId);
+  return definition ? getCardEffects(definition) : [];
+};
+
+/** The power a power card leaves in play: its effects that have a trigger. */
+const toPowerCard = (card: Card, effects: CardEffect[]): PowerCard => ({
+  id: card.baseId,
+  name: card.name,
+  description: card.description,
+  effects: effects.flatMap((effect) =>
+    effect.trigger
+      ? [
+          {
+            trigger: effect.trigger,
+            type: effect.type,
+            value: effect.value,
+            target: effect.target,
+            statusType: effect.statusType,
+          },
+        ]
+      : [],
+  ),
+});
 
 export const resolveCardPlay = ({
   card,
@@ -77,12 +135,12 @@ export const resolveCardPlay = ({
   enemies,
   hand,
   isFirstAttack,
+  counters = createCombatCounters(),
+  rng = Math.random,
 }: CardPlayInput): CardPlayResult => {
-  let newPlayer = player;
-  let newEnemies = [...enemies];
+  let battle: Battle = createBattle(player, [...enemies], counters);
   const newHand = [...hand];
   const createdCards: Card[] = [];
-  let cardsToDraw = 0;
 
   // The first-attack bonus belongs to the first damage effect of the card
   let firstAttackPending = isFirstAttack;
@@ -92,80 +150,90 @@ export const resolveCardPlay = ({
     return first;
   };
 
-  const hitEnemy = (
-    enemy: Enemy,
+  /** Ids of the enemies an effect with this target applies to. */
+  const pickTargets = (target: TargetType): string[] => {
+    switch (target) {
+      case TargetType.ALL_ENEMIES:
+        return battle.enemies.map((enemy) => enemy.id);
+      case TargetType.ENEMY:
+        return targetId ? [targetId] : [];
+      case TargetType.RANDOM_ENEMY: {
+        const enemy = pickRandom(
+          battle.enemies.filter((e) => e.health > 0),
+          rng,
+        );
+        return enemy ? [enemy.id] : [];
+      }
+      default:
+        return [];
+    }
+  };
+
+  const updateEnemies = (ids: string[], update: (enemy: Enemy) => Enemy) => {
+    battle = {
+      ...battle,
+      enemies: battle.enemies.map((enemy) =>
+        ids.includes(enemy.id) ? update(enemy) : enemy,
+      ),
+    };
+  };
+
+  const setPlayer = (update: (player: Player) => Player) => {
+    battle = { ...battle, player: update(battle.player) };
+  };
+
+  /** One hit of attack damage against every enemy the target selects. */
+  const hit = (
+    target: TargetType,
     baseDamage: number,
-    firstAttack: boolean,
-    strengthMultiplier: number = 1,
-  ): Enemy =>
-    applyDamage(
-      enemy,
-      calculateDamage(
-        baseDamage,
-        newPlayer,
+    strengthMultiplier?: number,
+  ) => {
+    const firstAttack = takeFirstAttack();
+    updateEnemies(pickTargets(target), (enemy) =>
+      takeDamage(
         enemy,
-        firstAttack,
-        strengthMultiplier,
+        calculateDamage(
+          baseDamage,
+          battle.player,
+          enemy,
+          firstAttack,
+          strengthMultiplier,
+        ),
       ),
     );
-
-  const hitAll = (
-    baseDamage: number,
-    firstAttack: boolean,
-    strengthMultiplier?: number,
-  ) => {
-    newEnemies = newEnemies.map((enemy) =>
-      hitEnemy(enemy, baseDamage, firstAttack, strengthMultiplier),
-    );
   };
 
-  const hitTarget = (
-    baseDamage: number,
-    firstAttack: boolean,
-    strengthMultiplier?: number,
-  ) => {
-    if (!targetId) return;
-    newEnemies = newEnemies.map((enemy) =>
-      enemy.id === targetId
-        ? hitEnemy(enemy, baseDamage, firstAttack, strengthMultiplier)
-        : enemy,
-    );
-  };
+  const effects = getPlayedEffects(card);
 
-  for (const effect of card.effects ?? []) {
+  for (const effect of effects) {
+    // Ongoing effects of a power card fire later, through its trigger
+    if (effect.trigger) continue;
+
+    const isSelf = effect.target === TargetType.SELF;
+
     switch (effect.type) {
       case EffectType.DAMAGE:
-        if (effect.target === TargetType.ALL_ENEMIES) {
-          hitAll(effect.value, takeFirstAttack(), effect.strengthMultiplier);
-        } else if (effect.target === TargetType.ENEMY) {
-          hitTarget(effect.value, takeFirstAttack(), effect.strengthMultiplier);
-        }
+        hit(effect.target, effect.value, effect.strengthMultiplier);
         break;
 
       case EffectType.DAMAGE_MULTIPLIER_BLOCK:
-        if (effect.target === TargetType.ENEMY) {
-          hitTarget(
-            newPlayer.block * (effect.multiplier || 1),
-            takeFirstAttack(),
-          );
-        }
+        hit(effect.target, battle.player.block * (effect.multiplier || 1));
         break;
 
       case EffectType.DAMAGE_MULTIPLIER_ENERGY:
-        if (effect.target === TargetType.ALL_ENEMIES) {
-          // One hit per energy spent
-          for (let hit = 0; hit < energyCost; hit++) {
-            hitAll(effect.value, takeFirstAttack());
-          }
+        // One hit per energy spent
+        for (let i = 0; i < energyCost; i++) {
+          hit(effect.target, effect.value);
         }
         break;
 
       case EffectType.BLOCK:
-        if (effect.target === TargetType.SELF) {
-          newPlayer = {
-            ...newPlayer,
-            block: newPlayer.block + calculateBlock(effect.value, newPlayer),
-          };
+        if (isSelf) {
+          battle = gainBlock(
+            battle,
+            calculateBlock(effect.value, battle.player),
+            rng,
+          );
         }
         break;
 
@@ -173,20 +241,25 @@ export const resolveCardPlay = ({
         const statusType = effect.statusType;
         if (!statusType) break;
 
-        if (effect.target === TargetType.SELF) {
-          newPlayer = applyStatusEffect(
-            newPlayer,
-            statusType,
-            effect.value,
-          ) as Player;
-        } else if (effect.target === TargetType.ENEMY && targetId) {
-          newEnemies = newEnemies.map((enemy) =>
-            enemy.id === targetId
-              ? (applyStatusEffect(enemy, statusType, effect.value) as Enemy)
-              : enemy,
+        if (isSelf) {
+          setPlayer(
+            (p) => applyStatusEffect(p, statusType, effect.value) as Player,
           );
-        } else if (effect.target === TargetType.ALL_ENEMIES) {
-          newEnemies = newEnemies.map(
+          if (effect.untilEndOfTurn) {
+            battle = {
+              ...battle,
+              counters: {
+                ...battle.counters,
+                expiringStatuses: [
+                  ...battle.counters.expiringStatuses,
+                  { type: statusType, stacks: effect.value },
+                ],
+              },
+            };
+          }
+        } else {
+          updateEnemies(
+            pickTargets(effect.target),
             (enemy) =>
               applyStatusEffect(enemy, statusType, effect.value) as Enemy,
           );
@@ -195,54 +268,59 @@ export const resolveCardPlay = ({
       }
 
       case EffectType.DRAW_CARDS:
-        if (effect.target === TargetType.SELF) {
-          cardsToDraw += effect.value;
+        if (isSelf) {
+          battle = {
+            ...battle,
+            cardsToDraw: battle.cardsToDraw + effect.value,
+          };
         }
         break;
 
       case EffectType.HEAL:
-        if (effect.target === TargetType.SELF) {
-          newPlayer = {
-            ...newPlayer,
-            health: Math.min(
-              newPlayer.maxHealth,
-              newPlayer.health + effect.value,
-            ),
-          };
+        if (isSelf) {
+          setPlayer((p) => ({
+            ...p,
+            health: Math.min(p.maxHealth, p.health + effect.value),
+          }));
         }
         break;
 
+      case EffectType.LOSE_HP:
+        if (isSelf) battle = loseHp(battle, effect.value, undefined, rng);
+        break;
+
       case EffectType.GAIN_ENERGY:
-        if (effect.target === TargetType.SELF) {
-          newPlayer = {
-            ...newPlayer,
+        if (isSelf) {
+          setPlayer((p) => ({
+            ...p,
             energy: Math.min(
-              newPlayer.maxEnergy + MAX_BONUS_ENERGY,
-              newPlayer.energy + effect.value,
+              p.maxEnergy + MAX_BONUS_ENERGY,
+              p.energy + effect.value,
             ),
-          };
+          }));
         }
         break;
 
       case EffectType.LOSE_ENERGY:
-        if (effect.target === TargetType.SELF) {
-          newPlayer = {
-            ...newPlayer,
-            energy: Math.max(0, newPlayer.energy - effect.value),
-          };
+        if (isSelf) {
+          setPlayer((p) => ({
+            ...p,
+            energy: Math.max(0, p.energy - effect.value),
+          }));
         }
         break;
 
       case EffectType.ADD_CARD_TO_DISCARD:
-        if (effect.target === TargetType.SELF) {
-          createdCards.push(createTemporaryCopy(card));
-        }
+        if (isSelf) createdCards.push(createTemporaryCopy(card));
         break;
 
       case EffectType.UPGRADE_CARD:
-        if (effect.target === TargetType.SELF) {
+        if (isSelf) {
           // Upgrade a random card in hand
-          const cardToUpgrade = pickRandom(newHand.filter((c) => !c.upgraded));
+          const cardToUpgrade = pickRandom(
+            newHand.filter((c) => !c.upgraded),
+            rng,
+          );
           if (cardToUpgrade) {
             newHand[newHand.indexOf(cardToUpgrade)] =
               upgradeCard(cardToUpgrade);
@@ -252,53 +330,39 @@ export const resolveCardPlay = ({
     }
   }
 
-  // Legacy support: cards with a direct damage property and no damage effects
-  if (
-    card.damage &&
-    card.damage > 0 &&
-    !card.effects?.some((effect) => isDamageEffect(effect.type))
-  ) {
-    hitTarget(card.damage, takeFirstAttack());
-  }
-
-  // Legacy support: cards with a direct block property and no block effects
-  if (
-    card.block &&
-    card.block > 0 &&
-    !card.effects?.some((effect) => effect.type === EffectType.BLOCK)
-  ) {
-    newPlayer = {
-      ...newPlayer,
-      block: newPlayer.block + calculateBlock(card.block, newPlayer),
-    };
-  }
-
   // Power cards stay attached to the player for the rest of the combat
   if (card.type === CardType.POWER) {
-    const powerCardDef = getPowerCardDefinition(card.baseId);
-    if (powerCardDef) {
-      const powerCards = [...newPlayer.powerCards, powerCardDef];
-      newPlayer = { ...newPlayer, powerCards };
+    setPlayer((p) => ({
+      ...p,
+      powerCards: [...p.powerCards, toPowerCard(card, effects)],
+    }));
+  }
 
-      // Only apply the definition's immediate effects when the card has no
-      // effects of its own, so they are not applied twice
-      if (!card.effects || card.effects.length === 0) {
-        const powerResult = processPowerCardEffects(
-          PowerTrigger.COMBAT_START,
-          { ...newPlayer, powerCards: [powerCardDef] },
-          newEnemies,
-        );
-        newPlayer = { ...powerResult.player, powerCards };
-        newEnemies = powerResult.enemies;
-      }
+  battle = dispatch(battle, { type: "card_played", card }, rng);
+
+  let destination: CardDestination = "discard";
+  if (card.type === CardType.POWER) {
+    destination = "removed";
+  } else if (card.exhaust) {
+    destination = "exhaust";
+    battle = dispatch(battle, { type: "card_exhausted", card }, rng);
+  }
+
+  // Enemies this card killed
+  for (const enemy of enemies) {
+    const after = battle.enemies.find((e) => e.id === enemy.id);
+    if (enemy.health > 0 && after && after.health <= 0) {
+      battle = dispatch(battle, { type: "enemy_died", enemyId: enemy.id }, rng);
     }
   }
 
   return {
-    player: newPlayer,
-    enemies: newEnemies,
+    player: battle.player,
+    enemies: battle.enemies,
     hand: newHand,
     createdCards,
-    cardsToDraw,
+    cardsToDraw: battle.cardsToDraw,
+    counters: battle.counters,
+    destination,
   };
 };

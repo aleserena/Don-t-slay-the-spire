@@ -5,6 +5,7 @@
 
 import {
   Card,
+  CombatCounters,
   EffectType,
   Enemy,
   GamePhase,
@@ -12,8 +13,6 @@ import {
   MonsterCard,
   MonsterCardType,
   Player,
-  PowerTrigger,
-  RelicTrigger,
   TurnPhase,
 } from "../types/game";
 import { NodeType } from "../types/map";
@@ -21,13 +20,12 @@ import { getBossForFloor } from "../data/bosses";
 import { getRandomEnemyEncounter } from "../data/enemies";
 import { selectEnemyCard } from "../data/monsterCards";
 import { processMonsterCardEffects } from "../utils/monsterCardEffects";
-import { processPowerCardEffects } from "../utils/powerCardEffects";
-import { processRelicEffects, RelicContext } from "../utils/relicEffects";
 import { tickPoison } from "../utils/statusEffects";
 import { shuffle } from "../utils/random";
-import { ELITE_HEALTH_MULTIPLIER } from "./constants";
+import { ELITE_HEALTH_MULTIPLIER, MAX_BONUS_ENERGY } from "./constants";
 import { withoutTemporaryCards } from "./deck";
 import { createCombatReward } from "./rewards";
+import { createBattle, createCombatCounters, dispatch } from "./triggers";
 
 export const isCombatNode = (type: NodeType): boolean =>
   type === NodeType.COMBAT || type === NodeType.ELITE || type === NodeType.BOSS;
@@ -75,6 +73,7 @@ export const createCombatState = (
   firstAttackThisCombat: true,
   // Incremented to 1 when the first player turn starts
   playerTurnThisCombat: 0,
+  combat: createCombatCounters(),
   player: {
     ...player,
     block: 0,
@@ -116,6 +115,7 @@ export const createVictoryState = (
     combatReward,
     selectedCard: null,
     playerTurnThisCombat: 0,
+    combat: createCombatCounters(),
     stepInProgress: false,
     stepType: undefined,
   };
@@ -124,54 +124,90 @@ export const createVictoryState = (
 /**
  * Block left at the start of a player turn. Block gained before the first
  * turn (combat-start effects) is kept; afterwards all block is lost, or at
- * most the smallest block-loss limit among the player's relics.
+ * most the smallest block-loss limit among the player's relics and powers.
  */
 const getBlockAtTurnStart = (player: Player, turn: number): number => {
   if (turn <= 1) return Math.max(0, player.block);
 
-  const limits = player.relics
-    .flatMap((relic) => relic.effects)
-    .filter(
-      (effect) =>
-        effect.trigger === RelicTrigger.TURN_START &&
-        effect.effect === EffectType.LIMIT_BLOCK_LOSS,
-    )
-    .map((effect) => effect.value ?? 0);
+  const limits = [
+    ...player.relics
+      .flatMap((relic) => relic.effects)
+      .filter((effect) => effect.effect === EffectType.LIMIT_BLOCK_LOSS)
+      .map((effect) => effect.value ?? 0),
+    ...player.powerCards
+      .flatMap((power) => power.effects)
+      .filter((effect) => effect.type === EffectType.LIMIT_BLOCK_LOSS)
+      .map((effect) => effect.value),
+  ];
   if (limits.length === 0) return 0;
 
   return Math.max(0, player.block - Math.min(...limits));
 };
 
 /**
- * Start of a player turn: energy refills, block resets, then power card and
- * relic turn-start effects apply. `turn` is the 1-based turn of the combat.
+ * Start of a player turn: energy refills (plus any energy promised for this
+ * turn), block resets, then power card and relic turn-start effects apply.
+ * `turn` is the 1-based turn of the combat.
  */
 export const startPlayerTurn = (
   player: Player,
   enemies: Enemy[],
   turn: number,
-): { player: Player; enemies: Enemy[]; cardsToDraw: number } => {
+  counters: CombatCounters = createCombatCounters(),
+): {
+  player: Player;
+  enemies: Enemy[];
+  cardsToDraw: number;
+  counters: CombatCounters;
+} => {
   const refreshed = {
     ...player,
-    energy: player.maxEnergy,
+    energy: Math.min(
+      player.maxEnergy + MAX_BONUS_ENERGY,
+      player.maxEnergy + counters.energyNextTurn,
+    ),
     block: getBlockAtTurnStart(player, turn),
   };
 
-  const powerResult = processPowerCardEffects(
-    PowerTrigger.TURN_START,
-    refreshed,
-    enemies,
+  return dispatch(
+    createBattle(refreshed, enemies, { ...counters, energyNextTurn: 0 }),
+    { type: "turn_start", turn },
   );
+};
 
-  const context: RelicContext = { playerTurnThisCombat: turn };
-  const relicResult = processRelicEffects(
-    RelicTrigger.TURN_START,
-    powerResult.player,
-    powerResult.enemies,
-    context,
-  );
+/**
+ * End of the player's turn: power card and relic turn-end effects apply,
+ * then statuses that only last for the turn are removed.
+ */
+export const endPlayerTurn = (
+  player: Player,
+  enemies: Enemy[],
+  counters: CombatCounters = createCombatCounters(),
+): {
+  player: Player;
+  enemies: Enemy[];
+  cardsToDraw: number;
+  counters: CombatCounters;
+} => {
+  const battle = dispatch(createBattle(player, enemies, counters), {
+    type: "turn_end",
+  });
 
-  return { ...relicResult, cardsToDraw: context.shouldDrawCards || 0 };
+  const expiring = battle.counters.expiringStatuses;
+  const statusEffects = battle.player.statusEffects
+    .map((effect) => {
+      const lost = expiring
+        .filter((status) => status.type === effect.type)
+        .reduce((total, status) => total + status.stacks, 0);
+      return lost > 0 ? { ...effect, stacks: effect.stacks - lost } : effect;
+    })
+    .filter((effect) => effect.stacks > 0);
+
+  return {
+    ...battle,
+    player: { ...battle.player, statusEffects },
+    counters: { ...battle.counters, expiringStatuses: [] },
+  };
 };
 
 /** Converts a monster card type to the intent shown in the UI. */
@@ -216,7 +252,7 @@ export const tickEnemies = (enemies: Enemy[]): Enemy[] =>
     .map((enemy) => ({ ...enemy, block: 0 }));
 
 /**
- * An enemy plays a card against the player. Relics that react to the player
+ * An enemy plays a card against the player. Effects that react to the player
  * losing health apply afterwards and may hurt the enemy back or ask for
  * cards to be drawn.
  */
@@ -224,29 +260,30 @@ export const resolveEnemyCard = (
   card: MonsterCard,
   player: Player,
   enemy: Enemy,
-): { player: Player; enemy: Enemy; cardsToDraw: number } => {
+  counters: CombatCounters = createCombatCounters(),
+): {
+  player: Player;
+  enemy: Enemy;
+  cardsToDraw: number;
+  counters: CombatCounters;
+} => {
   const cardResult = processMonsterCardEffects(card, player, enemy);
-  let newPlayer = cardResult.player;
-  let newEnemy = cardResult.enemy;
-  let cardsToDraw = 0;
+  let battle = createBattle(cardResult.player, [cardResult.enemy], counters);
 
-  const healthLost = player.health - newPlayer.health;
+  const healthLost = player.health - cardResult.player.health;
   if (healthLost > 0) {
-    const context: RelicContext = {};
-    const relicResult = processRelicEffects(
-      RelicTrigger.DAMAGE_TAKEN,
-      newPlayer,
-      [newEnemy],
-      context,
-    );
-    newPlayer = relicResult.player;
-    newEnemy = relicResult.enemies[0] || newEnemy;
-    cardsToDraw = context.shouldDrawCards || 0;
+    battle = dispatch(battle, {
+      type: "hp_lost",
+      amount: healthLost,
+      attackerId: enemy.id,
+    });
   }
 
+  const newEnemy = battle.enemies[0] ?? cardResult.enemy;
   return {
-    player: newPlayer,
+    player: battle.player,
     enemy: { ...newEnemy, health: Math.max(0, newEnemy.health) },
-    cardsToDraw,
+    cardsToDraw: battle.cardsToDraw,
+    counters: battle.counters,
   };
 };

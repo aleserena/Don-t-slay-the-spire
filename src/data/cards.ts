@@ -5,6 +5,7 @@ import {
   EffectType,
   TargetType,
   StatusType,
+  PowerTrigger,
 } from "../types/game";
 import { v4 as uuidv4 } from "uuid";
 import { pickWeighted, Rng } from "../utils/random";
@@ -412,6 +413,7 @@ export const getAllCards = (): Card[] => {
           type: EffectType.BLOCK,
           value: 3,
           target: TargetType.SELF,
+          trigger: PowerTrigger.TURN_END,
         },
       ],
     },
@@ -432,6 +434,7 @@ export const getAllCards = (): Card[] => {
           value: 2,
           target: TargetType.SELF,
           statusType: StatusType.STRENGTH,
+          trigger: PowerTrigger.TURN_START,
         },
       ],
     },
@@ -487,17 +490,17 @@ export const getAllCards = (): Card[] => {
         {
           type: EffectType.DAMAGE,
           value: 3,
-          target: TargetType.ENEMY,
+          target: TargetType.RANDOM_ENEMY,
         },
         {
           type: EffectType.DAMAGE,
           value: 3,
-          target: TargetType.ENEMY,
+          target: TargetType.RANDOM_ENEMY,
         },
         {
           type: EffectType.DAMAGE,
           value: 3,
-          target: TargetType.ENEMY,
+          target: TargetType.RANDOM_ENEMY,
         },
       ],
     },
@@ -607,6 +610,7 @@ export const getAllCards = (): Card[] => {
       rarity: CardRarity.UNCOMMON,
       description: "Gain 2 Energy. Exhaust.",
       upgraded: false,
+      exhaust: true,
       effects: [
         {
           type: EffectType.GAIN_ENERGY,
@@ -624,6 +628,7 @@ export const getAllCards = (): Card[] => {
       rarity: CardRarity.UNCOMMON,
       description: "Apply 1 Weak to ALL enemies. Exhaust.",
       upgraded: false,
+      exhaust: true,
       effects: [
         {
           type: EffectType.APPLY_STATUS,
@@ -648,6 +653,7 @@ export const getAllCards = (): Card[] => {
           value: 2,
           target: TargetType.SELF,
           statusType: StatusType.STRENGTH,
+          untilEndOfTurn: true,
         },
       ],
     },
@@ -683,9 +689,16 @@ export const getAllCards = (): Card[] => {
       upgraded: false,
       effects: [
         {
+          type: EffectType.LOSE_HP,
+          value: 1,
+          target: TargetType.SELF,
+          trigger: PowerTrigger.TURN_END,
+        },
+        {
           type: EffectType.DAMAGE,
           value: 5,
           target: TargetType.ALL_ENEMIES,
+          trigger: PowerTrigger.TURN_END,
         },
       ],
     },
@@ -703,6 +716,7 @@ export const getAllCards = (): Card[] => {
           type: EffectType.BLOCK,
           value: 3,
           target: TargetType.SELF,
+          trigger: PowerTrigger.CARD_EXHAUSTED,
         },
       ],
     },
@@ -717,9 +731,11 @@ export const getAllCards = (): Card[] => {
       upgraded: false,
       effects: [
         {
-          type: EffectType.BLOCK,
+          // Lose at most 0 Block at the start of the turn
+          type: EffectType.LIMIT_BLOCK_LOSS,
           value: 0,
           target: TargetType.SELF,
+          trigger: PowerTrigger.TURN_START,
         },
       ],
     },
@@ -736,7 +752,8 @@ export const getAllCards = (): Card[] => {
         {
           type: EffectType.DAMAGE,
           value: 5,
-          target: TargetType.ENEMY,
+          target: TargetType.RANDOM_ENEMY,
+          trigger: PowerTrigger.BLOCK_GAINED,
         },
       ],
     },

@@ -1,6 +1,5 @@
 import {
   Card,
-  CardType,
   Player,
   Enemy,
   EffectType,
@@ -9,6 +8,7 @@ import {
   TargetType,
 } from "../types/game";
 import { calculateDamage } from "./statusEffects";
+import { getCardEffects } from "../engine/effects";
 import { getAllCards } from "../data/cards";
 
 export interface CardDamageInfo {
@@ -108,31 +108,12 @@ export const calculateCardEffectDamage = (
 /**
  * Check if card needs target selection
  */
-export const cardNeedsTarget = (card: Card): boolean => {
-  // Cards that need a specific target
-  const targetingCards = [
-    "strike",
-    "bash",
-    "twin_strike",
-    "body_slam",
-    "anger",
-    "iron_wave",
-    "pommel_strike",
-    "poison_stab",
-    "heavy_blade",
-    "sword_boomerang",
-  ];
-  if (targetingCards.includes(card.baseId)) return true;
-
-  // Any attack with an effect aimed at a single enemy needs a target
-  // (covers cards missing from the list above, e.g. Uppercut). Powers such as
-  // Juggernaut use the ENEMY target for a random enemy, so they are excluded.
-  return (
-    card.type === CardType.ATTACK &&
-    (card.effects?.some((effect) => effect.target === TargetType.ENEMY) ??
-      false)
+export const cardNeedsTarget = (card: Card): boolean =>
+  // Any effect applied when the card is played that is aimed at one enemy.
+  // Ongoing power effects (with a trigger) pick their own targets.
+  getCardEffects(card).some(
+    (effect) => !effect.trigger && effect.target === TargetType.ENEMY,
   );
-};
 
 /**
  * Check if card targets all enemies (multi-target)
