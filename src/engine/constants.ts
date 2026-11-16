@@ -12,8 +12,14 @@ export const MAX_BONUS_ENERGY = 3;
 /** Health restored by resting at a rest site. */
 export const REST_HEAL_AMOUNT = 30;
 
-/** Elite encounters multiply enemy health by this. */
-export const ELITE_HEALTH_MULTIPLIER = 1.5;
+/** Last (0-based) floor that still uses the easy encounters. */
+export const EASY_FLOORS_END = 2;
+
+/** First (0-based) floor on which enemies are tougher. */
+export const HARD_FLOORS_START = 9;
+
+/** Enemy health is multiplied by this from `HARD_FLOORS_START` on. */
+export const HARD_HEALTH_MULTIPLIER = 1.25;
 
 /** Gold awarded for winning a combat (inclusive range). */
 export const VICTORY_GOLD_MIN = 10;

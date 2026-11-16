@@ -168,6 +168,18 @@ export const applyEventConsequence = (
   }
 };
 
+/** Gold an event choice takes from the player. */
+export const getChoiceGoldCost = (choice: EventChoice): number =>
+  choice.consequences
+    .filter((consequence) => consequence.type === ConsequenceType.LOSE_GOLD)
+    .reduce((total, consequence) => total + (consequence.value || 0), 0);
+
+/** Whether the player can pay for an event choice. */
+export const canChooseEventOption = (
+  choice: EventChoice,
+  player: Player,
+): boolean => player.gold >= getChoiceGoldCost(choice);
+
 /** Applies every consequence of an event choice, in order. */
 export const applyEventChoice = (
   choice: EventChoice,

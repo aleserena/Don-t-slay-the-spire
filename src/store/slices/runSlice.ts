@@ -26,6 +26,7 @@ export const createRunSlice: SliceCreator<RunActions> = (set, get) => ({
         player: saved.player,
         map: saved.map,
         currentFloor: saved.currentFloor,
+        combatsWon: saved.combatsWon ?? 0,
         rngState: saved.rngState,
         gamePhase: GamePhase.MAP,
         hasSavedGame: true,

@@ -8,11 +8,12 @@ import { RestScreen } from "./components/RestScreen";
 import { ShopScreen } from "./components/ShopScreen";
 import { TitleScreen } from "./components/TitleScreen";
 import { GameOverScreen } from "./components/GameOverScreen";
+import { VictoryScreen } from "./components/VictoryScreen";
 import { GamePhase } from "./types/game";
 import "./App.css";
 
 function App() {
-  const { gamePhase, startNewRun } = useGameStore();
+  const gamePhase = useGameStore((state) => state.gamePhase);
 
   const renderCurrentPhase = () => {
     switch (gamePhase) {
@@ -35,47 +36,7 @@ function App() {
       case GamePhase.GAME_OVER:
         return <GameOverScreen />;
       case GamePhase.VICTORY:
-        return (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100vh",
-              background: "linear-gradient(135deg, #1a1a2e, #16213e)",
-              color: "white",
-            }}
-          >
-            <h1
-              style={{
-                fontSize: "48px",
-                color: "#ffd700",
-                marginBottom: "20px",
-              }}
-            >
-              Victory!
-            </h1>
-            <p style={{ fontSize: "18px", marginBottom: "30px" }}>
-              You have conquered the Spire!
-            </p>
-            <button
-              onClick={() => startNewRun()}
-              style={{
-                padding: "15px 30px",
-                fontSize: "18px",
-                fontWeight: "bold",
-                background: "#4CAF50",
-                color: "white",
-                border: "none",
-                borderRadius: "10px",
-                cursor: "pointer",
-              }}
-            >
-              Start New Run
-            </button>
-          </div>
-        );
+        return <VictoryScreen />;
       default:
         return <MapView />;
     }

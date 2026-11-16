@@ -18,13 +18,19 @@ These cards need a mechanic of their own. They are listed in `src/data/__tests__
 - The relic trigger `REST` is defined but never fired (no relic uses it)
 - An enemy's retaliation and random-target effects during the enemy turn only see the enemy that is acting
 - The event reward `random_curse` resolves to nothing
-- Map node types are rolled independently (a floor can be all shops, and there is no guaranteed rest before the boss); encounters do not scale with the floor
+- Bosses share one deck and are not scaled by anything but their health
+- One enemy (`createLagavulin`) has no deck of its own and is not used in any encounter
 - There is no way to type a seed in the UI; `startNewGame(seed)` accepts one and the Game Over screen shows it
 - A run is saved on the map only: closing the browser during a combat, event or shop returns to the map before that node
-- Event choices that cost gold can be picked without having the gold
 - The hand view (`HandArea.tsx`) still has per-card markup for a few cards; the other card views read everything from card data
 
 ## Fixed
+
+### Run structure (unreleased)
+- The map is built from routes that never cross, with a combat to start, a treasure halfway, a rest site before the boss, and at least one shop and one elite
+- Fights scale with the floor: single enemies at the start, groups in the middle, tougher groups near the top; elite nodes have their own encounters
+- Defeating the boss shows a summary of the run
+- Event choices that cost more gold than the player has cannot be picked
 
 ### Seeded runs and saving (unreleased)
 - A run in progress is saved while it is on the map and can be continued from the title screen; the save is removed when the run ends

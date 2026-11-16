@@ -4,7 +4,7 @@ import { getRandomEvent } from "../../data/events";
 import { createEncounter, isCombatNode } from "../../engine/combat";
 import { REST_HEAL_AMOUNT } from "../../engine/constants";
 import { replaceCard } from "../../engine/deck";
-import { applyEventChoice } from "../../engine/events";
+import { applyEventChoice, canChooseEventOption } from "../../engine/events";
 import { createShop, createTreasureReward } from "../../engine/rewards";
 import { upgradeCard } from "../../utils/cardUpgrades";
 import { completeNode } from "../../utils/mapGeneration";
@@ -84,7 +84,7 @@ export const createMapSlice: SliceCreator<MapActions> = (set, get) => ({
   selectEventChoice: (choiceId) => {
     const state = get();
     const choice = state.currentEvent?.choices.find((c) => c.id === choiceId);
-    if (!choice) return;
+    if (!choice || !canChooseEventOption(choice, state.player)) return;
 
     const rng = createSeededRng(state.rngState);
     const outcome = applyEventChoice(

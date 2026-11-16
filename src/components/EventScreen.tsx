@@ -1,9 +1,10 @@
 import React from "react";
 import { useGameStore } from "../store/gameStore";
 import { EventConsequence } from "../types/map";
+import { canChooseEventOption, getChoiceGoldCost } from "../engine/events";
 
 export const EventScreen: React.FC = () => {
-  const { currentEvent, selectEventChoice } = useGameStore();
+  const { currentEvent, selectEventChoice, player } = useGameStore();
 
   if (!currentEvent) return null;
 
@@ -64,56 +65,70 @@ export const EventScreen: React.FC = () => {
             gap: "15px",
           }}
         >
-          {currentEvent.choices.map((choice) => (
-            <button
-              key={choice.id}
-              onClick={() => selectEventChoice(choice.id)}
-              style={{
-                padding: "20px",
-                fontSize: "16px",
-                fontWeight: "bold",
-                background: "linear-gradient(135deg, #4ecdc4, #45b7d1)",
-                color: "white",
-                border: "none",
-                borderRadius: "10px",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                textAlign: "left",
-                position: "relative",
-                overflow: "hidden",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background =
-                  "linear-gradient(135deg, #45b7d1, #4ecdc4)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow =
-                  "0 4px 12px rgba(78, 205, 196, 0.3)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background =
-                  "linear-gradient(135deg, #4ecdc4, #45b7d1)";
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              <div style={{ marginBottom: "10px" }}>{choice.text}</div>
-
-              {/* Show consequences preview */}
-              <div
+          {currentEvent.choices.map((choice) => {
+            const affordable = canChooseEventOption(choice, player);
+            return (
+              <button
+                key={choice.id}
+                onClick={() => selectEventChoice(choice.id)}
+                disabled={!affordable}
+                title={
+                  affordable
+                    ? undefined
+                    : `Not enough gold (needs ${getChoiceGoldCost(choice)})`
+                }
                 style={{
-                  fontSize: "12px",
-                  opacity: 0.8,
-                  fontStyle: "italic",
+                  opacity: affordable ? 1 : 0.5,
+                  padding: "20px",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  background: "linear-gradient(135deg, #4ecdc4, #45b7d1)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "10px",
+                  cursor: affordable ? "pointer" : "not-allowed",
+                  transition: "all 0.3s ease",
+                  textAlign: "left",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+                onMouseEnter={(e) => {
+                  if (!affordable) return;
+                  e.currentTarget.style.background =
+                    "linear-gradient(135deg, #45b7d1, #4ecdc4)";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 12px rgba(78, 205, 196, 0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background =
+                    "linear-gradient(135deg, #4ecdc4, #45b7d1)";
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                {choice.consequences.map((consequence, index) => (
-                  <div key={index} style={{ marginBottom: "2px" }}>
-                    {getConsequencePreview(consequence)}
-                  </div>
-                ))}
-              </div>
-            </button>
-          ))}
+                <div style={{ marginBottom: "10px" }}>
+                  {choice.text}
+                  {!affordable && " (not enough gold)"}
+                </div>
+
+                {/* Show consequences preview */}
+                <div
+                  style={{
+                    fontSize: "12px",
+                    opacity: 0.8,
+                    fontStyle: "italic",
+                  }}
+                >
+                  {choice.consequences.map((consequence, index) => (
+                    <div key={index} style={{ marginBottom: "2px" }}>
+                      {getConsequencePreview(consequence)}
+                    </div>
+                  ))}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -24,6 +24,8 @@ export interface SavedRun {
   persistentDeck: Card[];
   map: GameMap;
   currentFloor: number;
+  /** Added later; a save without it counts from zero */
+  combatsWon?: number;
 }
 
 const getStorage = (): Storage | null => {
@@ -39,7 +41,13 @@ const getStorage = (): Storage | null => {
 export const toSavedRun = (
   state: Pick<
     StoreState,
-    "seed" | "rngState" | "player" | "persistentDeck" | "map" | "currentFloor"
+    | "seed"
+    | "rngState"
+    | "player"
+    | "persistentDeck"
+    | "map"
+    | "currentFloor"
+    | "combatsWon"
   >,
 ): SavedRun | null =>
   state.map
@@ -58,6 +66,7 @@ export const toSavedRun = (
         persistentDeck: state.persistentDeck,
         map: state.map,
         currentFloor: state.currentFloor,
+        combatsWon: state.combatsWon,
       }
     : null;
 
