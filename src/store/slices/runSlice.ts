@@ -1,16 +1,39 @@
 import { GamePhase } from "../../types/game";
-import { createNewRunState } from "../initialState";
+import { createNewRunState, createOutOfCombatPiles } from "../initialState";
+import { hasSave, readSave } from "../saveGame";
 import { RunActions, SliceCreator, UiActions } from "../types";
 
 export const createRunSlice: SliceCreator<RunActions> = (set, get) => ({
-  startNewRun: () => set(createNewRunState()),
+  startNewRun: (seed) => set(createNewRunState(seed)),
 
-  startNewGame: () => set({ ...createNewRunState(), gamePhase: GamePhase.MAP }),
+  startNewGame: (seed) =>
+    set({ ...createNewRunState(seed), gamePhase: GamePhase.MAP }),
 
-  returnToTitle: () => set({ gamePhase: GamePhase.TITLE, selectedCard: null }),
+  returnToTitle: () =>
+    set({
+      gamePhase: GamePhase.TITLE,
+      selectedCard: null,
+      // The title screen offers "Continue" when a run is stored
+      hasSavedGame: hasSave(),
+    }),
 
   loadSavedGame: () => {
-    // Saving is not implemented yet; this only resumes the in-memory run
+    const saved = readSave();
+    if (saved) {
+      set({
+        ...createNewRunState(saved.seed),
+        ...createOutOfCombatPiles(saved.persistentDeck),
+        player: saved.player,
+        map: saved.map,
+        currentFloor: saved.currentFloor,
+        rngState: saved.rngState,
+        gamePhase: GamePhase.MAP,
+        hasSavedGame: true,
+      });
+      return;
+    }
+
+    // No stored run: resume the one still in memory, if there is one
     if (get().hasSavedGame) {
       set({ gamePhase: GamePhase.MAP });
     }

@@ -60,7 +60,7 @@ function App() {
               You have conquered the Spire!
             </p>
             <button
-              onClick={startNewRun}
+              onClick={() => startNewRun()}
               style={{
                 padding: "15px 30px",
                 fontSize: "18px",

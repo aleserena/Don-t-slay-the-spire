@@ -6,7 +6,7 @@ import {
   StatusType,
 } from "../types/game";
 import { createInstanceId } from "../utils/ids";
-import { pickWeighted } from "../utils/random";
+import { pickWeighted, Rng } from "../utils/random";
 
 // Cultist Cards
 export const cultistCards: MonsterCard[] = [
@@ -652,6 +652,7 @@ export const selectEnemyCard = (
   deck: MonsterCard[],
   enemyHealth: number,
   maxHealth: number,
+  rng: Rng = Math.random,
 ): MonsterCard => {
   if (!deck || deck.length === 0) {
     // Fallback to cultist cards if deck is undefined or empty
@@ -680,6 +681,6 @@ export const selectEnemyCard = (
   );
   const cardsToChooseFrom = preferredCards.length > 0 ? preferredCards : deck;
 
-  const card = pickWeighted(cardsToChooseFrom, (c) => c.priority)!;
+  const card = pickWeighted(cardsToChooseFrom, (c) => c.priority, rng)!;
   return { ...card, id: createInstanceId(card.baseId) };
 };

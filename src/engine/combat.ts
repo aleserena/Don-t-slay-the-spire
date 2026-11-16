@@ -21,7 +21,7 @@ import { getRandomEnemyEncounter } from "../data/enemies";
 import { selectEnemyCard } from "../data/monsterCards";
 import { processMonsterCardEffects } from "../utils/monsterCardEffects";
 import { tickPoison } from "../utils/statusEffects";
-import { shuffle } from "../utils/random";
+import { shuffle, Rng } from "../utils/random";
 import { ELITE_HEALTH_MULTIPLIER, MAX_BONUS_ENERGY } from "./constants";
 import { withoutTemporaryCards } from "./deck";
 import { createCombatReward } from "./rewards";
@@ -38,14 +38,22 @@ const toElite = (enemy: Enemy): Enemy => ({
 });
 
 /** Creates the enemies for a combat, elite or boss map node. */
-export const createEncounter = (type: NodeType, floor: number): Enemy[] => {
+export const createEncounter = (
+  type: NodeType,
+  floor: number,
+  rng: Rng = Math.random,
+): Enemy[] => {
+  // The opening card is picked here with the run's random source, so the
+  // same seed gives the same first intents
+  const withOpeningCard = (enemy: Enemy) => chooseNextCard(enemy, rng);
+
   switch (type) {
     case NodeType.BOSS:
-      return [getBossForFloor(floor)];
+      return [getBossForFloor(floor, rng)].map(withOpeningCard);
     case NodeType.ELITE:
-      return getRandomEnemyEncounter().map(toElite);
+      return getRandomEnemyEncounter(rng).map(toElite).map(withOpeningCard);
     default:
-      return getRandomEnemyEncounter();
+      return getRandomEnemyEncounter(rng).map(withOpeningCard);
   }
 };
 
@@ -57,15 +65,16 @@ export const createCombatState = (
   persistentDeck: Card[],
   player: Player,
   enemies: Enemy[],
+  rng: Rng = Math.random,
 ) => ({
   gamePhase: GamePhase.COMBAT,
   currentTurn: TurnPhase.PLAYER_TURN,
   // Every enemy shows what it will do on its first turn
   enemies: enemies.map((enemy) =>
-    enemy.currentCard ? enemy : chooseNextCard(enemy),
+    enemy.currentCard ? enemy : chooseNextCard(enemy, rng),
   ),
   hand: [] as Card[],
-  drawPile: shuffle(withoutTemporaryCards(persistentDeck)),
+  drawPile: shuffle(withoutTemporaryCards(persistentDeck), rng),
   discardPile: [] as Card[],
   exhaustPile: [] as Card[],
   combatReward: undefined,
@@ -90,8 +99,9 @@ export const createVictoryState = (
   persistentDeck: Card[],
   player: Player,
   defeatedEnemies: Enemy[],
+  rng: Rng = Math.random,
 ) => {
-  const combatReward = createCombatReward(player, defeatedEnemies);
+  const combatReward = createCombatReward(player, defeatedEnemies, rng);
   // Defeating a boss wins the run
   const isRunWon = defeatedEnemies.some((enemy) => enemy.isBoss);
 
@@ -154,6 +164,7 @@ export const startPlayerTurn = (
   enemies: Enemy[],
   turn: number,
   counters: CombatCounters = createCombatCounters(),
+  rng: Rng = Math.random,
 ): {
   player: Player;
   enemies: Enemy[];
@@ -172,6 +183,7 @@ export const startPlayerTurn = (
   return dispatch(
     createBattle(refreshed, enemies, { ...counters, energyNextTurn: 0 }),
     { type: "turn_start", turn },
+    rng,
   );
 };
 
@@ -183,15 +195,18 @@ export const endPlayerTurn = (
   player: Player,
   enemies: Enemy[],
   counters: CombatCounters = createCombatCounters(),
+  rng: Rng = Math.random,
 ): {
   player: Player;
   enemies: Enemy[];
   cardsToDraw: number;
   counters: CombatCounters;
 } => {
-  const battle = dispatch(createBattle(player, enemies, counters), {
-    type: "turn_end",
-  });
+  const battle = dispatch(
+    createBattle(player, enemies, counters),
+    { type: "turn_end" },
+    rng,
+  );
 
   const expiring = battle.counters.expiringStatuses;
   const statusEffects = battle.player.statusEffects
@@ -227,8 +242,8 @@ export const cardTypeToIntentType = (cardType: MonsterCardType): IntentType => {
 };
 
 /** Picks the card an enemy will play next turn and shows it as its intent. */
-export const chooseNextCard = (enemy: Enemy): Enemy => {
-  const card = selectEnemyCard(enemy.deck, enemy.health, enemy.maxHealth);
+export const chooseNextCard = (enemy: Enemy, rng: Rng = Math.random): Enemy => {
+  const card = selectEnemyCard(enemy.deck, enemy.health, enemy.maxHealth, rng);
   return {
     ...enemy,
     currentCard: card,
@@ -261,6 +276,7 @@ export const resolveEnemyCard = (
   player: Player,
   enemy: Enemy,
   counters: CombatCounters = createCombatCounters(),
+  rng: Rng = Math.random,
 ): {
   player: Player;
   enemy: Enemy;
@@ -272,11 +288,11 @@ export const resolveEnemyCard = (
 
   const healthLost = player.health - cardResult.player.health;
   if (healthLost > 0) {
-    battle = dispatch(battle, {
-      type: "hp_lost",
-      amount: healthLost,
-      attackerId: enemy.id,
-    });
+    battle = dispatch(
+      battle,
+      { type: "hp_lost", amount: healthLost, attackerId: enemy.id },
+      rng,
+    );
   }
 
   const newEnemy = battle.enemies[0] ?? cardResult.enemy;

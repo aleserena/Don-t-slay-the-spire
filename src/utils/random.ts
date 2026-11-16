@@ -8,19 +8,34 @@
 export type Rng = () => number;
 
 /**
+ * A deterministic random source whose position in its sequence can be read
+ * and stored: `createSeededRng(rng.state)` continues where `rng` is.
+ */
+export interface SeededRng {
+  (): number;
+  readonly state: number;
+}
+
+/**
  * Creates a deterministic random source (mulberry32). The same seed always
  * produces the same sequence, which makes random behavior reproducible.
  */
-export const createSeededRng = (seed: number): Rng => {
+export const createSeededRng = (seed: number): SeededRng => {
   let state = seed >>> 0;
-  return () => {
+  const next = () => {
     state = (state + 0x6d2b79f5) >>> 0;
     let t = state;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+  Object.defineProperty(next, "state", { get: () => state, enumerable: true });
+  return next as SeededRng;
 };
+
+/** A new seed for a run: an unsigned 32-bit integer. */
+export const createRandomSeed = (): number =>
+  Math.floor(Math.random() * 4294967296) >>> 0;
 
 /** Random integer in `[min, max]`, both inclusive. */
 export const randomInt = (
