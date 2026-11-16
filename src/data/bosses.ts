@@ -15,7 +15,7 @@ export const createSlimeBoss = (): Enemy => ({
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck("slime_boss"),
+  deck: getEnemyDeck("boss"),
 });
 
 export const createGuardian = (): Enemy => ({
@@ -30,7 +30,7 @@ export const createGuardian = (): Enemy => ({
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck("guardian"),
+  deck: getEnemyDeck("boss"),
 });
 
 export const createHexaghost = (): Enemy => ({
@@ -45,7 +45,7 @@ export const createHexaghost = (): Enemy => ({
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck("hexaghost"),
+  deck: getEnemyDeck("boss"),
 });
 
 export const createChamp = (): Enemy => ({
@@ -60,7 +60,7 @@ export const createChamp = (): Enemy => ({
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck("champ"),
+  deck: getEnemyDeck("boss"),
 });
 
 export const createCollector = (): Enemy => ({
@@ -74,7 +74,7 @@ export const createCollector = (): Enemy => ({
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck("collector"),
+  deck: getEnemyDeck("boss"),
 });
 
 export const createCityBoss = (): Enemy => ({
@@ -89,7 +89,7 @@ export const createCityBoss = (): Enemy => ({
   },
   statusEffects: [],
   isBoss: true,
-  deck: getEnemyDeck("automaton"),
+  deck: getEnemyDeck("boss"),
 });
 
 export const getAllBosses = (): Enemy[] => [
@@ -106,12 +106,17 @@ export const getRandomBoss = (): Enemy => {
   return pickRandom(bosses)!;
 };
 
+/** Floors in one act; the last one holds the act's boss. */
+const FLOORS_PER_ACT = 15;
+
+/** Picks the boss for a map floor (0-based) from the act that floor is in. */
 export const getBossForFloor = (floor: number): Enemy => {
-  if (floor < 5) {
+  const act = Math.floor(floor / FLOORS_PER_ACT);
+  if (act <= 0) {
     // Act 1 bosses
     const act1Bosses = [createSlimeBoss(), createGuardian(), createHexaghost()];
     return pickRandom(act1Bosses)!;
-  } else if (floor < 10) {
+  } else if (act === 1) {
     // Act 2 bosses
     const act2Bosses = [createChamp(), createCollector(), createCityBoss()];
     return pickRandom(act2Bosses)!;

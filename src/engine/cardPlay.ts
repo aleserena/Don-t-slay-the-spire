@@ -84,6 +84,14 @@ export const resolveCardPlay = ({
   const createdCards: Card[] = [];
   let cardsToDraw = 0;
 
+  // The first-attack bonus belongs to the first damage effect of the card
+  let firstAttackPending = isFirstAttack;
+  const takeFirstAttack = (): boolean => {
+    const first = firstAttackPending;
+    firstAttackPending = false;
+    return first;
+  };
+
   const hitEnemy = (
     enemy: Enemy,
     baseDamage: number,
@@ -128,15 +136,18 @@ export const resolveCardPlay = ({
     switch (effect.type) {
       case EffectType.DAMAGE:
         if (effect.target === TargetType.ALL_ENEMIES) {
-          hitAll(effect.value, isFirstAttack, effect.strengthMultiplier);
+          hitAll(effect.value, takeFirstAttack(), effect.strengthMultiplier);
         } else if (effect.target === TargetType.ENEMY) {
-          hitTarget(effect.value, isFirstAttack, effect.strengthMultiplier);
+          hitTarget(effect.value, takeFirstAttack(), effect.strengthMultiplier);
         }
         break;
 
       case EffectType.DAMAGE_MULTIPLIER_BLOCK:
         if (effect.target === TargetType.ENEMY) {
-          hitTarget(newPlayer.block * (effect.multiplier || 1), isFirstAttack);
+          hitTarget(
+            newPlayer.block * (effect.multiplier || 1),
+            takeFirstAttack(),
+          );
         }
         break;
 
@@ -144,7 +155,7 @@ export const resolveCardPlay = ({
         if (effect.target === TargetType.ALL_ENEMIES) {
           // One hit per energy spent
           for (let hit = 0; hit < energyCost; hit++) {
-            hitAll(effect.value, isFirstAttack && hit === 0);
+            hitAll(effect.value, takeFirstAttack());
           }
         }
         break;
@@ -247,7 +258,7 @@ export const resolveCardPlay = ({
     card.damage > 0 &&
     !card.effects?.some((effect) => isDamageEffect(effect.type))
   ) {
-    hitTarget(card.damage, isFirstAttack);
+    hitTarget(card.damage, takeFirstAttack());
   }
 
   // Legacy support: cards with a direct block property and no block effects

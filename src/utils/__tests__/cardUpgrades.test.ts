@@ -179,7 +179,8 @@ describe("CardUpgrades", () => {
 
       expect(result.name).toBe("Unknown Attack+");
       expect(result.damage).toBe(13);
-      expect(result.cost).toBe(1);
+      // The cost only drops when nothing else improves
+      expect(result.cost).toBe(2);
       expect(result.upgraded).toBe(true);
     });
 
@@ -196,7 +197,7 @@ describe("CardUpgrades", () => {
 
       expect(result.name).toBe("Unknown Skill+");
       expect(result.block).toBe(11);
-      expect(result.cost).toBe(1);
+      expect(result.cost).toBe(2);
       expect(result.upgraded).toBe(true);
     });
 
@@ -271,13 +272,13 @@ describe("CardUpgrades", () => {
 
     it("should show cost reduction preview", () => {
       const card = createMockCard({
-        id: "unknown_attack",
+        id: "unknown_utility",
         cost: 2,
-        damage: 10,
+        damage: undefined,
       });
       const preview = getUpgradePreview(card);
 
-      expect(preview).toBe("Damage: 10 → 13, Cost: 2 → 1");
+      expect(preview).toBe("Cost: 2 → 1");
     });
 
     it("should show multiple changes preview", () => {

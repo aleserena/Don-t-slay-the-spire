@@ -538,6 +538,80 @@ export const sneakyGremlinCards: MonsterCard[] = [
   },
 ];
 
+// Boss cards: one shared deck for every boss
+export const bossCards: MonsterCard[] = [
+  {
+    id: "crushing_blow",
+    baseId: "crushing_blow",
+    name: "Crushing Blow",
+    type: MonsterCardType.ATTACK,
+    description: "Deal 18 damage.",
+    damage: 18,
+    priority: 4,
+    effects: [
+      {
+        type: EffectType.DAMAGE,
+        value: 18,
+        target: TargetType.ENEMY,
+      },
+    ],
+  },
+  {
+    id: "staggering_strike",
+    baseId: "staggering_strike",
+    name: "Staggering Strike",
+    type: MonsterCardType.ATTACK,
+    description: "Deal 10 damage. Apply 1 Weak.",
+    damage: 10,
+    priority: 3,
+    effects: [
+      {
+        type: EffectType.DAMAGE,
+        value: 10,
+        target: TargetType.ENEMY,
+      },
+      {
+        type: EffectType.APPLY_STATUS,
+        value: 1,
+        target: TargetType.ENEMY,
+        statusType: StatusType.WEAK,
+      },
+    ],
+  },
+  {
+    id: "brace",
+    baseId: "brace",
+    name: "Brace",
+    type: MonsterCardType.DEFEND,
+    description: "Gain 15 Block.",
+    block: 15,
+    priority: 2,
+    effects: [
+      {
+        type: EffectType.BLOCK,
+        value: 15,
+        target: TargetType.SELF,
+      },
+    ],
+  },
+  {
+    id: "gather_power",
+    baseId: "gather_power",
+    name: "Gather Power",
+    type: MonsterCardType.BUFF,
+    description: "Gain 2 Strength.",
+    priority: 2,
+    effects: [
+      {
+        type: EffectType.APPLY_STATUS,
+        value: 2,
+        target: TargetType.SELF,
+        statusType: StatusType.STRENGTH,
+      },
+    ],
+  },
+];
+
 // Function to get deck for specific enemy type
 export const getEnemyDeck = (enemyName: string): MonsterCard[] => {
   switch (enemyName.toLowerCase()) {
@@ -566,6 +640,8 @@ export const getEnemyDeck = (enemyName: string): MonsterCard[] => {
       return [...madGremlinCards];
     case "sneaky gremlin":
       return [...sneakyGremlinCards];
+    case "boss":
+      return [...bossCards];
     default:
       return [...cultistCards]; // Default fallback
   }

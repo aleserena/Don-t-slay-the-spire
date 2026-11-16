@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **Status timing**: Weak and Vulnerable tick after the affected side has acted (enemies after their action, the player at the end of the enemy turn), so 1 stack lasts one turn
+- **Block**: Combat-start block survives the first turn; block-loss limits (Calipers) are a relic effect type (`LIMIT_BLOCK_LOSS`) instead of negative block
+- **Power cards**: Leave play when played instead of being discarded and redrawn
+- **Targeting**: `playCard` rejects a targeted card without a living target, and targets the only enemy automatically
+- **First-attack bonus**: Applies to one hit per card and before percentage modifiers
+- **Upgrades**: Upgrades edit card effects, so upgraded base cards deal their shown numbers. The generic upgrade is +3 damage/block, or +1 on other numbers, or -1 cost when nothing else improves; descriptions are rewritten with the new numbers
+- **Bosses**: Bosses use a boss deck (they used the Cultist deck), every enemy picks an opening card when combat starts, and boss selection uses 15-floor acts
+- **Victory**: Defeating a boss ends the run on the victory screen
+- **Floor tracking**: `currentFloor` follows the map node that was entered
 - **Combat start**: Combats entered from the map now shuffle the deck, apply turn-start relic and power effects on turn 1, and deal the first hand immediately instead of after a timer
 - **Events**: Upgrade-card and remove-card outcomes are implemented; losing the last health in an event ends the run
 - **Unique ids**: Card, enemy and enemy-card instances use UUID-based ids instead of timestamps, which could collide
