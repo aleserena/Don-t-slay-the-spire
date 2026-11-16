@@ -69,7 +69,7 @@ coverage/
 
 ## 🔧 Configuration Files
 
-### ESLint Configuration (.eslintrc.js)
+### ESLint Configuration (.eslintrc.cjs)
 ```javascript
 module.exports = {
   root: true,
