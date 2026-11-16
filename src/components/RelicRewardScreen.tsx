@@ -8,6 +8,7 @@ export const RelicRewardScreen: React.FC = () => {
   if (!combatReward?.relicReward) return null;
 
   const relic = combatReward.relicReward;
+  const isTreasureReward = combatReward.isTreasureReward || false;
 
   const getRelicRarityColor = (rarity: string): string => {
     switch (rarity) {
@@ -75,7 +76,7 @@ export const RelicRewardScreen: React.FC = () => {
             backgroundClip: "text",
           }}
         >
-          🏆 Elite Defeated! 🏆
+          {isTreasureReward ? "💎 Treasure Found! 💎" : "🏆 Elite Defeated! 🏆"}
         </div>
 
         <div
@@ -86,7 +87,7 @@ export const RelicRewardScreen: React.FC = () => {
             opacity: 0.9,
           }}
         >
-          Choose your reward!
+          {isTreasureReward ? "A relic awaits you!" : "Choose your reward!"}
         </div>
 
         {/* Relic Display */}
@@ -289,8 +290,10 @@ export const RelicRewardScreen: React.FC = () => {
             maxWidth: "400px",
           }}
         >
-          Elite enemies drop powerful relics that provide permanent benefits
-          throughout your run.
+          {isTreasureReward 
+            ? "Treasure chests contain powerful relics that provide permanent benefits throughout your run."
+            : "Elite enemies drop powerful relics that provide permanent benefits throughout your run."
+          }
         </div>
       </div>
     </div>

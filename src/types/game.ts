@@ -212,6 +212,7 @@ export interface CardEffect {
   multiplier?: number;
   target: TargetType;
   statusType?: StatusType;
+  strengthMultiplier?: number; // Special property for cards like Heavy Blade
 }
 
 /**
@@ -469,6 +470,11 @@ export interface Player {
  * @property {Event} [currentEvent] - Current event being processed (if in event phase)
  * @property {Shop} [currentShop] - Current shop being visited (if in shop phase)
  * @property {boolean} [firstAttackThisCombat] - Whether this is the first attack in combat
+ * @property {number} [playerTurnThisCombat] - Track which player turn it is in combat
+ * @property {boolean} stepInProgress - Whether a step is in progress
+ * @property {() => void} [_resolveStep] - Optional resolve function for the step
+ * @property {stepType?: 'before' | 'attack' | 'after'} stepType - The type of step
+ * @property {Card[]} persistentDeck - Cards in the player's persistent deck
  *
  * @example
  * ```typescript
@@ -480,7 +486,14 @@ export interface Player {
  *   discardPile: [],
  *   exhaustPile: [],
  *   currentTurn: TurnPhase.PLAYER_TURN,
- *   gamePhase: GamePhase.COMBAT
+ *   gamePhase: GamePhase.COMBAT,
+ *   playerTurnThisCombat: 1,
+ *   stepInProgress: true,
+ *   _resolveStep: () => {
+ *     // Implementation of _resolveStep function
+ *   },
+ *   stepType: 'before',
+ *   persistentDeck: [/* persistent deck cards *\/]
  * };
  * ```
  */
@@ -498,6 +511,11 @@ export interface GameState {
   currentEvent?: import("./map").Event;
   currentShop?: import("./map").Shop;
   firstAttackThisCombat?: boolean;
+  playerTurnThisCombat?: number; // Track which player turn it is in combat
+  stepInProgress: boolean;
+  _resolveStep?: (value?: unknown) => void;
+  stepType?: 'before' | 'attack' | 'after';
+  persistentDeck: Card[];
 }
 
 /**
@@ -549,7 +567,7 @@ export enum TurnPhase {
 }
 
 /**
- * Represents rewards given after winning a combat encounter.
+ * Represents rewards given after winning a combat encounter or from treasure nodes.
  *
  * Combat rewards provide the player with resources to improve their
  * deck and character for future encounters.
@@ -557,7 +575,8 @@ export enum TurnPhase {
  * @interface CombatReward
  * @property {number} gold - Gold gained from the combat
  * @property {Card[]} cardRewards - Cards available to add to deck
- * @property {Relic} [relicReward] - Relic available to collect (boss fights only)
+ * @property {Relic} [relicReward] - Relic available to collect (boss fights or treasure nodes)
+ * @property {boolean} [isTreasureReward] - Whether this reward is from a treasure node (not combat)
  *
  * @example
  * ```typescript
@@ -572,6 +591,7 @@ export interface CombatReward {
   gold: number;
   cardRewards: Card[];
   relicReward?: Relic;
+  isTreasureReward?: boolean;
 }
 
 /**

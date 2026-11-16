@@ -10,19 +10,27 @@ export const applyStatusEffect = (
     (effect) => effect.type === effectType,
   );
 
+  let newStatusEffects;
   if (existingEffect) {
-    // Stack the effect
-    existingEffect.stacks += stacks;
+    // Stack the effect (immutably)
+    newStatusEffects = target.statusEffects.map(effect =>
+      effect.type === effectType
+        ? { ...effect, stacks: effect.stacks + stacks }
+        : effect
+    );
   } else {
-    // Add new effect
-    target.statusEffects.push({
-      type: effectType,
-      stacks,
-      duration: getStatusEffectDuration(effectType),
-    });
+    // Add new effect (immutably)
+    newStatusEffects = [
+      ...target.statusEffects,
+      {
+        type: effectType,
+        stacks,
+        duration: getStatusEffectDuration(effectType),
+      },
+    ];
   }
 
-  return { ...target };
+  return { ...target, statusEffects: newStatusEffects };
 };
 
 export const removeStatusEffect = (
@@ -113,6 +121,7 @@ export const calculateDamage = (
   attacker: Player | Enemy,
   target: Player | Enemy,
   isFirstAttack?: boolean,
+  strengthMultiplier: number = 1,
 ): number => {
   // Input validation
   if (typeof baseDamage !== "number" || isNaN(baseDamage)) {
@@ -153,7 +162,7 @@ export const calculateDamage = (
         strength.stacks,
       );
     } else {
-      damage += strength.stacks;
+      damage += strength.stacks * strengthMultiplier;
     }
   }
 

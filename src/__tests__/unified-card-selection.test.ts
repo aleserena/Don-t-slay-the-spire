@@ -17,6 +17,11 @@ describe("Unified Card Selection System", () => {
   });
 
   it("should handle targeting cards with targeting mode as confirmation", () => {
+    // Get the actual Strike card from data
+    const strikeCard = getAllCards().find(
+      (card) => card.baseId === "strike",
+    )!;
+
     // Set up combat scenario with a targeting card (Strike)
     useGameStore.setState({
       gamePhase: GamePhase.COMBAT,
@@ -29,6 +34,7 @@ describe("Unified Card Selection System", () => {
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
           statusEffects: [],
+          deck: [],
         },
       ],
       currentTurn: TurnPhase.PLAYER_TURN,
@@ -37,19 +43,7 @@ describe("Unified Card Selection System", () => {
         energy: 3,
         maxEnergy: 3,
       },
-      hand: [
-        {
-          id: "strike",
-          baseId: "strike",
-          name: "Strike",
-          cost: 1,
-          type: CardType.ATTACK,
-          rarity: CardRarity.COMMON,
-          description: "Deal 6 damage.",
-          damage: 6,
-          upgraded: false,
-        },
-      ],
+      hand: [strikeCard],
       discardPile: [],
       selectedCard: null,
     });
@@ -87,6 +81,7 @@ describe("Unified Card Selection System", () => {
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
           statusEffects: [],
+          deck: [],
         },
         {
           id: "enemy2",
@@ -96,6 +91,7 @@ describe("Unified Card Selection System", () => {
           block: 0,
           intent: { type: IntentType.ATTACK, value: 8 },
           statusEffects: [],
+          deck: [],
         },
       ],
       currentTurn: TurnPhase.PLAYER_TURN,
@@ -140,6 +136,11 @@ describe("Unified Card Selection System", () => {
   });
 
   it("should handle non-damage cards with unified confirmation system", () => {
+    // Get the actual Defend card from data
+    const defendCard = getAllCards().find(
+      (card) => card.baseId === "defend",
+    )!;
+
     // Set up combat scenario with a non-damage card (Defend)
     useGameStore.setState({
       gamePhase: GamePhase.COMBAT,
@@ -152,6 +153,7 @@ describe("Unified Card Selection System", () => {
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
           statusEffects: [],
+          deck: [],
         },
       ],
       currentTurn: TurnPhase.PLAYER_TURN,
@@ -161,19 +163,7 @@ describe("Unified Card Selection System", () => {
         maxEnergy: 3,
         block: 0,
       },
-      hand: [
-        {
-          id: "defend",
-          baseId: "defend",
-          name: "Defend",
-          cost: 1,
-          type: CardType.SKILL,
-          rarity: CardRarity.COMMON,
-          description: "Gain 5 Block.",
-          block: 5,
-          upgraded: false,
-        },
-      ],
+      hand: [defendCard],
       discardPile: [],
     });
 
@@ -209,6 +199,7 @@ describe("Unified Card Selection System", () => {
           block: 0,
           intent: { type: IntentType.ATTACK, value: 10 },
           statusEffects: [],
+          deck: [],
         },
       ],
       currentTurn: TurnPhase.PLAYER_TURN,

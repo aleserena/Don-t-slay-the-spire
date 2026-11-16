@@ -22,6 +22,13 @@ export const createInitialDeck = (): Card[] => {
       rarity: CardRarity.BASE,
       description: "Deal 6 damage.",
       damage: 6,
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 6,
+          target: TargetType.ENEMY,
+        },
+      ],
       upgraded: false,
     });
   }
@@ -37,6 +44,13 @@ export const createInitialDeck = (): Card[] => {
       rarity: CardRarity.BASE,
       description: "Gain 5 Block.",
       block: 5,
+      effects: [
+        {
+          type: EffectType.BLOCK,
+          value: 5,
+          target: TargetType.SELF,
+        },
+      ],
       upgraded: false,
     });
   }
@@ -81,6 +95,13 @@ export const getAllCards = (): Card[] => {
       rarity: CardRarity.BASE,
       description: "Deal 6 damage.",
       damage: 6,
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 6,
+          target: TargetType.ENEMY,
+        },
+      ],
       upgraded: false,
     },
     {
@@ -92,6 +113,13 @@ export const getAllCards = (): Card[] => {
       rarity: CardRarity.BASE,
       description: "Gain 5 Block.",
       block: 5,
+      effects: [
+        {
+          type: EffectType.BLOCK,
+          value: 5,
+          target: TargetType.SELF,
+        },
+      ],
       upgraded: false,
     },
     {
@@ -169,6 +197,18 @@ export const getAllCards = (): Card[] => {
       description: "Gain 5 Block. Deal 5 damage.",
       damage: 5,
       block: 5,
+      effects: [
+        {
+          type: EffectType.BLOCK,
+          value: 5,
+          target: TargetType.SELF,
+        },
+        {
+          type: EffectType.DAMAGE,
+          value: 5,
+          target: TargetType.ENEMY,
+        },
+      ],
       upgraded: false,
     },
     {
@@ -180,14 +220,19 @@ export const getAllCards = (): Card[] => {
       rarity: CardRarity.COMMON,
       description: "Deal 9 damage. Draw 1 card.",
       damage: 9,
-      upgraded: false,
       effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 9,
+          target: TargetType.ENEMY,
+        },
         {
           type: EffectType.DRAW_CARDS,
           value: 1,
           target: TargetType.SELF,
         },
       ],
+      upgraded: false,
     },
     {
       id: "twin_strike",
@@ -222,8 +267,12 @@ export const getAllCards = (): Card[] => {
       rarity: CardRarity.COMMON,
       description: "Deal 6 damage. Apply 3 Poison.",
       damage: 6,
-      upgraded: false,
       effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 6,
+          target: TargetType.ENEMY,
+        },
         {
           type: EffectType.APPLY_STATUS,
           value: 3,
@@ -231,6 +280,7 @@ export const getAllCards = (): Card[] => {
           statusType: StatusType.POISON,
         },
       ],
+      upgraded: false,
     },
     {
       id: "shockwave",
@@ -267,14 +317,19 @@ export const getAllCards = (): Card[] => {
       rarity: CardRarity.COMMON,
       description: "Gain 5 Block. Upgrade a card in your hand.",
       block: 5,
-      upgraded: false,
       effects: [
+        {
+          type: EffectType.BLOCK,
+          value: 5,
+          target: TargetType.SELF,
+        },
         {
           type: EffectType.UPGRADE_CARD,
           value: 1,
           target: TargetType.SELF,
         },
       ],
+      upgraded: false,
     },
     {
       id: "body_slam",
@@ -409,6 +464,14 @@ export const getAllCards = (): Card[] => {
       description: "Deal 14 damage. Strength affects this card 3 times.",
       damage: 14,
       upgraded: false,
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 14,
+          target: TargetType.ENEMY,
+          strengthMultiplier: 3, // Special property for Heavy Blade
+        },
+      ],
     },
     {
       id: "sword_boomerang",
@@ -448,6 +511,13 @@ export const getAllCards = (): Card[] => {
         "Deal 6 damage. Deals 2 additional damage for every Strike in your deck.",
       damage: 6,
       upgraded: false,
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 6,
+          target: TargetType.ENEMY,
+        },
+      ],
     },
     {
       id: "thunderclap",
@@ -484,6 +554,11 @@ export const getAllCards = (): Card[] => {
       upgraded: false,
       effects: [
         {
+          type: EffectType.DAMAGE,
+          value: 13,
+          target: TargetType.ENEMY,
+        },
+        {
           type: EffectType.APPLY_STATUS,
           value: 1,
           target: TargetType.ENEMY,
@@ -510,6 +585,11 @@ export const getAllCards = (): Card[] => {
       block: 8,
       upgraded: false,
       effects: [
+        {
+          type: EffectType.BLOCK,
+          value: 8,
+          target: TargetType.SELF,
+        },
         {
           type: EffectType.DRAW_CARDS,
           value: 1,
@@ -671,6 +751,13 @@ export const getAllCards = (): Card[] => {
       description: "Deal 32 damage.",
       damage: 32,
       upgraded: false,
+      effects: [
+        {
+          type: EffectType.DAMAGE,
+          value: 32,
+          target: TargetType.ENEMY,
+        },
+      ],
     },
     {
       id: "immolate",

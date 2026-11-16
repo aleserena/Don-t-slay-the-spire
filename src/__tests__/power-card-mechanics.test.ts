@@ -380,7 +380,7 @@ describe("Power Card Mechanics", () => {
       expect(finalState.player.powerCards.length).toBe(0); // Power cards should be cleared
     });
 
-    it("should persist power cards during combat but clear them between combats", () => {
+    it("should persist power cards during combat but clear them between combats", async () => {
       const store = useGameStore.getState();
 
       // Start a new run
@@ -419,7 +419,7 @@ describe("Power Card Mechanics", () => {
       expect(currentState.player.powerCards.length).toBe(1);
 
       // End turn and verify power card still persists
-      store.endTurn();
+      await store.endTurn();
 
       // Wait for enemy turn to complete
       setTimeout(() => {
@@ -485,10 +485,11 @@ describe("Power Card Mechanics", () => {
         upgraded: false,
       };
 
-      // Add power card to draw pile
+      // Add power card to the deck (and to the draw pile of the current combat)
       useGameStore.setState((state) => ({
         ...state,
         drawPile: [...state.drawPile, inflameCard],
+        persistentDeck: [...state.persistentDeck, inflameCard],
       }));
 
       // Draw the power card and play it
