@@ -325,6 +325,7 @@ describe("Relic Effects", () => {
         RelicTrigger.TURN_START,
         mockPlayer,
         mockEnemies,
+        { playerTurnThisCombat: 2 }, // Horn Cleat only triggers on turn 2
       );
 
       expect(result.player.energy).toBe(3); // +1 from Energy Core

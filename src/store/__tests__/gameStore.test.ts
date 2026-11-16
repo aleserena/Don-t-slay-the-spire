@@ -387,7 +387,7 @@ describe("GameStore", () => {
   });
 
   describe("Turn Management", () => {
-    it("should end player turn and transition to enemy turn", () => {
+    it("should end player turn and transition to enemy turn", async () => {
       const { endTurn, drawCards } = useGameStore.getState();
 
       // Set up a combat scenario
@@ -412,12 +412,12 @@ describe("GameStore", () => {
 
       expect(useGameStore.getState().currentTurn).toBe(TurnPhase.PLAYER_TURN);
 
-      endTurn();
+      await endTurn();
 
       const newStore = useGameStore.getState();
-      expect(newStore.currentTurn).toBe(TurnPhase.ENEMY_TURN);
-      expect(newStore.hand).toEqual([]); // Hand should be discarded
-      expect(newStore.player.block).toBe(0); // Block should be reset
+      expect(newStore.currentTurn).toBe(TurnPhase.PLAYER_TURN); // Enemy turn processed immediately, now back to player turn
+      expect(newStore.hand.length).toBe(5); // New hand should be drawn at start of player turn
+      expect(newStore.player.block).toBe(0); // Block should be reset at start of player turn
     });
   });
 
@@ -520,6 +520,13 @@ describe("GameStore", () => {
             rarity: CardRarity.COMMON,
             description: "Deal 10 damage.",
             damage: 10,
+            effects: [
+              {
+                type: EffectType.DAMAGE,
+                value: 10,
+                target: TargetType.ENEMY,
+              },
+            ],
             upgraded: false,
           },
         ],
@@ -770,6 +777,98 @@ describe("GameStore", () => {
           (effect) => effect.type === StatusType.VULNERABLE,
         ),
       ).toBe(true);
+    });
+  });
+
+  describe("Deck preservation across combats and rewards", () => {
+    it("should preserve and grow the deck correctly after each fight and reward", () => {
+      const store = useGameStore.getState();
+      // Create a custom deck of 10 unique cards
+      const baseCard = getAllCards().find((c) => c.baseId === "strike")!;
+      const customDeck = Array.from({ length: 10 }, (_, i) => ({
+        ...baseCard,
+        id: `strike_${i}`,
+      }));
+      // Set up the store with this deck
+      useGameStore.setState({
+        drawPile: [...customDeck],
+        discardPile: [],
+        exhaustPile: [],
+        hand: [],
+        player: { ...store.player },
+      });
+
+      // Helper to simulate a fight and claim a reward
+      function doFightAndClaimReward() {
+        // Start combat
+        useGameStore.getState().startCombat();
+        // Simulate a single weak enemy
+        useGameStore.setState({
+          enemies: [
+            {
+              id: "enemy1",
+              name: "Enemy 1",
+              health: 1,
+              maxHealth: 1,
+              block: 0,
+              intent: { type: IntentType.ATTACK, value: 1 },
+              statusEffects: [],
+              deck: [],
+            },
+          ],
+          gamePhase: GamePhase.COMBAT,
+          currentTurn: TurnPhase.PLAYER_TURN,
+        });
+        // Instantly kill the enemy to end combat
+        useGameStore.setState((s) => ({
+          enemies: s.enemies.map((e) => ({ ...e, health: 0 })),
+        }));
+        // Process enemy turn to trigger combat end and reward
+        useGameStore.getState().processEnemyTurn();
+        // Pick the first card reward
+        const reward = useGameStore.getState().combatReward?.cardRewards?.[0];
+        if (reward) {
+          useGameStore.getState().selectCardReward(reward.id);
+        } else {
+          throw new Error("No card reward generated");
+        }
+      }
+
+      // Initial deck size
+      expect(useGameStore.getState().drawPile.length).toBe(10);
+
+      // First fight and reward
+      doFightAndClaimReward();
+      expect(useGameStore.getState().drawPile.length).toBe(11);
+
+      // Second fight and reward
+      doFightAndClaimReward();
+      expect(useGameStore.getState().drawPile.length).toBe(12);
+
+      // Third fight (no reward claim)
+      useGameStore.getState().startCombat();
+      useGameStore.setState({
+        enemies: [
+          {
+            id: "enemy1",
+            name: "Enemy 1",
+            health: 1,
+            maxHealth: 1,
+            block: 0,
+            intent: { type: IntentType.ATTACK, value: 1 },
+            statusEffects: [],
+            deck: [],
+          },
+        ],
+        gamePhase: GamePhase.COMBAT,
+        currentTurn: TurnPhase.PLAYER_TURN,
+      });
+      useGameStore.setState((s) => ({
+        enemies: s.enemies.map((e) => ({ ...e, health: 0 })),
+      }));
+      useGameStore.getState().processEnemyTurn();
+      // Deck should still be 12 (no reward claimed)
+      expect(useGameStore.getState().drawPile.length).toBe(12);
     });
   });
 });

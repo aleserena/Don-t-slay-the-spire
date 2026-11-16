@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { createInitialDeck, getAllCards } from "../cards";
-import { CardType, CardRarity } from "../../types/game";
+import {
+  createInitialDeck,
+  getAllCards,
+  getRewardCards,
+  generateCardRewards,
+} from "../cards";
+import { CardType, CardRarity, Card } from "../../types/game";
 
 describe("Cards Data", () => {
   describe("createInitialDeck", () => {
@@ -52,7 +57,7 @@ describe("Cards Data", () => {
       expect(strike).toBeDefined();
       expect(strike?.cost).toBe(1);
       expect(strike?.type).toBe(CardType.ATTACK);
-      expect(strike?.rarity).toBe(CardRarity.COMMON);
+      expect(strike?.rarity).toBe(CardRarity.BASE);
       expect(strike?.damage).toBe(6);
     });
 
@@ -63,7 +68,7 @@ describe("Cards Data", () => {
       expect(defend).toBeDefined();
       expect(defend?.cost).toBe(1);
       expect(defend?.type).toBe(CardType.SKILL);
-      expect(defend?.rarity).toBe(CardRarity.COMMON);
+      expect(defend?.rarity).toBe(CardRarity.BASE);
       expect(defend?.block).toBe(5);
     });
 
@@ -119,6 +124,7 @@ describe("Cards Data", () => {
       const cardRarities = allCards.map((card) => card.rarity);
       const uniqueRarities = new Set(cardRarities);
 
+      expect(uniqueRarities.has(CardRarity.BASE)).toBe(true);
       expect(uniqueRarities.has(CardRarity.COMMON)).toBe(true);
       expect(uniqueRarities.has(CardRarity.UNCOMMON)).toBe(true);
       expect(uniqueRarities.has(CardRarity.RARE)).toBe(true);
@@ -228,6 +234,110 @@ describe("Cards Data", () => {
       // Should have at least one "X" cost card (whirlwind)
       const xCostCards = allCards.filter((card) => card.cost === "X");
       expect(xCostCards.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("getRewardCards", () => {
+    it("should return cards excluding base cards", () => {
+      const rewardCards = getRewardCards();
+      const allCards = getAllCards();
+
+      expect(rewardCards.length).toBeLessThan(allCards.length);
+
+      // Should not contain any base cards
+      const baseCards = rewardCards.filter(
+        (card) => card.rarity === CardRarity.BASE,
+      );
+      expect(baseCards.length).toBe(0);
+
+      // Should contain other rarities
+      const commonCards = rewardCards.filter(
+        (card) => card.rarity === CardRarity.COMMON,
+      );
+      const uncommonCards = rewardCards.filter(
+        (card) => card.rarity === CardRarity.UNCOMMON,
+      );
+      const rareCards = rewardCards.filter(
+        (card) => card.rarity === CardRarity.RARE,
+      );
+
+      expect(commonCards.length).toBeGreaterThan(0);
+      expect(uncommonCards.length).toBeGreaterThan(0);
+      expect(rareCards.length).toBeGreaterThan(0);
+    });
+
+    it("should not contain strike or defend cards", () => {
+      const rewardCards = getRewardCards();
+
+      const strikeCards = rewardCards.filter(
+        (card) => card.baseId === "strike",
+      );
+      const defendCards = rewardCards.filter(
+        (card) => card.baseId === "defend",
+      );
+
+      expect(strikeCards.length).toBe(0);
+      expect(defendCards.length).toBe(0);
+    });
+  });
+
+  describe("generateCardRewards", () => {
+    it("should generate the specified number of cards", () => {
+      const rewards = generateCardRewards(3);
+      expect(rewards.length).toBe(3);
+
+      const rewards5 = generateCardRewards(5);
+      expect(rewards5.length).toBe(5);
+    });
+
+    it("should only return non-base cards", () => {
+      const rewards = generateCardRewards(10);
+
+      const baseCards = rewards.filter(
+        (card) => card.rarity === CardRarity.BASE,
+      );
+      expect(baseCards.length).toBe(0);
+    });
+
+    it("should respect rarity weighting", () => {
+      // Generate many rewards to test weighting
+      const allRewards: Card[] = [];
+      for (let i = 0; i < 100; i++) {
+        allRewards.push(...generateCardRewards(1));
+      }
+
+      const commonCount = allRewards.filter(
+        (card) => card.rarity === CardRarity.COMMON,
+      ).length;
+      const uncommonCount = allRewards.filter(
+        (card) => card.rarity === CardRarity.UNCOMMON,
+      ).length;
+      const rareCount = allRewards.filter(
+        (card) => card.rarity === CardRarity.RARE,
+      ).length;
+
+      // Common should be most frequent
+      expect(commonCount).toBeGreaterThan(uncommonCount);
+      expect(commonCount).toBeGreaterThan(rareCount);
+
+      // Uncommon should be more frequent than rare
+      expect(uncommonCount).toBeGreaterThan(rareCount);
+
+      // Should have some of each rarity
+      expect(commonCount).toBeGreaterThan(0);
+      expect(uncommonCount).toBeGreaterThan(0);
+      expect(rareCount).toBeGreaterThan(0);
+    });
+
+    it("should handle edge cases", () => {
+      // Should handle 0 count
+      const emptyRewards = generateCardRewards(0);
+      expect(emptyRewards.length).toBe(0);
+
+      // Should handle large count (but limited by available cards)
+      const largeRewards = generateCardRewards(100);
+      expect(largeRewards.length).toBeGreaterThan(0);
+      expect(largeRewards.length).toBeLessThanOrEqual(getRewardCards().length);
     });
   });
 });

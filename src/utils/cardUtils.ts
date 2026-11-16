@@ -1,10 +1,12 @@
 import {
   Card,
+  CardType,
   Player,
   Enemy,
   EffectType,
   StatusEffect,
   IntentType,
+  TargetType,
 } from "../types/game";
 import { calculateDamage } from "./statusEffects";
 import { getAllCards } from "../data/cards";
@@ -65,6 +67,7 @@ export const calculateCardEffectDamage = (
             player,
             enemy,
             isFirstAttack && totalDamage === 0,
+            effect.strengthMultiplier || 1,
           );
           break;
 
@@ -116,8 +119,19 @@ export const cardNeedsTarget = (card: Card): boolean => {
     "iron_wave",
     "pommel_strike",
     "poison_stab",
+    "heavy_blade",
+    "sword_boomerang",
   ];
-  return targetingCards.includes(card.baseId);
+  if (targetingCards.includes(card.baseId)) return true;
+
+  // Any attack with an effect aimed at a single enemy needs a target
+  // (covers cards missing from the list above, e.g. Uppercut). Powers such as
+  // Juggernaut use the ENEMY target for a random enemy, so they are excluded.
+  return (
+    card.type === CardType.ATTACK &&
+    (card.effects?.some((effect) => effect.target === TargetType.ENEMY) ??
+      false)
+  );
 };
 
 /**
@@ -143,7 +157,13 @@ export const calculateCardDamage = (
   if (card.effects) {
     for (const effect of card.effects) {
       if (effect.type === EffectType.DAMAGE) {
-        totalDamage += calculateDamage(effect.value, player, target);
+        totalDamage += calculateDamage(
+          effect.value,
+          player,
+          target,
+          false,
+          effect.strengthMultiplier || 1,
+        );
       } else if (effect.type === EffectType.DAMAGE_MULTIPLIER_BLOCK) {
         const blockDamage = player.block * (effect.multiplier || 1);
         totalDamage += calculateDamage(blockDamage, player, target);

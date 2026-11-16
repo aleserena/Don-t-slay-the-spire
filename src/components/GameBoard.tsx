@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useGameStore } from "../store/gameStore";
+import { Card } from "../types/game";
+import { UnifiedHeader } from "./UnifiedHeader";
 import { PlayerArea } from "./PlayerArea";
 import { EnemyArea } from "./EnemyArea";
 import { HandArea } from "./HandArea";
-import { UnifiedHeader } from "./UnifiedHeader";
 import { DebugPanel } from "./DebugPanel";
-import { Card } from "../types/game";
 import { cardNeedsTarget, isMultiTargetCard } from "../utils/cardUtils";
 import { CardGrid } from "./CardGrid";
 import { DamageDebugPanel } from "./DamageDebugPanel";
@@ -21,6 +21,8 @@ export const GameBoard: React.FC = () => {
     currentTurn,
     endTurn,
     toggleDebugMode,
+    stepInProgress,
+    resolveStep,
   } = useGameStore();
   const [previousHandSize, setPreviousHandSize] = useState(hand.length);
   const [previousDiscardSize, setPreviousDiscardSize] = useState(
@@ -45,10 +47,36 @@ export const GameBoard: React.FC = () => {
     previousDrawSize,
   ]);
 
-  // Add keyboard event listener for debug mode toggle
+  // Handle animation steps automatically
+  useEffect(() => {
+    if (stepInProgress) {
+      // Auto-resolve after 300ms to prevent freezing
+      // In a real implementation, this would wait for actual animations
+      const timer = setTimeout(() => {
+        resolveStep();
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+  }, [stepInProgress, resolveStep]);
+
+  // Handle hand size changes for card drawing animation
+  useEffect(() => {
+    if (hand.length > previousHandSize) {
+      // Cards were drawn - could trigger animation here
+      setPreviousHandSize(hand.length);
+    } else if (hand.length < previousHandSize) {
+      // Cards were played - could trigger animation here
+      setPreviousHandSize(hand.length);
+    }
+  }, [hand.length, previousHandSize]);
+
+  // Handle debug mode toggle
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        console.log("[DEBUG] Debug mode toggle key pressed");
         toggleDebugMode();
       }
     };
@@ -82,11 +110,13 @@ export const GameBoard: React.FC = () => {
       playCard(card.id);
       setSelectedCard(null);
     }
+    setConfirmingCard(card);
   };
 
   const handleEnemyTarget = (enemyId: string) => {
-    if (selectedCard) {
-      playCard(selectedCard.id, enemyId);
+    if (confirmingCard) {
+      playCard(confirmingCard.id, enemyId);
+      setConfirmingCard(null);
       setSelectedCard(null);
     }
   };
@@ -347,3 +377,5 @@ export const GameBoard: React.FC = () => {
     </div>
   );
 };
+
+export default GameBoard;

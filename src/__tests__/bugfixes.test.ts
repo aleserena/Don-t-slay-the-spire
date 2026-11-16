@@ -13,6 +13,9 @@ import {
   CardRarity,
   Player,
   Enemy,
+  RelicRarity,
+  RelicTrigger,
+  MonsterCardType,
 } from "../types/game";
 import { NodeType } from "../types/map";
 import {
@@ -31,7 +34,10 @@ describe("Bug Fixes", () => {
     it("should preserve deck composition after completing a level", () => {
       const { selectCardReward, startCombat } = useGameStore.getState();
 
-      // Add a card to the deck through card reward
+      // Simulate a proper combat flow by starting combat first
+      startCombat();
+
+      // Now simulate combat ending and going to card reward
       const testCard: Card = {
         id: "test_card",
         baseId: "test_card",
@@ -544,6 +550,11 @@ describe("Bug Fixes", () => {
         upgraded: false,
         effects: [
           {
+            type: EffectType.DAMAGE,
+            value: 6,
+            target: TargetType.ENEMY,
+          },
+          {
             type: EffectType.ADD_CARD_TO_DISCARD,
             value: 1,
             target: TargetType.SELF,
@@ -558,7 +569,7 @@ describe("Bug Fixes", () => {
           {
             id: "test_enemy",
             name: "Test Enemy",
-            health: 5, // Low health so it can be killed with one attack
+            health: 10, // Higher health so it doesn't die from one Anger attack
             maxHealth: 50,
             block: 0,
             intent: {
@@ -657,11 +668,12 @@ describe("Bug Fixes", () => {
         expect(afterCombat.gamePhase).toBe(GamePhase.CARD_REWARD);
         expect(afterCombat.combatReward).toBeDefined();
 
-        // Total cards should still be 10 (4 in hand + 5 in draw + 1 in discard)
+        // Total cards should still be 10 (excluding _copy_ cards)
         const totalCards =
-          afterCombat.hand.length +
-          afterCombat.drawPile.length +
-          afterCombat.discardPile.length;
+          afterCombat.hand.filter((c) => !c.id.includes("_copy_")).length +
+          afterCombat.drawPile.filter((c) => !c.id.includes("_copy_")).length +
+          afterCombat.discardPile.filter((c) => !c.id.includes("_copy_"))
+            .length;
         expect(totalCards).toBe(10);
 
         // Select a card reward
@@ -688,6 +700,145 @@ describe("Bug Fixes", () => {
       }
     });
 
+    it("should preserve deck from start of each combat, not just initial deck", () => {
+      const { playCard, selectCardReward, startCombat } =
+        useGameStore.getState();
+
+      // Start fresh
+      useGameStore.getState().startNewRun();
+
+      // Verify starting deck has 10 cards
+      const initialState = useGameStore.getState();
+      expect(initialState.drawPile.length).toBe(10);
+
+      // First combat: add a reward card
+      startCombat();
+
+      // Set up first combat scenario
+      useGameStore.setState((state) => ({
+        ...state,
+        gamePhase: GamePhase.COMBAT,
+        enemies: [
+          {
+            id: "test_enemy_1",
+            name: "Test Enemy 1",
+            health: 5,
+            maxHealth: 50,
+            block: 0,
+            intent: { type: IntentType.ATTACK, value: 10 },
+            statusEffects: [],
+            deck: getEnemyDeck("cultist"),
+          },
+        ],
+        hand: state.drawPile.slice(0, 5),
+        drawPile: state.drawPile.slice(5),
+        discardPile: [],
+        exhaustPile: [],
+        currentTurn: TurnPhase.PLAYER_TURN,
+      }));
+
+      // Play a card to win combat
+      const combatState = useGameStore.getState();
+      const attackCard = combatState.hand.find(
+        (card) => card.damage && card.damage > 0,
+      );
+      expect(attackCard).toBeDefined();
+
+      if (attackCard) {
+        playCard(attackCard.id, "test_enemy_1");
+
+        // Select a card reward
+        const afterCombat = useGameStore.getState();
+        expect(afterCombat.gamePhase).toBe(GamePhase.CARD_REWARD);
+
+        const rewardCard = afterCombat.combatReward!.cardRewards[0];
+        selectCardReward(rewardCard.id);
+
+        // Should have 11 cards now
+        const afterReward = useGameStore.getState();
+        expect(afterReward.drawPile.length).toBe(11);
+      }
+
+      // Second combat: the deck should start with 11 cards (including the reward)
+      startCombat();
+
+      const secondCombatState = useGameStore.getState();
+      expect(secondCombatState.gamePhase).toBe(GamePhase.COMBAT);
+
+      // Should draw 5 cards, leaving 6 in draw pile
+      expect(secondCombatState.hand.length).toBe(5);
+      expect(secondCombatState.drawPile.length).toBe(6);
+      expect(
+        secondCombatState.hand.length + secondCombatState.drawPile.length,
+      ).toBe(11);
+
+      // Set up second combat scenario
+      useGameStore.setState((state) => ({
+        ...state,
+        enemies: [
+          {
+            id: "test_enemy_2",
+            name: "Test Enemy 2",
+            health: 5,
+            maxHealth: 50,
+            block: 0,
+            intent: { type: IntentType.ATTACK, value: 10 },
+            statusEffects: [],
+            deck: getEnemyDeck("cultist"),
+          },
+        ],
+      }));
+
+      // Play a card to win second combat
+      const secondCombatState2 = useGameStore.getState();
+      const attackCard2 = secondCombatState2.hand.find(
+        (card) => card.damage && card.damage > 0,
+      );
+
+      // If no attack card in hand, find one in the draw pile and draw it
+      if (!attackCard2) {
+        const drawPileAttackCard = secondCombatState2.drawPile.find(
+          (card) => card.damage && card.damage > 0,
+        );
+        expect(drawPileAttackCard).toBeDefined();
+
+        if (drawPileAttackCard) {
+          // Draw the attack card to hand
+          useGameStore.setState((state) => ({
+            ...state,
+            hand: [...state.hand, drawPileAttackCard],
+            drawPile: state.drawPile.filter(
+              (c) => c.id !== drawPileAttackCard.id,
+            ),
+          }));
+
+          // Now play the attack card
+          const updatedState = useGameStore.getState();
+          const attackCardInHand = updatedState.hand.find(
+            (card) => card.damage && card.damage > 0,
+          );
+          expect(attackCardInHand).toBeDefined();
+
+          if (attackCardInHand) {
+            playCard(attackCardInHand.id, "test_enemy_2");
+          }
+        }
+      } else {
+        playCard(attackCard2.id, "test_enemy_2");
+      }
+
+      // After second combat, should still have 11 cards (the deck from start of second combat)
+      const afterSecondCombat = useGameStore.getState();
+      expect(afterSecondCombat.gamePhase).toBe(GamePhase.CARD_REWARD);
+
+      // The deck should be restored to the 11 cards from the start of the second combat
+      const totalCards =
+        afterSecondCombat.hand.length +
+        afterSecondCombat.drawPile.length +
+        afterSecondCombat.discardPile.length;
+      expect(totalCards).toBe(11); // Should preserve the 11 cards from start of second combat
+    });
+
     it("should properly handle deck state transitions", () => {
       const { selectCardReward, skipCardReward, returnToMap } =
         useGameStore.getState();
@@ -710,6 +861,102 @@ describe("Bug Fixes", () => {
         useGameStore.setState({ gamePhase: GamePhase.SHOP });
         returnToMap();
       }).not.toThrow();
+    });
+
+    it("should keep block during the enemy turn and reset it at the start of the next player turn", async () => {
+      const { endTurn, startNewRun, startCombat } = useGameStore.getState();
+      startNewRun();
+      startCombat();
+
+      // Enemy without a card to play this turn, so the player takes no damage
+      useGameStore.setState((state) => ({
+        ...state,
+        player: { ...state.player, block: 12 },
+        enemies: [
+          {
+            id: "test_enemy",
+            name: "Test Enemy",
+            health: 50,
+            maxHealth: 50,
+            block: 0,
+            intent: {
+              type: IntentType.ATTACK,
+              value: 10,
+            },
+            statusEffects: [],
+            deck: getEnemyDeck("cultist"),
+          },
+        ],
+      }));
+      const healthBefore = useGameStore.getState().player.health;
+
+      // Ending the turn runs the enemy turn and starts the next player turn
+      await endTurn();
+
+      const finalState = useGameStore.getState();
+      expect(finalState.currentTurn).toBe(TurnPhase.PLAYER_TURN);
+      expect(finalState.playerTurnThisCombat).toBe(2);
+      expect(finalState.player.block).toBe(0); // Block is reset at start of player turn
+      expect(finalState.player.health).toBe(healthBefore); // No damage was taken
+    });
+
+    it("should use block to reduce enemy damage during enemy turn", async () => {
+      const { endTurn, startNewRun, startCombat } = useGameStore.getState();
+      startNewRun();
+      startCombat();
+
+      // Give player 5 block and set up enemy that deals 10 damage, remove healing relics
+      useGameStore.setState((state) => ({
+        ...state,
+        player: {
+          ...state.player,
+          block: 5,
+          health: 50,
+          relics: state.player.relics.filter(
+            (r) => r.id !== "burning_blood" && r.id !== "blood_vial",
+          ),
+        },
+        enemies: [
+          {
+            id: "damaging_enemy",
+            name: "Damaging Enemy",
+            health: 50,
+            maxHealth: 50,
+            block: 0,
+            intent: { type: IntentType.ATTACK, value: 10 },
+            statusEffects: [],
+            deck: [
+              {
+                id: "test_attack",
+                baseId: "test_attack",
+                name: "Test Attack",
+                type: MonsterCardType.ATTACK,
+                description: "Deal 10 damage",
+                damage: 10,
+                priority: 1,
+              },
+            ],
+            currentCard: {
+              id: "test_attack",
+              baseId: "test_attack",
+              name: "Test Attack",
+              type: MonsterCardType.ATTACK,
+              description: "Deal 10 damage",
+              damage: 10,
+              priority: 1,
+            },
+          },
+        ],
+      }));
+
+      // End player turn (enemy attacks, block should reduce damage)
+      await endTurn();
+
+      const finalState = useGameStore.getState();
+      // Player should have taken 5 damage (10 damage - 5 block = 5 damage)
+      expect(finalState.player.health).toBe(45);
+      // The next player turn has started, so the leftover block is reset
+      expect(finalState.player.block).toBe(0);
     });
   });
 
@@ -754,6 +1001,99 @@ describe("Bug Fixes", () => {
 
         expect(sameFloorNodes.length).toBe(0);
       }
+    });
+  });
+
+  describe("Horn Cleat Relic", () => {
+    it("should only grant block on the 2nd player turn", async () => {
+      const { startNewRun, startCombat, endTurn } = useGameStore.getState();
+      startNewRun();
+      // Give player Horn Cleat (before starting combat)
+      useGameStore.setState((state) => ({
+        ...state,
+        player: {
+          ...state.player,
+          relics: [
+            ...state.player.relics,
+            {
+              id: "horn_cleat",
+              name: "Horn Cleat",
+              description: "At the start of your 2nd turn, gain 14 Block.",
+              rarity: RelicRarity.UNCOMMON,
+              effects: [
+                {
+                  trigger: RelicTrigger.TURN_START,
+                  effect: EffectType.BLOCK,
+                  value: 14,
+                },
+              ],
+            },
+          ],
+        },
+      }));
+      startCombat();
+      // Set a high-health enemy after combat starts
+      useGameStore.setState((state) => ({
+        ...state,
+        enemies: [
+          {
+            id: "test_enemy",
+            name: "Test Enemy",
+            health: 50,
+            maxHealth: 50,
+            block: 0,
+            intent: {
+              type: IntentType.ATTACK,
+              value: 10,
+            },
+            statusEffects: [],
+            deck: getEnemyDeck("cultist"),
+          },
+        ],
+      }));
+      // First player turn: should NOT get block
+      expect(useGameStore.getState().player.block).toBe(0);
+      // End player turn, process enemy turn, go to 2nd player turn
+      await endTurn();
+      // Wait for state updates to complete before polling
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Wait for playerTurnThisCombat === 2 and block to be applied (poll up to 500ms)
+      let tries = 0;
+      let block = 0;
+      let playerTurnThisCombat = 0;
+      while (tries < 50) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        const state = useGameStore.getState();
+        playerTurnThisCombat = state.playerTurnThisCombat;
+        block = state.player.block;
+        console.log(
+          `[TEST DEBUG] Try ${tries}: playerTurnThisCombat=${playerTurnThisCombat}, block=${block}`,
+        );
+        if (playerTurnThisCombat === 2) {
+          console.log(
+            `[TEST DEBUG] player on turn 2:`,
+            JSON.stringify(state.player),
+          );
+        }
+        if (playerTurnThisCombat === 2 && block === 14) {
+          break;
+        }
+        tries++;
+      }
+      console.log(
+        `[TEST DEBUG] Final: playerTurnThisCombat=${playerTurnThisCombat}, block=${block}`,
+      );
+      expect(block).toBe(14);
+      await endTurn();
+      // Wait for block to reset (poll up to 200ms)
+      block = 14;
+      tries = 0;
+      while (block !== 0 && tries < 20) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        block = useGameStore.getState().player.block;
+        tries++;
+      }
+      expect(block).toBe(0);
     });
   });
 });

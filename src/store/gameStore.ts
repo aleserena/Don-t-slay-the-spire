@@ -41,8 +41,9 @@ import {
   CardType,
   PowerTrigger,
   MonsterCardType,
+  MonsterCard,
 } from "../types/game";
-import { createInitialDeck, getAllCards } from "../data/cards";
+import { createInitialDeck, generateCardRewards } from "../data/cards";
 import { getBossForFloor } from "../data/bosses";
 import { getStarterRelic, getAllRelics } from "../data/relics";
 import { generateMap, completeNode } from "../utils/mapGeneration";
@@ -60,6 +61,88 @@ import {
 } from "../utils/statusEffects";
 import { upgradeCard } from "../utils/cardUpgrades";
 import { getRandomEnemyEncounter } from "../data/enemies";
+
+/**
+ * Pause between the steps of the enemy turn so the UI can show each one.
+ * Disabled outside the browser and under test, where the enemy turn resolves
+ * synchronously.
+ */
+const STEP_DELAY_MS =
+  typeof window === "undefined" || import.meta.env.MODE === "test" ? 0 : 300;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Converts a monster card type to the intent shown in the UI. */
+const cardTypeToIntentType = (cardType: MonsterCardType): IntentType => {
+  switch (cardType) {
+    case MonsterCardType.ATTACK:
+      return IntentType.ATTACK;
+    case MonsterCardType.DEFEND:
+      return IntentType.DEFEND;
+    case MonsterCardType.BUFF:
+      return IntentType.BUFF;
+    case MonsterCardType.DEBUFF:
+      return IntentType.DEBUFF;
+    default:
+      return IntentType.UNKNOWN;
+  }
+};
+
+/**
+ * Builds the state changes for winning a combat: rewards (gold, cards, and a
+ * relic if an elite was defeated), clearing combat-only player state, and
+ * restoring the deck from the persistent deck.
+ */
+const createVictoryState = (
+  state: GameState,
+  player: Player,
+  defeatedEnemies: Enemy[],
+) => {
+  const rewardGold = 10 + Math.floor(Math.random() * 20);
+
+  let relicReward: Relic | undefined = undefined;
+  if (defeatedEnemies.some((enemy) => enemy.isElite)) {
+    const availableRelics = getAllRelics().filter(
+      (r: Relic) =>
+        r.rarity === "common" || r.rarity === "uncommon" || r.rarity === "rare",
+    );
+    relicReward =
+      availableRelics[Math.floor(Math.random() * availableRelics.length)];
+  }
+
+  return {
+    hand: [],
+    discardPile: [],
+    exhaustPile: [],
+    // Temporary copies created during combat do not persist
+    drawPile: state.persistentDeck.filter(
+      (card) => !card.id.includes("_copy_"),
+    ),
+    player: {
+      ...player,
+      gold: player.gold + rewardGold,
+      statusEffects: player.statusEffects.filter(
+        (effect) =>
+          effect.type !== StatusType.WEAK &&
+          effect.type !== StatusType.VULNERABLE &&
+          effect.type !== StatusType.STRENGTH,
+      ),
+      powerCards: [], // Power cards only last for one combat
+    },
+    enemies: [],
+    currentTurn: TurnPhase.COMBAT_END,
+    gamePhase: GamePhase.CARD_REWARD,
+    combatReward: {
+      gold: rewardGold,
+      cardRewards: generateCardRewards(3),
+      relicReward,
+    },
+    selectedCard: null,
+    playerTurnThisCombat: 0,
+  };
+};
 
 /**
  * Extended game store interface that includes UI state and actions.
@@ -86,6 +169,20 @@ interface GameStore extends GameState {
   currentFloor: number;
   /** Whether there's a saved game available */
   hasSavedGame: boolean;
+  /** Tracks the current turn in the combat */
+  playerTurnThisCombat: number;
+  /** Stores the original deck before combat starts (to preserve it after combat) */
+  originalDeckBeforeCombat: Card[];
+  /** Indicates if an enemy step animation is in progress */
+  stepInProgress: boolean;
+  /** Internal resolver for the current step */
+  _resolveStep?: (value?: unknown) => void;
+  /** Call this to resolve the current step and continue the enemy turn */
+  resolveStep: () => void;
+  /** Type of step currently in progress */
+  stepType?: "before" | "attack" | "after";
+  /** Persistent deck of cards */
+  persistentDeck: Card[];
 
   // Actions
   /**
@@ -98,7 +195,7 @@ interface GameStore extends GameState {
   /**
    * Ends the current player turn and starts enemy turn
    */
-  endTurn: () => void;
+  endTurn: () => Promise<void>;
 
   /**
    * Starts a new combat encounter
@@ -119,7 +216,7 @@ interface GameStore extends GameState {
   /**
    * Processes the enemy turn (AI actions, damage calculation)
    */
-  processEnemyTurn: () => void;
+  processEnemyTurn: () => Promise<void>;
 
   // Progression actions
   /**
@@ -244,6 +341,30 @@ interface GameStore extends GameState {
    * Skips the relic reward
    */
   skipRelicReward: () => void;
+
+  /**
+   * Starts the player's turn (increments turn, resets energy/block, processes effects, draws hand)
+   */
+  startPlayerTurn: () => void;
+
+  /**
+   * Processes before-attack effects for an enemy (poison damage, etc.)
+   */
+  processBeforeAttackEffects: (player: Player, enemy: Enemy) => Player;
+
+  /**
+   * Processes enemy attack with proper trigger resolution (LIFO stack)
+   */
+  processEnemyAttack: (
+    card: MonsterCard,
+    player: Player,
+    enemy: Enemy,
+  ) => { player: Player; enemy: Enemy };
+
+  /**
+   * Processes after-attack effects for an enemy
+   */
+  processAfterAttackEffects: (player: Player, _enemy: Enemy) => Player;
 }
 
 /**
@@ -294,6 +415,10 @@ const createInitialGameState = (): GameState => {
     currentTurn: TurnPhase.PLAYER_TURN,
     gamePhase: GamePhase.TITLE,
     map: generateMap(),
+    stepInProgress: false,
+    _resolveStep: undefined,
+    stepType: undefined,
+    persistentDeck: deck,
   };
 };
 
@@ -329,6 +454,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   debugMode: false,
   currentFloor: 1,
   hasSavedGame: false,
+  playerTurnThisCombat: 1,
+  originalDeckBeforeCombat: [],
 
   /**
    * Starts a completely new run, resetting all progress but preserving debug mode.
@@ -397,10 +524,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
             exhaustPile: [],
             currentTurn: TurnPhase.PLAYER_TURN,
             firstAttackThisCombat: true,
+            playerTurnThisCombat: 1,
             player: {
               ...state.player,
-              energy: state.player.maxEnergy,
               block: 0,
+              energy: state.player.maxEnergy,
+              relics: state.player.relics,
+              powerCards: state.player.powerCards,
             },
           };
         }
@@ -418,10 +548,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
             exhaustPile: [],
             currentTurn: TurnPhase.PLAYER_TURN,
             firstAttackThisCombat: true,
+            playerTurnThisCombat: 1,
             player: {
               ...state.player,
-              energy: state.player.maxEnergy,
               block: 0,
+              energy: state.player.maxEnergy,
+              relics: state.player.relics,
+              powerCards: state.player.powerCards,
             },
           };
         }
@@ -444,10 +577,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
             exhaustPile: [],
             currentTurn: TurnPhase.PLAYER_TURN,
             firstAttackThisCombat: true,
+            playerTurnThisCombat: 1,
             player: {
               ...state.player,
-              energy: state.player.maxEnergy,
               block: 0,
+              energy: state.player.maxEnergy,
+              relics: state.player.relics,
+              powerCards: state.player.powerCards,
             },
           };
         }
@@ -468,45 +604,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
           };
 
         case "treasure": {
-          // Give player a random relic
-          const treasureRelic = getAllRelics().filter(
+          // Generate a random treasure relic
+          const availableRelics = getAllRelics().filter(
             (r: Relic) => r.rarity === "common" || r.rarity === "uncommon",
-          )[
-            Math.floor(
-              Math.random() *
-                getAllRelics().filter(
-                  (r: Relic) =>
-                    r.rarity === "common" || r.rarity === "uncommon",
-                ).length,
-            )
-          ];
+          );
+          const treasureRelic =
+            availableRelics[Math.floor(Math.random() * availableRelics.length)];
 
           return {
             ...state,
-            gamePhase: GamePhase.MAP,
+            gamePhase: GamePhase.RELIC_REWARD,
             map: updatedMap,
-            player: {
-              ...state.player,
-              relics: [...state.player.relics, treasureRelic],
+            combatReward: {
+              gold: 0,
+              cardRewards: [],
+              relicReward: treasureRelic,
+              isTreasureReward: true,
             },
           };
         }
 
         case "shop": {
-          const shopCards = getAllCards()
-            .filter(() => Math.random() < 0.3)
-            .slice(0, 5)
-            .map((card) => ({
-              card,
-              cost:
-                50 +
-                (card.rarity === "uncommon"
-                  ? 25
-                  : card.rarity === "rare"
-                    ? 50
-                    : 0),
-              purchased: false,
-            }));
+          const shopCards = generateCardRewards(5).map((card) => ({
+            card,
+            cost:
+              50 +
+              (card.rarity === "uncommon"
+                ? 25
+                : card.rarity === "rare"
+                  ? 50
+                  : 0),
+            purchased: false,
+          }));
 
           const shopRelics = getAllRelics()
             .filter((r: Relic) => r.rarity !== "starter" && Math.random() < 0.2)
@@ -583,14 +712,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Check if there's a relic reward to show next
       const hasRelicReward = state.combatReward?.relicReward;
 
+      // Use current deck (which includes previously added reward cards) and add the new card
+      const currentDeck = [
+        ...state.drawPile,
+        ...state.discardPile,
+        ...state.hand,
+      ];
+      const newCard = { ...card, id: `${card.baseId}_${Date.now()}` };
+      const updatedDeck = [...currentDeck, newCard];
+
       if (hasRelicReward) {
         // Go to relic reward screen, keep the relic in combatReward
         return {
           ...state,
-          drawPile: [
-            ...state.drawPile,
-            { ...card, id: `${card.baseId}_${Date.now()}` },
-          ],
+          drawPile: updatedDeck,
+          persistentDeck: updatedDeck,
           gamePhase: GamePhase.RELIC_REWARD,
           combatReward: {
             ...state.combatReward!,
@@ -600,19 +736,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         };
       } else {
         // No relic reward, go back to map
-        const allCards = [
-          ...state.drawPile,
-          ...state.discardPile,
-          ...state.exhaustPile,
-          ...state.hand,
-        ].filter((c) => !c.id.includes("_copy_")); // Remove cards created during combat
-
         return {
           ...state,
-          drawPile: [
-            ...allCards,
-            { ...card, id: `${card.baseId}_${Date.now()}` },
-          ],
+          drawPile: updatedDeck,
+          persistentDeck: updatedDeck,
           discardPile: [],
           exhaustPile: [],
           hand: [],
@@ -632,11 +759,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => {
       // Check if there's a relic reward to show next
       const hasRelicReward = state.combatReward?.relicReward;
-
+      // Use the current deck as the persistent deck
+      const currentDeck = [
+        ...state.drawPile,
+        ...state.discardPile,
+        ...state.hand,
+      ];
       if (hasRelicReward) {
         // Go to relic reward screen
         return {
           ...state,
+          persistentDeck: currentDeck,
           gamePhase: GamePhase.RELIC_REWARD,
           combatReward: {
             ...state.combatReward!,
@@ -646,16 +779,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         };
       } else {
         // No relic reward, go back to map
-        const allCards = [
-          ...state.drawPile,
-          ...state.discardPile,
-          ...state.exhaustPile,
-          ...state.hand,
-        ].filter((c) => !c.id.includes("_copy_")); // Remove cards created during combat
-
         return {
           ...state,
-          drawPile: allCards,
+          drawPile: currentDeck,
+          persistentDeck: currentDeck,
           discardPile: [],
           exhaustPile: [],
           hand: [],
@@ -694,6 +821,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       return {
         ...newState,
+        // Events can add or remove cards; keep the persistent deck in sync
+        persistentDeck:
+          newState.drawPile === currentState.drawPile
+            ? currentState.persistentDeck
+            : [...newState.drawPile],
         gamePhase: GamePhase.MAP,
         currentEvent: undefined,
         selectedCard: null,
@@ -706,21 +838,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
    */
   returnToMap: () => {
     set((state) => {
-      // Combine ALL cards back into the draw pile, but filter out cards created during combat
-      const allCards = [
-        ...state.drawPile,
-        ...state.discardPile,
-        ...state.exhaustPile,
-        ...state.hand,
-      ].filter((c) => !c.id.includes("_copy_")); // Remove cards created during combat
-
+      // Use persistentDeck as the source of truth for the deck
+      const filteredPersistentDeck = state.persistentDeck.filter(
+        (card) => !card.id.includes("_copy_"),
+      );
       return {
         ...state,
         gamePhase: GamePhase.MAP,
         currentEvent: undefined,
         currentShop: undefined,
         combatReward: undefined,
-        drawPile: allCards,
+        drawPile: filteredPersistentDeck,
         discardPile: [],
         exhaustPile: [],
         hand: [],
@@ -737,210 +865,146 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * @param targetId - Optional target ID for targeting cards
    */
   playCard: (cardId: string, targetId?: string) => {
-    const state = get();
-    const card = state.hand.find((c) => c.id === cardId);
+    const current = get();
+    const playedCard = current.hand.find((c) => c.id === cardId);
 
-    if (!card || state.currentTurn !== TurnPhase.PLAYER_TURN) return;
+    if (!playedCard || current.currentTurn !== TurnPhase.PLAYER_TURN) return;
 
-    // Calculate energy cost
-    let energyCost = typeof card.cost === "number" ? card.cost : 0;
+    // X-cost cards consume all available energy (and can be played with 0)
+    const energyCost =
+      playedCard.cost === "X" ? current.player.energy : playedCard.cost;
+    if (current.player.energy < energyCost) return;
 
-    // For X-cost cards like whirlwind, consume ALL energy
-    if (card.cost === "X") {
-      energyCost = state.player.energy; // Consume all available energy
-    }
-
-    // Check if player has enough energy (X-cost cards can be played with 0 energy)
-    if (card.cost !== "X" && state.player.energy < energyCost) return;
+    let cardsToDraw = 0;
 
     set((state) => {
-      const newHand = state.hand.filter((c) => c.id !== cardId);
+      const card = state.hand.find((c) => c.id === cardId);
+      if (!card) return state;
 
+      const newHand = state.hand.filter((c) => c.id !== cardId);
       // All cards (including power cards) are discarded normally
       const newDiscardPile = [...state.discardPile, card];
 
-      // Store original energy for X-cost cards before any effects are applied
-      const originalEnergy = state.player.energy;
-
-      // Calculate whirlwind hits BEFORE consuming energy
-      let whirlwindHits = 1;
-      if (card.baseId === "whirlwind") {
-        whirlwindHits = originalEnergy; // Number of hits equals original energy
-      }
-
-      // Consume energy (for X-cost cards, this will be ALL energy)
-      let newPlayer = {
+      let newPlayer: Player = {
         ...state.player,
         energy: state.player.energy - energyCost,
       };
       let newEnemies = [...state.enemies];
 
-      // Check if this is an attack card for Akabeko effect
-      const isAttackCard = card.type === "attack";
-      const isFirstAttack = state.firstAttackThisCombat && isAttackCard;
+      // First attack of the combat (Akabeko)
+      const isFirstAttack =
+        state.firstAttackThisCombat && card.type === CardType.ATTACK;
 
-      // Apply card effects using the modular system
+      const hitEnemy = (
+        enemy: Enemy,
+        baseDamage: number,
+        firstAttack: boolean,
+        strengthMultiplier: number = 1,
+      ): Enemy => {
+        const damage = calculateDamage(
+          baseDamage,
+          newPlayer,
+          enemy,
+          firstAttack,
+          strengthMultiplier,
+        );
+        return {
+          ...enemy,
+          health: enemy.health - Math.max(0, damage - enemy.block),
+          block: Math.max(0, enemy.block - damage),
+        };
+      };
+
+      const hitTarget = (
+        baseDamage: number,
+        firstAttack: boolean,
+        strengthMultiplier: number = 1,
+      ) => {
+        if (!targetId) return;
+        newEnemies = newEnemies.map((enemy) =>
+          enemy.id === targetId
+            ? hitEnemy(enemy, baseDamage, firstAttack, strengthMultiplier)
+            : enemy,
+        );
+      };
+
       if (card.effects) {
         for (const effect of card.effects) {
           switch (effect.type) {
             case EffectType.DAMAGE:
               if (effect.target === TargetType.ALL_ENEMIES) {
-                newEnemies = newEnemies.map((enemy) => {
-                  const finalDamage = calculateDamage(
-                    effect.value,
-                    newPlayer,
+                newEnemies = newEnemies.map((enemy) =>
+                  hitEnemy(
                     enemy,
-                    isFirstAttack,
-                  );
-                  const damageAfterBlock = Math.max(
-                    0,
-                    finalDamage - enemy.block,
-                  );
-
-                  return {
-                    ...enemy,
-                    health: enemy.health - damageAfterBlock,
-                    block: Math.max(0, enemy.block - finalDamage),
-                  };
-                });
-              } else if (effect.target === TargetType.ENEMY && targetId) {
-                const enemyIndex = newEnemies.findIndex(
-                  (e) => e.id === targetId,
-                );
-                if (enemyIndex !== -1) {
-                  const finalDamage = calculateDamage(
                     effect.value,
-                    newPlayer,
-                    newEnemies[enemyIndex],
                     isFirstAttack,
-                  );
-                  const damageAfterBlock = Math.max(
-                    0,
-                    finalDamage - newEnemies[enemyIndex].block,
-                  );
-
-                  newEnemies[enemyIndex] = {
-                    ...newEnemies[enemyIndex],
-                    health: newEnemies[enemyIndex].health - damageAfterBlock,
-                    block: Math.max(
-                      0,
-                      newEnemies[enemyIndex].block - finalDamage,
-                    ),
-                  };
-                }
+                    effect.strengthMultiplier,
+                  ),
+                );
+              } else if (effect.target === TargetType.ENEMY) {
+                hitTarget(
+                  effect.value,
+                  isFirstAttack,
+                  effect.strengthMultiplier,
+                );
               }
               break;
 
             case EffectType.DAMAGE_MULTIPLIER_BLOCK:
-              if (effect.target === TargetType.ENEMY && targetId) {
-                const enemyIndex = newEnemies.findIndex(
-                  (e) => e.id === targetId,
+              if (effect.target === TargetType.ENEMY) {
+                hitTarget(
+                  newPlayer.block * (effect.multiplier || 1),
+                  isFirstAttack,
                 );
-                if (enemyIndex !== -1) {
-                  const blockDamage =
-                    newPlayer.block * (effect.multiplier || 1);
-                  const finalDamage = calculateDamage(
-                    blockDamage,
-                    newPlayer,
-                    newEnemies[enemyIndex],
-                    isFirstAttack,
-                  );
-                  const damageAfterBlock = Math.max(
-                    0,
-                    finalDamage - newEnemies[enemyIndex].block,
-                  );
-
-                  newEnemies[enemyIndex] = {
-                    ...newEnemies[enemyIndex],
-                    health: newEnemies[enemyIndex].health - damageAfterBlock,
-                    block: Math.max(
-                      0,
-                      newEnemies[enemyIndex].block - finalDamage,
-                    ),
-                  };
-                }
               }
               break;
 
             case EffectType.DAMAGE_MULTIPLIER_ENERGY:
               if (effect.target === TargetType.ALL_ENEMIES) {
-                // Apply damage X times where X = energy spent (use original energy before consumption)
-                // Only deal damage if energy was actually spent
-                if (whirlwindHits > 0) {
-                  const damageResults: {
-                    target: Enemy;
-                    damageDealt: number;
-                  }[] = [];
-
-                  for (let i = 0; i < whirlwindHits; i++) {
-                    newEnemies = newEnemies.map((enemy) => {
-                      const finalDamage = calculateDamage(
-                        effect.value,
-                        state.player,
-                        enemy,
-                        isFirstAttack && i === 0,
-                      );
-                      const damageAfterBlock = Math.max(
-                        0,
-                        finalDamage - enemy.block,
-                      );
-
-                      // Track damage for debugging
-                      const existingResult = damageResults.find(
-                        (r) => r.target.id === enemy.id,
-                      );
-                      if (existingResult) {
-                        existingResult.damageDealt += damageAfterBlock;
-                      } else {
-                        damageResults.push({
-                          target: enemy,
-                          damageDealt: damageAfterBlock,
-                        });
-                      }
-
-                      return {
-                        ...enemy,
-                        health: enemy.health - damageAfterBlock,
-                        block: Math.max(0, enemy.block - finalDamage),
-                      };
-                    });
-                  }
+                // One hit per energy spent
+                for (let hit = 0; hit < energyCost; hit++) {
+                  newEnemies = newEnemies.map((enemy) =>
+                    hitEnemy(enemy, effect.value, isFirstAttack && hit === 0),
+                  );
                 }
               }
               break;
 
             case EffectType.BLOCK:
               if (effect.target === TargetType.SELF) {
-                const finalBlock = calculateBlock(effect.value, newPlayer);
-                newPlayer.block += finalBlock;
+                newPlayer = {
+                  ...newPlayer,
+                  block:
+                    newPlayer.block + calculateBlock(effect.value, newPlayer),
+                };
               }
               break;
 
             case EffectType.APPLY_STATUS:
               if (effect.statusType) {
+                const statusType = effect.statusType;
                 if (effect.target === TargetType.SELF) {
                   newPlayer = applyStatusEffect(
                     newPlayer,
-                    effect.statusType,
+                    statusType,
                     effect.value,
                   ) as Player;
                 } else if (effect.target === TargetType.ENEMY && targetId) {
-                  const enemyIndex = newEnemies.findIndex(
-                    (e) => e.id === targetId,
+                  newEnemies = newEnemies.map((enemy) =>
+                    enemy.id === targetId
+                      ? (applyStatusEffect(
+                          enemy,
+                          statusType,
+                          effect.value,
+                        ) as Enemy)
+                      : enemy,
                   );
-                  if (enemyIndex !== -1) {
-                    newEnemies[enemyIndex] = applyStatusEffect(
-                      newEnemies[enemyIndex],
-                      effect.statusType,
-                      effect.value,
-                    ) as Enemy;
-                  }
                 } else if (effect.target === TargetType.ALL_ENEMIES) {
                   newEnemies = newEnemies.map(
                     (enemy) =>
                       applyStatusEffect(
                         enemy,
-                        effect.statusType!,
+                        statusType,
                         effect.value,
                       ) as Enemy,
                   );
@@ -950,61 +1014,66 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
             case EffectType.DRAW_CARDS:
               if (effect.target === TargetType.SELF) {
-                setTimeout(() => get().drawCards(effect.value), 0);
+                cardsToDraw += effect.value;
               }
               break;
 
             case EffectType.HEAL:
               if (effect.target === TargetType.SELF) {
-                newPlayer.health = Math.min(
-                  newPlayer.maxHealth,
-                  newPlayer.health + effect.value,
-                );
+                newPlayer = {
+                  ...newPlayer,
+                  health: Math.min(
+                    newPlayer.maxHealth,
+                    newPlayer.health + effect.value,
+                  ),
+                };
               }
               break;
 
             case EffectType.GAIN_ENERGY:
               if (effect.target === TargetType.SELF) {
-                newPlayer.energy = Math.min(
-                  newPlayer.maxEnergy + 3,
-                  newPlayer.energy + effect.value,
-                );
+                newPlayer = {
+                  ...newPlayer,
+                  energy: Math.min(
+                    newPlayer.maxEnergy + 3,
+                    newPlayer.energy + effect.value,
+                  ),
+                };
               }
               break;
 
             case EffectType.LOSE_ENERGY:
               if (effect.target === TargetType.SELF) {
-                newPlayer.energy = Math.max(0, newPlayer.energy - effect.value);
+                newPlayer = {
+                  ...newPlayer,
+                  energy: Math.max(0, newPlayer.energy - effect.value),
+                };
               }
               break;
 
             case EffectType.ADD_CARD_TO_DISCARD:
               if (effect.target === TargetType.SELF) {
-                // Add a copy of the current card to the discard pile
-                const cardCopy = {
+                // Add a temporary copy of the played card to the discard pile
+                newDiscardPile.push({
                   ...card,
                   id: `${card.baseId}_copy_${Date.now()}`,
-                };
-                newDiscardPile.push(cardCopy);
+                });
               }
               break;
 
             case EffectType.UPGRADE_CARD:
               if (effect.target === TargetType.SELF) {
-                // Upgrade a random card in hand (in a real implementation, player would choose)
+                // Upgrade a random card in hand
                 const upgradableCards = newHand.filter((c) => !c.upgraded);
                 if (upgradableCards.length > 0) {
-                  const randomIndex = Math.floor(
-                    Math.random() * upgradableCards.length,
-                  );
-                  const cardToUpgrade = upgradableCards[randomIndex];
+                  const cardToUpgrade =
+                    upgradableCards[
+                      Math.floor(Math.random() * upgradableCards.length)
+                    ];
                   const handIndex = newHand.findIndex(
                     (c) => c.id === cardToUpgrade.id,
                   );
-
-                  if (handIndex !== -1) {
-                    newHand[handIndex] = upgradeCard(cardToUpgrade);
-                  }
+                  newHand[handIndex] = upgradeCard(cardToUpgrade);
                 }
               }
               break;
@@ -1012,68 +1081,53 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       }
 
-      // Legacy support: Handle cards with direct damage property (only if no damage effects)
+      // Legacy support: cards with a direct damage property and no damage effects
       if (
         card.damage &&
         card.damage > 0 &&
-        (!card.effects ||
-          !card.effects.some(
-            (effect) =>
-              effect.type === EffectType.DAMAGE ||
-              effect.type === EffectType.DAMAGE_MULTIPLIER_BLOCK ||
-              effect.type === EffectType.DAMAGE_MULTIPLIER_ENERGY,
-          ))
+        !card.effects?.some(
+          (effect) =>
+            effect.type === EffectType.DAMAGE ||
+            effect.type === EffectType.DAMAGE_MULTIPLIER_BLOCK ||
+            effect.type === EffectType.DAMAGE_MULTIPLIER_ENERGY,
+        )
       ) {
-        if (targetId) {
-          const enemyIndex = newEnemies.findIndex((e) => e.id === targetId);
-          if (enemyIndex !== -1) {
-            const finalDamage = calculateDamage(
-              card.damage,
-              newPlayer,
-              newEnemies[enemyIndex],
-              isFirstAttack,
-            );
-            const damageAfterBlock = Math.max(
-              0,
-              finalDamage - newEnemies[enemyIndex].block,
-            );
-
-            newEnemies[enemyIndex] = {
-              ...newEnemies[enemyIndex],
-              health: newEnemies[enemyIndex].health - damageAfterBlock,
-              block: Math.max(0, newEnemies[enemyIndex].block - finalDamage),
-            };
-          }
-        }
+        hitTarget(card.damage, isFirstAttack);
       }
 
-      // Legacy support: Handle cards with direct block property (only if no block effects)
+      // Legacy support: cards with a direct block property and no block effects
       if (
         card.block &&
         card.block > 0 &&
-        (!card.effects ||
-          !card.effects.some((effect) => effect.type === EffectType.BLOCK))
+        !card.effects?.some((effect) => effect.type === EffectType.BLOCK)
       ) {
-        const finalBlock = calculateBlock(card.block, newPlayer);
-        newPlayer.block += finalBlock;
+        newPlayer = {
+          ...newPlayer,
+          block: newPlayer.block + calculateBlock(card.block, newPlayer),
+        };
       }
 
-      // Handle power cards
+      // Power cards stay attached to the player for the rest of the combat
       if (card.type === CardType.POWER) {
         const powerCardDef = getPowerCardDefinition(card.baseId);
         if (powerCardDef) {
-          // Always add the power card (allow multiple copies)
-          newPlayer.powerCards = [...newPlayer.powerCards, powerCardDef];
+          newPlayer = {
+            ...newPlayer,
+            powerCards: [...newPlayer.powerCards, powerCardDef],
+          };
 
-          // Only apply immediate power card effects if the card doesn't have its own effects
-          // This prevents double application for cards like Inflame
+          // Only apply the definition's immediate effects when the card has
+          // no effects of its own (prevents double application, e.g. Inflame)
           if (!card.effects || card.effects.length === 0) {
             const powerResult = processPowerCardEffects(
               PowerTrigger.COMBAT_START,
-              newPlayer,
+              { ...newPlayer, powerCards: [powerCardDef] },
               newEnemies,
             );
-            newPlayer = powerResult.player;
+            newPlayer = {
+              ...powerResult.player,
+              powerCards: newPlayer.powerCards,
+            };
             newEnemies = powerResult.enemies;
           }
         }
@@ -1082,60 +1136,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Remove dead enemies
       newEnemies = newEnemies.filter((e) => e.health > 0);
 
-      // Check for combat end
       if (newEnemies.length === 0) {
-        const rewardGold = 10 + Math.floor(Math.random() * 20);
-        const rewardCards = getAllCards()
-          .filter(() => Math.random() < 0.4)
-          .slice(0, 3);
-
-        // Check if any defeated enemy was an elite
-        const hadEliteEnemy = state.enemies.some((enemy) => enemy.isElite);
-        let relicReward = undefined;
-
-        if (hadEliteEnemy) {
-          // Get a random relic for elite reward
-          const availableRelics = getAllRelics().filter(
-            (r: Relic) =>
-              r.rarity === "common" ||
-              r.rarity === "uncommon" ||
-              r.rarity === "rare",
-          );
-          if (availableRelics.length > 0) {
-            relicReward =
-              availableRelics[
-                Math.floor(Math.random() * availableRelics.length)
-              ];
-          }
-        }
-
-        // Clear temporary status effects and power cards at end of combat
-        const clearedPlayer = {
-          ...newPlayer,
-          gold: newPlayer.gold + rewardGold,
-          statusEffects: newPlayer.statusEffects.filter(
-            (effect) =>
-              effect.type !== StatusType.WEAK &&
-              effect.type !== StatusType.VULNERABLE &&
-              effect.type !== StatusType.STRENGTH,
-          ),
-          powerCards: [], // Clear all power cards after combat
-        };
-
+        cardsToDraw = 0;
         return {
           ...state,
-          hand: newHand,
-          discardPile: newDiscardPile,
-          player: clearedPlayer,
-          enemies: newEnemies,
-          currentTurn: TurnPhase.COMBAT_END,
-          gamePhase: GamePhase.CARD_REWARD,
-          combatReward: {
-            gold: rewardGold,
-            cardRewards: rewardCards,
-            relicReward: relicReward,
-          },
-          selectedCard: null,
+          ...createVictoryState(state, newPlayer, state.enemies),
         };
       }
 
@@ -1151,234 +1156,205 @@ export const useGameStore = create<GameStore>((set, get) => ({
         selectedCard: null,
       };
     });
+
+    // Draw cards from card effects once the played card has left the hand
+    if (cardsToDraw > 0) {
+      get().drawCards(cardsToDraw);
+    }
   },
 
   /**
-   * Processes the enemy turn (AI actions, damage calculation)
+   * Processes the enemy turn (status effects, enemy cards, relic reactions),
+   * then starts the next player turn.
+   *
+   * Runs step by step with a short pause between steps so the UI can show
+   * each one. When step delays are disabled the whole turn resolves
+   * synchronously.
    */
-  processEnemyTurn: () => {
-    set((state) => {
-      let newPlayer = { ...state.player };
-      let newEnemies = [...state.enemies];
+  processEnemyTurn: async () => {
+    const enemiesAtTurnStart = get().enemies;
+    let newPlayer = { ...get().player };
+    let newEnemies = [...enemiesAtTurnStart];
 
-      // Process status effects on enemies
-      newEnemies = newEnemies.map(
-        (enemy) => processStatusEffects(enemy) as Enemy,
-      );
+    const endSteps = { stepInProgress: false, stepType: undefined };
 
-      // Remove dead enemies (health <= 0)
-      newEnemies = newEnemies.filter((enemy) => enemy.health > 0);
-
-      // Process status effects on player
-      newPlayer = processStatusEffects(newPlayer) as Player;
-
-      // Reset enemy block at start of their turn
-      newEnemies = newEnemies.map((enemy) => ({
-        ...enemy,
-        block: 0,
+    const isPlayerDead = () => {
+      if (newPlayer.health > 0) return false;
+      set((s) => ({
+        ...s,
+        ...endSteps,
+        player: { ...newPlayer, health: 0 },
+        gamePhase: GamePhase.GAME_OVER,
+        selectedCard: null,
       }));
+      return true;
+    };
 
-      // Reset player block at start of player turn
-      newPlayer = {
-        ...newPlayer,
-        energy: newPlayer.maxEnergy,
-        block: 0,
-      };
+    // Status effects tick on enemies first (poison damage, etc.)
+    newEnemies = newEnemies
+      .map((enemy) => processStatusEffects(enemy) as Enemy)
+      .filter((enemy) => enemy.health > 0)
+      // Enemy block resets at the start of their turn
+      .map((enemy) => ({ ...enemy, block: 0 }));
 
-      // Process power card turn start effects (like Demon Form)
-      const powerResult = processPowerCardEffects(
-        PowerTrigger.TURN_START,
-        newPlayer,
-        newEnemies,
-      );
-      newPlayer = powerResult.player;
-      newEnemies = powerResult.enemies;
+    newPlayer = processStatusEffects(newPlayer) as Player;
+    if (isPlayerDead()) return;
 
-      // Process relic turn start effects (like Energy Core)
-      const relicResult = processRelicEffects(
-        RelicTrigger.TURN_START,
-        newPlayer,
-        newEnemies,
-      );
-      newPlayer = relicResult.player;
-      newEnemies = relicResult.enemies;
+    for (const enemyId of newEnemies.map((enemy) => enemy.id)) {
+      const findEnemy = () => newEnemies.find((e) => e.id === enemyId);
+      const enemy = findEnemy();
+      if (!enemy) continue;
 
-      // Each enemy plays their current card
-      for (let i = 0; i < newEnemies.length; i++) {
-        const enemy = newEnemies[i];
+      // Step 1: before-attack effects
+      if (STEP_DELAY_MS > 0) await delay(STEP_DELAY_MS);
+      set((s) => ({ ...s, stepInProgress: true, stepType: "before" }));
+      newPlayer = get().processBeforeAttackEffects(newPlayer, enemy);
+      set((s) => ({ ...s, player: newPlayer }));
+      if (isPlayerDead()) return;
 
-        if (enemy.currentCard) {
-          // Process the monster card effects
-          const cardResult = processMonsterCardEffects(
-            enemy.currentCard,
-            newPlayer,
-            enemy,
-          );
-          newPlayer = cardResult.player;
-          newEnemies[i] = cardResult.enemy;
+      // Step 2: the enemy plays its current card
+      if (enemy.currentCard) {
+        if (STEP_DELAY_MS > 0) await delay(STEP_DELAY_MS);
+        set((s) => ({ ...s, stepInProgress: true, stepType: "attack" }));
 
-          // Check for game over after each enemy action
-          if (newPlayer.health <= 0) {
-            return {
-              ...state,
-              player: { ...newPlayer, health: 0 },
-              gamePhase: GamePhase.GAME_OVER,
-              selectedCard: null,
-            };
-          }
+        const attackResult = get().processEnemyAttack(
+          enemy.currentCard,
+          newPlayer,
+          enemy,
+        );
+        newPlayer = attackResult.player;
+        // The enemy may have died from retaliation damage (e.g. Bronze Scales)
+        newEnemies = newEnemies
+          .map((e) => (e.id === enemyId ? attackResult.enemy : e))
+          .filter((e) => e.health > 0);
 
-          // Process damage taken relic effects if player took damage
-          const initialHealth = state.player.health;
-          const damageDealt = initialHealth - newPlayer.health;
-          if (damageDealt > 0) {
-            const context: { damage: number; shouldDrawCards?: number } = {
-              damage: damageDealt,
-            };
-            const relicResult = processRelicEffects(
-              RelicTrigger.DAMAGE_TAKEN,
-              newPlayer,
-              newEnemies,
-              context,
-            );
-            newPlayer = relicResult.player;
-            newEnemies = relicResult.enemies;
-
-            // Remove dead enemies after relic effects (e.g., Bronze Scales)
-            newEnemies = newEnemies.filter((enemy) => enemy.health > 0);
-
-            // Handle Centennial Puzzle card drawing
-            if (context.shouldDrawCards && context.shouldDrawCards > 0) {
-              setTimeout(() => get().drawCards(context.shouldDrawCards!), 100);
-            }
-          }
-        }
-
-        // Select new card for next turn if enemy is still alive
-        if (newEnemies[i] && newEnemies[i].health > 0) {
-          const newCard = selectEnemyCard(
-            newEnemies[i].deck,
-            newEnemies[i].health,
-            newEnemies[i].maxHealth,
-          );
-
-          // Convert card type to intent type for UI display
-          const convertCardTypeToIntentType = (
-            cardType: MonsterCardType,
-          ): IntentType => {
-            switch (cardType) {
-              case MonsterCardType.ATTACK:
-                return IntentType.ATTACK;
-              case MonsterCardType.DEFEND:
-                return IntentType.DEFEND;
-              case MonsterCardType.BUFF:
-                return IntentType.BUFF;
-              case MonsterCardType.DEBUFF:
-                return IntentType.DEBUFF;
-              case MonsterCardType.SPECIAL:
-                return IntentType.UNKNOWN;
-              default:
-                return IntentType.UNKNOWN;
-            }
-          };
-
-          newEnemies[i] = {
-            ...newEnemies[i],
-            currentCard: newCard,
-            intent: {
-              type: convertCardTypeToIntentType(newCard.type),
-              value: newCard.damage || newCard.block,
-              card: newCard,
-            },
-          };
-        }
+        set((s) => ({ ...s, player: newPlayer, enemies: newEnemies }));
+        if (isPlayerDead()) return;
       }
 
-      // Check if combat should end (all enemies dead)
-      const combatEnded = newEnemies.length === 0;
+      // Step 3: after-attack effects
+      if (STEP_DELAY_MS > 0) await delay(STEP_DELAY_MS);
+      set((s) => ({ ...s, stepInProgress: true, stepType: "after" }));
+      newPlayer = get().processAfterAttackEffects(newPlayer, enemy);
+      set((s) => ({ ...s, player: newPlayer }));
+      if (isPlayerDead()) return;
 
-      return {
-        ...state,
-        player: newPlayer,
-        enemies: newEnemies,
-        currentTurn: combatEnded ? TurnPhase.COMBAT_END : TurnPhase.PLAYER_TURN,
-        selectedCard: null,
-      };
-    });
+      // Surviving enemies pick their card for next turn
+      const survivor = findEnemy();
+      if (survivor) {
+        const newCard = selectEnemyCard(
+          survivor.deck,
+          survivor.health,
+          survivor.maxHealth,
+        );
+        newEnemies = newEnemies.map((e) =>
+          e.id === enemyId
+            ? {
+                ...e,
+                currentCard: newCard,
+                intent: {
+                  type: cardTypeToIntentType(newCard.type),
+                  value: newCard.damage || newCard.block,
+                  card: newCard,
+                },
+              }
+            : e,
+        );
+        set((s) => ({ ...s, enemies: newEnemies }));
+      }
+    }
 
-    // Draw new hand for player turn
-    get().drawCards(5);
+    if (newEnemies.length === 0) {
+      set((s) => ({
+        ...s,
+        ...endSteps,
+        ...createVictoryState(s, newPlayer, enemiesAtTurnStart),
+      }));
+      return;
+    }
+
+    set((s) => ({
+      ...s,
+      ...endSteps,
+      player: newPlayer,
+      enemies: newEnemies,
+      selectedCard: null,
+    }));
+    get().startPlayerTurn();
   },
 
   /**
    * Ends the current player turn and starts enemy turn
    */
-  endTurn: () => {
-    const state = get();
+  endTurn: async () => {
+    if (get().currentTurn !== TurnPhase.PLAYER_TURN) return;
 
-    if (state.currentTurn === TurnPhase.PLAYER_TURN) {
-      set((currentState) => {
-        let newPlayer = { ...currentState.player };
-        let newEnemies = [...currentState.enemies];
+    set((state) => {
+      // Power card turn end effects (like Metallicize)
+      const powerResult = processPowerCardEffects(
+        PowerTrigger.TURN_END,
+        state.player,
+        state.enemies,
+      );
 
-        // Process power card turn end effects (like Metallicize)
-        const powerResult = processPowerCardEffects(
-          PowerTrigger.TURN_END,
-          newPlayer,
-          newEnemies,
-        );
-        newPlayer = powerResult.player;
-        newEnemies = powerResult.enemies;
+      return {
+        ...state,
+        // The remaining hand is discarded
+        hand: [],
+        discardPile: [...state.discardPile, ...state.hand],
+        currentTurn: TurnPhase.ENEMY_TURN,
+        player: powerResult.player,
+        enemies: powerResult.enemies,
+        selectedCard: null,
+        // Block is NOT reset here - it resets at start of next player turn
+      };
+    });
 
-        // Discard remaining hand
-        const newDiscardPile = [
-          ...currentState.discardPile,
-          ...currentState.hand,
-        ];
-
-        return {
-          ...currentState,
-          hand: [],
-          discardPile: newDiscardPile,
-          currentTurn: TurnPhase.ENEMY_TURN,
-          player: newPlayer,
-          enemies: newEnemies,
-          selectedCard: null,
-          // Block is NOT reset here - it resets at start of next player turn
-        };
-      });
-
-      // Process enemy turn
-      setTimeout(() => {
-        get().processEnemyTurn();
-      }, 1000); // Add delay for better UX
-    }
+    await get().processEnemyTurn();
   },
 
   /**
    * Starts a new combat encounter
    */
   startCombat: () => {
-    // Preserve current player state and deck, but reset combat-specific state
-    set((state) => ({
-      ...state,
-      enemies: [],
-      hand: [],
-      // Keep the current deck composition (drawPile + discardPile + exhaustPile)
-      drawPile: [...state.drawPile, ...state.discardPile, ...state.exhaustPile],
-      discardPile: [],
-      exhaustPile: [],
-      currentTurn: TurnPhase.PLAYER_TURN,
-      gamePhase: GamePhase.COMBAT,
-      combatReward: undefined,
-      // Reset player's combat state but keep progression
-      player: {
-        ...state.player,
-        block: 0,
-        energy: state.player.maxEnergy,
-      },
-    }));
+    set((state) => {
+      // Use persistentDeck as the source of truth for the deck
+      const shuffledDeck = [...state.persistentDeck].sort(
+        () => Math.random() - 0.5,
+      );
+      console.log(
+        `[DEBUG] startCombat - Shuffling ${state.persistentDeck.length} cards from persistentDeck into drawPile`,
+      );
+      console.log(
+        `[DEBUG] Persistent deck cards:`,
+        state.persistentDeck.map((c) => c.name),
+      );
+      console.log(
+        `[DEBUG] Shuffled deck cards:`,
+        shuffledDeck.map((c) => c.name),
+      );
 
-    get().drawCards(5);
+      return {
+        ...state,
+        enemies: [],
+        hand: [],
+        drawPile: shuffledDeck,
+        discardPile: [],
+        exhaustPile: [],
+        currentTurn: TurnPhase.PLAYER_TURN,
+        gamePhase: GamePhase.COMBAT,
+        combatReward: undefined,
+        playerTurnThisCombat: 0, // Will be incremented to 1 on first player turn
+        player: {
+          ...state.player,
+          block: 0,
+          energy: state.player.maxEnergy,
+          relics: state.player.relics,
+          powerCards: state.player.powerCards,
+        },
+      };
+    });
+    get().startPlayerTurn();
   },
 
   /**
@@ -1391,18 +1367,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
       let newDiscardPile = [...state.discardPile];
       const newHand = [...state.hand];
 
-      for (let i = 0; i < count; i++) {
+      console.log(
+        `[DEBUG] drawCards called - count: ${count}, drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length}`,
+      );
+
+      let drawn = 0;
+      while (drawn < count) {
         if (newDrawPile.length === 0 && newDiscardPile.length > 0) {
           // Shuffle discard pile into draw pile
+          console.log(
+            `[DEBUG] Draw pile empty, shuffling ${newDiscardPile.length} cards from discard pile into draw pile`,
+          );
           newDrawPile = [...newDiscardPile].sort(() => Math.random() - 0.5);
           newDiscardPile = [];
+          console.log(
+            `[DEBUG] After shuffle - drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length}`,
+          );
         }
-
         if (newDrawPile.length > 0) {
           const drawnCard = newDrawPile.pop()!;
           newHand.push(drawnCard);
+          drawn++;
+          console.log(`[DEBUG] Drew card: ${drawnCard.name} (${drawnCard.id})`);
+        } else {
+          console.log(
+            `[DEBUG] No cards available to draw (drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length})`,
+          );
+          break;
         }
       }
+
+      console.log(
+        `[DEBUG] drawCards complete - hand: ${newHand.length}, drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length}`,
+      );
 
       return {
         ...state,
@@ -1444,16 +1441,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newShop.cards = [...newShop.cards];
       newShop.cards[index] = { ...shopCard, purchased: true };
 
+      const purchasedCard = {
+        ...shopCard.card,
+        id: `${shopCard.card.baseId}_${Date.now()}`,
+      };
+
       return {
         ...state,
         player: {
           ...state.player,
           gold: state.player.gold - shopCard.cost,
         },
-        drawPile: [
-          ...state.drawPile,
-          { ...shopCard.card, id: `${shopCard.card.baseId}_${Date.now()}` },
-        ],
+        drawPile: [...state.drawPile, purchasedCard],
+        persistentDeck: [...state.persistentDeck, purchasedCard],
         currentShop: newShop,
         selectedCard: null,
       };
@@ -1519,6 +1519,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       const newDrawPile = [...state.drawPile];
       const newDiscardPile = [...state.discardPile];
+      const newPersistentDeck = state.persistentDeck.filter(
+        (c) => c.id !== cardId,
+      );
 
       // Remove the card from the appropriate pile
       const drawIndex = newDrawPile.findIndex((c) => c.id === cardId);
@@ -1539,7 +1542,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         },
         drawPile: newDrawPile,
         discardPile: newDiscardPile,
-        showCardRemovalModal: false,
+        persistentDeck: newPersistentDeck,
+        currentShop: {
+          ...state.currentShop,
+          removeCardCost: state.currentShop.removeCardCost + 25,
+        },
         selectedCard: null,
       };
     });
@@ -1642,6 +1649,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ...state,
         drawPile: newDrawPile,
         discardPile: newDiscardPile,
+        persistentDeck: state.persistentDeck.map((c) =>
+          c.id === cardId ? upgradeCard(cardToUpgrade) : c,
+        ),
         showCardUpgradeModal: false,
         gamePhase: GamePhase.MAP,
         selectedCard: null,
@@ -1720,18 +1730,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((state) => {
       const relic = state.combatReward?.relicReward;
       if (!relic) return state;
-
-      // Combine ALL cards back into the draw pile, but filter out cards created during combat
-      const allCards = [
-        ...state.drawPile,
-        ...state.discardPile,
-        ...state.exhaustPile,
-        ...state.hand,
-      ].filter((c) => !c.id.includes("_copy_")); // Remove cards created during combat
-
+      // Use persistentDeck as the source of truth for the deck
+      const filteredPersistentDeck = state.persistentDeck.filter(
+        (c) => !c.id.includes("_copy_"),
+      );
       return {
         ...state,
-        drawPile: allCards,
+        drawPile: filteredPersistentDeck,
         discardPile: [],
         exhaustPile: [],
         hand: [],
@@ -1752,17 +1757,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
    */
   skipRelicReward: () => {
     set((state) => {
-      // Combine ALL cards back into the draw pile, but filter out cards created during combat
-      const allCards = [
-        ...state.drawPile,
-        ...state.discardPile,
-        ...state.exhaustPile,
-        ...state.hand,
-      ].filter((c) => !c.id.includes("_copy_")); // Remove cards created during combat
-
+      // Use persistentDeck as the source of truth for the deck
+      const filteredPersistentDeck = state.persistentDeck.filter(
+        (c) => !c.id.includes("_copy_"),
+      );
       return {
         ...state,
-        drawPile: allCards,
+        drawPile: filteredPersistentDeck,
         discardPile: [],
         exhaustPile: [],
         hand: [],
@@ -1772,5 +1773,185 @@ export const useGameStore = create<GameStore>((set, get) => ({
         selectedCard: null,
       };
     });
+  },
+
+  /**
+   * Starts the player's turn (increments turn, resets energy/block, processes effects, draws hand)
+   */
+  startPlayerTurn: () => {
+    console.log("[DEBUG] startPlayerTurn called");
+
+    set((state) => {
+      const nextPlayerTurnThisCombat = (state.playerTurnThisCombat || 0) + 1;
+      console.log(
+        `[DEBUG] Starting player turn ${nextPlayerTurnThisCombat} in combat`,
+      );
+      console.log(
+        `[DEBUG] Player health: ${state.player.health}/${state.player.maxHealth}, Energy: ${state.player.energy}/${state.player.maxEnergy}, Block: ${state.player.block}`,
+      );
+      console.log(
+        `[DEBUG] Enemies: ${state.enemies.length}, Hand: ${state.hand.length}, Draw pile: ${state.drawPile.length}`,
+      );
+      console.log(
+        `[DEBUG] Player relics before reset:`,
+        state.player.relics.map((r) => r.name),
+      );
+
+      let newPlayer = {
+        ...state.player,
+        energy: state.player.maxEnergy,
+        block: 0,
+      };
+      let newEnemies = [...state.enemies];
+
+      console.log(
+        `[DEBUG] Reset energy to ${newPlayer.energy}, block to ${newPlayer.block}`,
+      );
+      console.log(
+        `[DEBUG] Player relics after reset:`,
+        newPlayer.relics.map((r) => r.name),
+      );
+
+      // Power card TURN_START effects
+      console.log("[DEBUG] Processing power card TURN_START effects");
+      const powerResult = processPowerCardEffects(
+        PowerTrigger.TURN_START,
+        newPlayer,
+        newEnemies,
+      );
+      newPlayer = powerResult.player;
+      newEnemies = powerResult.enemies;
+
+      // Relic TURN_START effects (use computed nextPlayerTurnThisCombat)
+      console.log(
+        `[DEBUG] Processing relic TURN_START effects for turn ${nextPlayerTurnThisCombat}`,
+      );
+      console.log(
+        `[DEBUG] Player has ${newPlayer.relics.length} relics:`,
+        newPlayer.relics.map((r) => r.name),
+      );
+
+      const relicResult = processRelicEffects(
+        RelicTrigger.TURN_START,
+        newPlayer,
+        newEnemies,
+        { playerTurnThisCombat: nextPlayerTurnThisCombat },
+      );
+      newPlayer = relicResult.player;
+      newEnemies = relicResult.enemies;
+
+      console.log(
+        `[DEBUG] After relic effects - Energy: ${newPlayer.energy}, Block: ${newPlayer.block}`,
+      );
+      console.log(
+        `[DEBUG] Player relics after relic effects:`,
+        newPlayer.relics.map((r) => r.name),
+      );
+
+      console.log(
+        `[DEBUG] Final state - Hand: ${state.hand.length}, Draw pile: ${state.drawPile.length}, Energy: ${newPlayer.energy}, Block: ${newPlayer.block}`,
+      );
+      console.log(
+        `[DEBUG] Final player relics:`,
+        newPlayer.relics.map((r) => r.name),
+      );
+
+      return {
+        ...state,
+        player: newPlayer,
+        enemies: newEnemies,
+        currentTurn: TurnPhase.PLAYER_TURN,
+        playerTurnThisCombat: nextPlayerTurnThisCombat,
+        selectedCard: null,
+      };
+    });
+
+    // Draw cards after state update (this will handle reshuffle if needed)
+    get().drawCards(5);
+  },
+
+  /**
+   * Processes before-attack effects for an enemy (poison damage, etc.)
+   */
+  processBeforeAttackEffects: (player: Player, enemy: Enemy): Player => {
+    const newPlayer = { ...player };
+
+    // Process poison damage on enemy (enemy takes damage, not player)
+    const poisonEffect = enemy.statusEffects.find(
+      (e) => e.type === StatusType.POISON,
+    );
+    if (poisonEffect && poisonEffect.stacks > 0) {
+      // Apply poison damage to enemy (this is handled in processStatusEffects)
+      // For now, just return the player unchanged
+      // The actual poison damage will be processed in the main enemy turn loop
+    }
+
+    return newPlayer;
+  },
+
+  /**
+   * Processes enemy attack with proper trigger resolution (LIFO stack)
+   */
+  processEnemyAttack: (
+    card: MonsterCard,
+    player: Player,
+    enemy: Enemy,
+  ): { player: Player; enemy: Enemy } => {
+    let newPlayer = { ...player };
+    let newEnemy = { ...enemy };
+
+    // Process the monster card effects with proper trigger resolution
+    const cardResult = processMonsterCardEffects(card, newPlayer, newEnemy);
+    newPlayer = cardResult.player;
+    newEnemy = cardResult.enemy;
+
+    // Process damage taken relic effects if player took damage
+    const initialHealth = player.health;
+    const damageDealt = initialHealth - newPlayer.health;
+    if (damageDealt > 0) {
+      const context: { damage: number; shouldDrawCards?: number } = {
+        damage: damageDealt,
+      };
+      const relicResult = processRelicEffects(
+        RelicTrigger.DAMAGE_TAKEN,
+        newPlayer,
+        [newEnemy], // Pass as array for consistency
+        context,
+      );
+      newPlayer = relicResult.player;
+      newEnemy = relicResult.enemies[0] || newEnemy;
+
+      // Handle Centennial Puzzle card drawing
+      if (context.shouldDrawCards && context.shouldDrawCards > 0) {
+        get().drawCards(context.shouldDrawCards!);
+      }
+    }
+
+    // Ensure enemy health doesn't go below 0
+    if (newEnemy.health < 0) {
+      newEnemy.health = 0;
+    }
+
+    return { player: newPlayer, enemy: newEnemy };
+  },
+
+  /**
+   * Processes after-attack effects for an enemy
+   */
+  processAfterAttackEffects: (player: Player, _enemy: Enemy): Player => {
+    const newPlayer = { ...player };
+
+    // Process any after-attack effects here
+    // For now, this is a placeholder for future effects
+
+    return newPlayer;
+  },
+
+  /**
+   * Call this to resolve the current step and continue the enemy turn
+   */
+  resolveStep: () => {
+    const resolver = get()._resolveStep;
+    if (resolver) resolver();
   },
 }));
