@@ -82,7 +82,7 @@ describe("Heavy Blade Fix", () => {
       const finalEnemyHealth = finalState.enemies[0].health;
 
       // Calculate expected damage: 14 base + (2 strength × 3) = 14 + 6 = 20
-      const expectedDamage = 14 + (2 * 3);
+      const expectedDamage = 14 + 2 * 3;
       const actualDamage = initialEnemyHealth - finalEnemyHealth;
 
       expect(actualDamage).toBe(expectedDamage);
@@ -176,4 +176,4 @@ describe("Heavy Blade Fix", () => {
       expect(cardNeedsTarget(heavyBladeCard)).toBe(true);
     });
   });
-}); 
+});

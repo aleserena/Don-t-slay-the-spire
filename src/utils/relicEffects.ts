@@ -20,11 +20,22 @@ export const processRelicEffects = (
   enemies: Enemy[],
   _context?: RelicContext,
 ): { player: Player; enemies: Enemy[] } => {
-  console.log(`[DEBUG] processRelicEffects called - trigger: ${trigger}, context:`, _context);
-  console.log(`[DEBUG] Player has ${player.relics.length} relics:`, player.relics.map(r => r.name));
-  console.log(`[DEBUG] Player state - Health: ${player.health}, Block: ${player.block}, Energy: ${player.energy}`);
-  console.log(`[DEBUG] Enemies: ${enemies.length}`, enemies.map(e => `${e.name}(${e.health}/${e.maxHealth})`));
-  
+  console.log(
+    `[DEBUG] processRelicEffects called - trigger: ${trigger}, context:`,
+    _context,
+  );
+  console.log(
+    `[DEBUG] Player has ${player.relics.length} relics:`,
+    player.relics.map((r) => r.name),
+  );
+  console.log(
+    `[DEBUG] Player state - Health: ${player.health}, Block: ${player.block}, Energy: ${player.energy}`,
+  );
+  console.log(
+    `[DEBUG] Enemies: ${enemies.length}`,
+    enemies.map((e) => `${e.name}(${e.health}/${e.maxHealth})`),
+  );
+
   let newPlayer = { ...player };
   let newEnemies = [...enemies];
 
@@ -32,17 +43,23 @@ export const processRelicEffects = (
   for (const relic of player.relics) {
     console.log(`[DEBUG] Checking relic: ${relic.name} (${relic.id})`);
     for (const effect of relic.effects) {
-      console.log(`[DEBUG] Relic effect: ${effect.trigger} === ${trigger}? ${effect.trigger === trigger}`);
+      console.log(
+        `[DEBUG] Relic effect: ${effect.trigger} === ${trigger}? ${effect.trigger === trigger}`,
+      );
       if (effect.trigger === trigger) {
-        console.log(`[DEBUG] Relic effect triggered: ${relic.name} - ${effect.effect} (${effect.value})`);
-        
+        console.log(
+          `[DEBUG] Relic effect triggered: ${relic.name} - ${effect.effect} (${effect.value})`,
+        );
+
         // Special handling for specific relics
         if (
           relic.id === "bronze_scales" &&
           trigger === RelicTrigger.DAMAGE_TAKEN
         ) {
           // Bronze Scales: Deal 3 damage back to all enemies
-          console.log('[DEBUG] Bronze Scales triggered - dealing 3 damage to all enemies');
+          console.log(
+            "[DEBUG] Bronze Scales triggered - dealing 3 damage to all enemies",
+          );
           newEnemies = newEnemies.map((enemy) => ({
             ...enemy,
             health: Math.max(0, enemy.health - 3),
@@ -54,7 +71,9 @@ export const processRelicEffects = (
           // Centennial Puzzle: Draw 3 cards on first damage taken
           // This would need to be handled in the game store to actually draw cards
           // For now, we'll mark that cards should be drawn
-          console.log('[DEBUG] Centennial Puzzle triggered - should draw 3 cards');
+          console.log(
+            "[DEBUG] Centennial Puzzle triggered - should draw 3 cards",
+          );
           if (_context) {
             _context.shouldDrawCards = 3;
           }
@@ -63,9 +82,13 @@ export const processRelicEffects = (
           trigger === RelicTrigger.TURN_START
         ) {
           // Horn Cleat: Only trigger on the 2nd player turn
-          console.log(`[DEBUG] Horn Cleat check - playerTurnThisCombat: ${_context?.playerTurnThisCombat}, should trigger: ${_context?.playerTurnThisCombat === 2}`);
+          console.log(
+            `[DEBUG] Horn Cleat check - playerTurnThisCombat: ${_context?.playerTurnThisCombat}, should trigger: ${_context?.playerTurnThisCombat === 2}`,
+          );
           if (_context?.playerTurnThisCombat === 2) {
-            console.log("[DEBUG] Horn Cleat triggered on playerTurnThisCombat=2");
+            console.log(
+              "[DEBUG] Horn Cleat triggered on playerTurnThisCombat=2",
+            );
             const result = applyRelicEffect(
               effect,
               newPlayer,
@@ -74,13 +97,19 @@ export const processRelicEffects = (
             );
             newPlayer = result.player;
             newEnemies = result.enemies;
-            console.log(`[DEBUG] Horn Cleat applied - new block: ${newPlayer.block}`);
+            console.log(
+              `[DEBUG] Horn Cleat applied - new block: ${newPlayer.block}`,
+            );
           } else {
-            console.log(`[DEBUG] Horn Cleat NOT triggered, playerTurnThisCombat=${_context?.playerTurnThisCombat}`);
+            console.log(
+              `[DEBUG] Horn Cleat NOT triggered, playerTurnThisCombat=${_context?.playerTurnThisCombat}`,
+            );
           }
         } else {
           // Apply standard relic effect
-          console.log(`[DEBUG] Applying standard relic effect: ${relic.name} - ${effect.effect}`);
+          console.log(
+            `[DEBUG] Applying standard relic effect: ${relic.name} - ${effect.effect}`,
+          );
           const result = applyRelicEffect(
             effect,
             newPlayer,
@@ -89,11 +118,14 @@ export const processRelicEffects = (
           );
           newPlayer = result.player;
           newEnemies = result.enemies;
-          console.log(`[DEBUG] Standard relic effect applied - new player state:`, {
-            health: newPlayer.health,
-            block: newPlayer.block,
-            energy: newPlayer.energy
-          });
+          console.log(
+            `[DEBUG] Standard relic effect applied - new player state:`,
+            {
+              health: newPlayer.health,
+              block: newPlayer.block,
+              energy: newPlayer.energy,
+            },
+          );
         }
       }
     }
@@ -102,9 +134,9 @@ export const processRelicEffects = (
   console.log(`[DEBUG] processRelicEffects complete - final player state:`, {
     health: newPlayer.health,
     block: newPlayer.block,
-    energy: newPlayer.energy
+    energy: newPlayer.energy,
   });
-  
+
   return { player: newPlayer, enemies: newEnemies };
 };
 
@@ -114,9 +146,15 @@ const applyRelicEffect = (
   enemies: Enemy[],
   _context?: RelicContext,
 ): { player: Player; enemies: Enemy[] } => {
-  console.log(`[DEBUG] applyRelicEffect called - effect: ${effect.effect}, value: ${effect.value}, target: ${effect.target}`);
-  console.log(`[DEBUG] Player state before:`, { health: player.health, block: player.block, energy: player.energy });
-  
+  console.log(
+    `[DEBUG] applyRelicEffect called - effect: ${effect.effect}, value: ${effect.value}, target: ${effect.target}`,
+  );
+  console.log(`[DEBUG] Player state before:`, {
+    health: player.health,
+    block: player.block,
+    energy: player.energy,
+  });
+
   let newPlayer = { ...player };
   let newEnemies = [...enemies];
 
@@ -128,12 +166,16 @@ const applyRelicEffect = (
         newPlayer.maxHealth,
         newPlayer.health + amount,
       );
-      console.log(`[DEBUG] HEAL effect - healed ${amount}, new health: ${newPlayer.health}`);
+      console.log(
+        `[DEBUG] HEAL effect - healed ${amount}, new health: ${newPlayer.health}`,
+      );
       break;
 
     case EffectType.BLOCK:
       newPlayer.block += amount;
-      console.log(`[DEBUG] BLOCK effect - added ${amount} block, new block: ${newPlayer.block}`);
+      console.log(
+        `[DEBUG] BLOCK effect - added ${amount} block, new block: ${newPlayer.block}`,
+      );
       break;
 
     case EffectType.GAIN_ENERGY:
@@ -141,18 +183,24 @@ const applyRelicEffect = (
         newPlayer.maxEnergy + 3,
         newPlayer.energy + amount,
       );
-      console.log(`[DEBUG] GAIN_ENERGY effect - gained ${amount} energy, new energy: ${newPlayer.energy}`);
+      console.log(
+        `[DEBUG] GAIN_ENERGY effect - gained ${amount} energy, new energy: ${newPlayer.energy}`,
+      );
       break;
 
     case EffectType.DRAW_CARDS:
       // This would trigger the draw cards function in the game store
       // For now, we'll just note that cards should be drawn
-      console.log(`[DEBUG] DRAW_CARDS effect - should draw ${effect.value || 0} cards`);
+      console.log(
+        `[DEBUG] DRAW_CARDS effect - should draw ${effect.value || 0} cards`,
+      );
       break;
 
     case EffectType.APPLY_STATUS:
       if (effect.statusType) {
-        console.log(`[DEBUG] APPLY_STATUS effect - status: ${effect.statusType}, value: ${effect.value}, target: ${effect.target}`);
+        console.log(
+          `[DEBUG] APPLY_STATUS effect - status: ${effect.statusType}, value: ${effect.value}, target: ${effect.target}`,
+        );
         // Check if the effect has a target specified
         if (effect.target === "self") {
           newPlayer = applyStatusEffect(
@@ -160,7 +208,10 @@ const applyRelicEffect = (
             effect.statusType,
             effect.value || 1,
           ) as Player;
-          console.log(`[DEBUG] Applied status to self - new status effects:`, newPlayer.statusEffects);
+          console.log(
+            `[DEBUG] Applied status to self - new status effects:`,
+            newPlayer.statusEffects,
+          );
         } else if (
           effect.target === "all_enemies" ||
           effect.target === "ALL_ENEMIES" ||
@@ -175,19 +226,27 @@ const applyRelicEffect = (
                 effect.value || 1,
               ) as Enemy,
           );
-          console.log(`[DEBUG] Applied status to all enemies - enemy status effects:`, newEnemies.map(e => ({ name: e.name, effects: e.statusEffects })));
+          console.log(
+            `[DEBUG] Applied status to all enemies - enemy status effects:`,
+            newEnemies.map((e) => ({ name: e.name, effects: e.statusEffects })),
+          );
         }
       }
       break;
 
     case EffectType.DAMAGE:
-      console.log(`[DEBUG] DAMAGE effect - dealing ${amount} damage to ${effect.target}`);
+      console.log(
+        `[DEBUG] DAMAGE effect - dealing ${amount} damage to ${effect.target}`,
+      );
       if (effect.target === "all_enemies" || effect.target === "ALL_ENEMIES") {
         newEnemies = newEnemies.map((enemy) => ({
           ...enemy,
           health: enemy.health - amount,
         }));
-        console.log(`[DEBUG] Damaged all enemies - new health:`, newEnemies.map(e => ({ name: e.name, health: e.health })));
+        console.log(
+          `[DEBUG] Damaged all enemies - new health:`,
+          newEnemies.map((e) => ({ name: e.name, health: e.health })),
+        );
       }
       break;
   }
@@ -195,9 +254,9 @@ const applyRelicEffect = (
   console.log(`[DEBUG] applyRelicEffect complete - final player state:`, {
     health: newPlayer.health,
     block: newPlayer.block,
-    energy: newPlayer.energy
+    energy: newPlayer.energy,
   });
-  
+
   return { player: newPlayer, enemies: newEnemies };
 };
 

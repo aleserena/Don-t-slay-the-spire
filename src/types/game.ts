@@ -514,7 +514,7 @@ export interface GameState {
   playerTurnThisCombat?: number; // Track which player turn it is in combat
   stepInProgress: boolean;
   _resolveStep?: (value?: unknown) => void;
-  stepType?: 'before' | 'attack' | 'after';
+  stepType?: "before" | "attack" | "after";
   persistentDeck: Card[];
 }
 

@@ -58,7 +58,7 @@ describe("Body Slam Test", () => {
     playCard(bodySlamCard.id, "test_enemy");
 
     const finalState = useGameStore.getState();
-    
+
     // Enemy should have taken 10 damage (equal to player's block)
     expect(finalState.enemies[0].health).toBe(40); // 50 - 10 = 40
   });
@@ -84,8 +84,8 @@ describe("Body Slam Test", () => {
     playCard(bodySlamCard.id, "test_enemy");
 
     const finalState = useGameStore.getState();
-    
+
     // Enemy should have taken 0 damage
     expect(finalState.enemies[0].health).toBe(50); // No damage dealt
   });
-}); 
+});

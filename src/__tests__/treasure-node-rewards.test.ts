@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useGameStore } from "../store/gameStore";
-import {
-  GamePhase,
-  RelicRarity,
-} from "../types/game";
+import { GamePhase, RelicRarity } from "../types/game";
 import { NodeType } from "../types/map";
 
 describe("Treasure Node Relic Rewards", () => {
@@ -87,7 +84,10 @@ describe("Treasure Node Relic Rewards", () => {
       const relic = state.combatReward?.relicReward;
 
       expect(relic).toBeDefined();
-      expect(relic?.rarity).toBeOneOf([RelicRarity.COMMON, RelicRarity.UNCOMMON]);
+      expect(relic?.rarity).toBeOneOf([
+        RelicRarity.COMMON,
+        RelicRarity.UNCOMMON,
+      ]);
     });
   });
 
@@ -169,7 +169,6 @@ describe("Treasure Node Relic Rewards", () => {
 
   describe("Treasure vs Elite Relic Rewards", () => {
     it("should distinguish between treasure and elite relic rewards", () => {
-
       // Set up a treasure relic reward state
       const treasureRelic = {
         id: "treasure_relic",
@@ -218,4 +217,4 @@ describe("Treasure Node Relic Rewards", () => {
       expect(state.combatReward?.isTreasureReward).toBe(false);
     });
   });
-}); 
+});

@@ -290,10 +290,9 @@ export const RelicRewardScreen: React.FC = () => {
             maxWidth: "400px",
           }}
         >
-          {isTreasureReward 
+          {isTreasureReward
             ? "Treasure chests contain powerful relics that provide permanent benefits throughout your run."
-            : "Elite enemies drop powerful relics that provide permanent benefits throughout your run."
-          }
+            : "Elite enemies drop powerful relics that provide permanent benefits throughout your run."}
         </div>
       </div>
     </div>

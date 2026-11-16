@@ -38,10 +38,10 @@ describe("Reshuffle Logic", () => {
 
   it("should reshuffle discard pile when draw pile is empty", async () => {
     const { drawCards, endTurn } = useGameStore.getState();
-    
+
     // Get 10 Strike cards for the deck
     const strikeCards = Array.from({ length: 10 }, (_, i) => {
-      const baseCard = getAllCards().find(card => card.baseId === "strike")!;
+      const baseCard = getAllCards().find((card) => card.baseId === "strike")!;
       return { ...baseCard, id: `${baseCard.baseId}_${i}` };
     });
 
@@ -82,4 +82,4 @@ describe("Reshuffle Logic", () => {
     const ids = [...hand, ...drawPile].map((card) => card.id).sort();
     expect(ids).toEqual(strikeCards.map((card) => card.id).sort());
   });
-}); 
+});

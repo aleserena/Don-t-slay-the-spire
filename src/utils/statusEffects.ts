@@ -13,10 +13,10 @@ export const applyStatusEffect = (
   let newStatusEffects;
   if (existingEffect) {
     // Stack the effect (immutably)
-    newStatusEffects = target.statusEffects.map(effect =>
+    newStatusEffects = target.statusEffects.map((effect) =>
       effect.type === effectType
         ? { ...effect, stacks: effect.stacks + stacks }
-        : effect
+        : effect,
     );
   } else {
     // Add new effect (immutably)

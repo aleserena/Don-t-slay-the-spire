@@ -180,7 +180,7 @@ interface GameStore extends GameState {
   /** Call this to resolve the current step and continue the enemy turn */
   resolveStep: () => void;
   /** Type of step currently in progress */
-  stepType?: 'before' | 'attack' | 'after';
+  stepType?: "before" | "attack" | "after";
   /** Persistent deck of cards */
   persistentDeck: Card[];
 
@@ -355,7 +355,11 @@ interface GameStore extends GameState {
   /**
    * Processes enemy attack with proper trigger resolution (LIFO stack)
    */
-  processEnemyAttack: (card: MonsterCard, player: Player, enemy: Enemy) => { player: Player; enemy: Enemy };
+  processEnemyAttack: (
+    card: MonsterCard,
+    player: Player,
+    enemy: Enemy,
+  ) => { player: Player; enemy: Enemy };
 
   /**
    * Processes after-attack effects for an enemy
@@ -604,9 +608,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const availableRelics = getAllRelics().filter(
             (r: Relic) => r.rarity === "common" || r.rarity === "uncommon",
           );
-          const treasureRelic = availableRelics[
-            Math.floor(Math.random() * availableRelics.length)
-          ];
+          const treasureRelic =
+            availableRelics[Math.floor(Math.random() * availableRelics.length)];
 
           return {
             ...state,
@@ -710,7 +713,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const hasRelicReward = state.combatReward?.relicReward;
 
       // Use current deck (which includes previously added reward cards) and add the new card
-      const currentDeck = [...state.drawPile, ...state.discardPile, ...state.hand];
+      const currentDeck = [
+        ...state.drawPile,
+        ...state.discardPile,
+        ...state.hand,
+      ];
       const newCard = { ...card, id: `${card.baseId}_${Date.now()}` };
       const updatedDeck = [...currentDeck, newCard];
 
@@ -753,7 +760,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Check if there's a relic reward to show next
       const hasRelicReward = state.combatReward?.relicReward;
       // Use the current deck as the persistent deck
-      const currentDeck = [...state.drawPile, ...state.discardPile, ...state.hand];
+      const currentDeck = [
+        ...state.drawPile,
+        ...state.discardPile,
+        ...state.hand,
+      ];
       if (hasRelicReward) {
         // Go to relic reward screen
         return {
@@ -828,7 +839,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   returnToMap: () => {
     set((state) => {
       // Use persistentDeck as the source of truth for the deck
-      const filteredPersistentDeck = state.persistentDeck.filter(card => !card.id.includes('_copy_'));
+      const filteredPersistentDeck = state.persistentDeck.filter(
+        (card) => !card.id.includes("_copy_"),
+      );
       return {
         ...state,
         gamePhase: GamePhase.MAP,
@@ -1306,11 +1319,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startCombat: () => {
     set((state) => {
       // Use persistentDeck as the source of truth for the deck
-      const shuffledDeck = [...state.persistentDeck].sort(() => Math.random() - 0.5);
-      console.log(`[DEBUG] startCombat - Shuffling ${state.persistentDeck.length} cards from persistentDeck into drawPile`);
-      console.log(`[DEBUG] Persistent deck cards:`, state.persistentDeck.map(c => c.name));
-      console.log(`[DEBUG] Shuffled deck cards:`, shuffledDeck.map(c => c.name));
-      
+      const shuffledDeck = [...state.persistentDeck].sort(
+        () => Math.random() - 0.5,
+      );
+      console.log(
+        `[DEBUG] startCombat - Shuffling ${state.persistentDeck.length} cards from persistentDeck into drawPile`,
+      );
+      console.log(
+        `[DEBUG] Persistent deck cards:`,
+        state.persistentDeck.map((c) => c.name),
+      );
+      console.log(
+        `[DEBUG] Shuffled deck cards:`,
+        shuffledDeck.map((c) => c.name),
+      );
+
       return {
         ...state,
         enemies: [],
@@ -1344,16 +1367,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       let newDiscardPile = [...state.discardPile];
       const newHand = [...state.hand];
 
-      console.log(`[DEBUG] drawCards called - count: ${count}, drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length}`);
+      console.log(
+        `[DEBUG] drawCards called - count: ${count}, drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length}`,
+      );
 
       let drawn = 0;
       while (drawn < count) {
         if (newDrawPile.length === 0 && newDiscardPile.length > 0) {
           // Shuffle discard pile into draw pile
-          console.log(`[DEBUG] Draw pile empty, shuffling ${newDiscardPile.length} cards from discard pile into draw pile`);
+          console.log(
+            `[DEBUG] Draw pile empty, shuffling ${newDiscardPile.length} cards from discard pile into draw pile`,
+          );
           newDrawPile = [...newDiscardPile].sort(() => Math.random() - 0.5);
           newDiscardPile = [];
-          console.log(`[DEBUG] After shuffle - drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length}`);
+          console.log(
+            `[DEBUG] After shuffle - drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length}`,
+          );
         }
         if (newDrawPile.length > 0) {
           const drawnCard = newDrawPile.pop()!;
@@ -1361,13 +1390,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
           drawn++;
           console.log(`[DEBUG] Drew card: ${drawnCard.name} (${drawnCard.id})`);
         } else {
-          console.log(`[DEBUG] No cards available to draw (drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length})`);
+          console.log(
+            `[DEBUG] No cards available to draw (drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length})`,
+          );
           break;
         }
       }
-      
-      console.log(`[DEBUG] drawCards complete - hand: ${newHand.length}, drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length}`);
-      
+
+      console.log(
+        `[DEBUG] drawCards complete - hand: ${newHand.length}, drawPile: ${newDrawPile.length}, discardPile: ${newDiscardPile.length}`,
+      );
+
       return {
         ...state,
         hand: newHand,
@@ -1384,7 +1417,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   shuffleDiscardIntoDraw: () => {
     set((state) => ({
       ...state,
-      drawPile: [...state.drawPile, ...state.discardPile].sort(() => Math.random() - 0.5),
+      drawPile: [...state.drawPile, ...state.discardPile].sort(
+        () => Math.random() - 0.5,
+      ),
       discardPile: [],
       selectedCard: null,
     }));
@@ -1484,7 +1519,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       const newDrawPile = [...state.drawPile];
       const newDiscardPile = [...state.discardPile];
-      const newPersistentDeck = state.persistentDeck.filter((c) => c.id !== cardId);
+      const newPersistentDeck = state.persistentDeck.filter(
+        (c) => c.id !== cardId,
+      );
 
       // Remove the card from the appropriate pile
       const drawIndex = newDrawPile.findIndex((c) => c.id === cardId);
@@ -1694,7 +1731,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const relic = state.combatReward?.relicReward;
       if (!relic) return state;
       // Use persistentDeck as the source of truth for the deck
-      const filteredPersistentDeck = state.persistentDeck.filter(c => !c.id.includes('_copy_'));
+      const filteredPersistentDeck = state.persistentDeck.filter(
+        (c) => !c.id.includes("_copy_"),
+      );
       return {
         ...state,
         drawPile: filteredPersistentDeck,
@@ -1719,7 +1758,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   skipRelicReward: () => {
     set((state) => {
       // Use persistentDeck as the source of truth for the deck
-      const filteredPersistentDeck = state.persistentDeck.filter(c => !c.id.includes('_copy_'));
+      const filteredPersistentDeck = state.persistentDeck.filter(
+        (c) => !c.id.includes("_copy_"),
+      );
       return {
         ...state,
         drawPile: filteredPersistentDeck,
@@ -1738,46 +1779,83 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * Starts the player's turn (increments turn, resets energy/block, processes effects, draws hand)
    */
   startPlayerTurn: () => {
-    console.log('[DEBUG] startPlayerTurn called');
-    
+    console.log("[DEBUG] startPlayerTurn called");
+
     set((state) => {
       const nextPlayerTurnThisCombat = (state.playerTurnThisCombat || 0) + 1;
-      console.log(`[DEBUG] Starting player turn ${nextPlayerTurnThisCombat} in combat`);
-      console.log(`[DEBUG] Player health: ${state.player.health}/${state.player.maxHealth}, Energy: ${state.player.energy}/${state.player.maxEnergy}, Block: ${state.player.block}`);
-      console.log(`[DEBUG] Enemies: ${state.enemies.length}, Hand: ${state.hand.length}, Draw pile: ${state.drawPile.length}`);
-      console.log(`[DEBUG] Player relics before reset:`, state.player.relics.map(r => r.name));
-      
-      let newPlayer = { ...state.player, energy: state.player.maxEnergy, block: 0 };
+      console.log(
+        `[DEBUG] Starting player turn ${nextPlayerTurnThisCombat} in combat`,
+      );
+      console.log(
+        `[DEBUG] Player health: ${state.player.health}/${state.player.maxHealth}, Energy: ${state.player.energy}/${state.player.maxEnergy}, Block: ${state.player.block}`,
+      );
+      console.log(
+        `[DEBUG] Enemies: ${state.enemies.length}, Hand: ${state.hand.length}, Draw pile: ${state.drawPile.length}`,
+      );
+      console.log(
+        `[DEBUG] Player relics before reset:`,
+        state.player.relics.map((r) => r.name),
+      );
+
+      let newPlayer = {
+        ...state.player,
+        energy: state.player.maxEnergy,
+        block: 0,
+      };
       let newEnemies = [...state.enemies];
-      
-      console.log(`[DEBUG] Reset energy to ${newPlayer.energy}, block to ${newPlayer.block}`);
-      console.log(`[DEBUG] Player relics after reset:`, newPlayer.relics.map(r => r.name));
-      
+
+      console.log(
+        `[DEBUG] Reset energy to ${newPlayer.energy}, block to ${newPlayer.block}`,
+      );
+      console.log(
+        `[DEBUG] Player relics after reset:`,
+        newPlayer.relics.map((r) => r.name),
+      );
+
       // Power card TURN_START effects
-      console.log('[DEBUG] Processing power card TURN_START effects');
-      const powerResult = processPowerCardEffects(PowerTrigger.TURN_START, newPlayer, newEnemies);
+      console.log("[DEBUG] Processing power card TURN_START effects");
+      const powerResult = processPowerCardEffects(
+        PowerTrigger.TURN_START,
+        newPlayer,
+        newEnemies,
+      );
       newPlayer = powerResult.player;
       newEnemies = powerResult.enemies;
-      
+
       // Relic TURN_START effects (use computed nextPlayerTurnThisCombat)
-      console.log(`[DEBUG] Processing relic TURN_START effects for turn ${nextPlayerTurnThisCombat}`);
-      console.log(`[DEBUG] Player has ${newPlayer.relics.length} relics:`, newPlayer.relics.map(r => r.name));
-      
+      console.log(
+        `[DEBUG] Processing relic TURN_START effects for turn ${nextPlayerTurnThisCombat}`,
+      );
+      console.log(
+        `[DEBUG] Player has ${newPlayer.relics.length} relics:`,
+        newPlayer.relics.map((r) => r.name),
+      );
+
       const relicResult = processRelicEffects(
         RelicTrigger.TURN_START,
         newPlayer,
         newEnemies,
-        { playerTurnThisCombat: nextPlayerTurnThisCombat }
+        { playerTurnThisCombat: nextPlayerTurnThisCombat },
       );
       newPlayer = relicResult.player;
       newEnemies = relicResult.enemies;
-      
-      console.log(`[DEBUG] After relic effects - Energy: ${newPlayer.energy}, Block: ${newPlayer.block}`);
-      console.log(`[DEBUG] Player relics after relic effects:`, newPlayer.relics.map(r => r.name));
-      
-      console.log(`[DEBUG] Final state - Hand: ${state.hand.length}, Draw pile: ${state.drawPile.length}, Energy: ${newPlayer.energy}, Block: ${newPlayer.block}`);
-      console.log(`[DEBUG] Final player relics:`, newPlayer.relics.map(r => r.name));
-      
+
+      console.log(
+        `[DEBUG] After relic effects - Energy: ${newPlayer.energy}, Block: ${newPlayer.block}`,
+      );
+      console.log(
+        `[DEBUG] Player relics after relic effects:`,
+        newPlayer.relics.map((r) => r.name),
+      );
+
+      console.log(
+        `[DEBUG] Final state - Hand: ${state.hand.length}, Draw pile: ${state.drawPile.length}, Energy: ${newPlayer.energy}, Block: ${newPlayer.block}`,
+      );
+      console.log(
+        `[DEBUG] Final player relics:`,
+        newPlayer.relics.map((r) => r.name),
+      );
+
       return {
         ...state,
         player: newPlayer,
@@ -1787,7 +1865,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         selectedCard: null,
       };
     });
-    
+
     // Draw cards after state update (this will handle reshuffle if needed)
     get().drawCards(5);
   },
@@ -1797,30 +1875,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
    */
   processBeforeAttackEffects: (player: Player, enemy: Enemy): Player => {
     const newPlayer = { ...player };
-    
+
     // Process poison damage on enemy (enemy takes damage, not player)
-    const poisonEffect = enemy.statusEffects.find(e => e.type === StatusType.POISON);
+    const poisonEffect = enemy.statusEffects.find(
+      (e) => e.type === StatusType.POISON,
+    );
     if (poisonEffect && poisonEffect.stacks > 0) {
       // Apply poison damage to enemy (this is handled in processStatusEffects)
       // For now, just return the player unchanged
       // The actual poison damage will be processed in the main enemy turn loop
     }
-    
+
     return newPlayer;
   },
 
   /**
    * Processes enemy attack with proper trigger resolution (LIFO stack)
    */
-  processEnemyAttack: (card: MonsterCard, player: Player, enemy: Enemy): { player: Player; enemy: Enemy } => {
+  processEnemyAttack: (
+    card: MonsterCard,
+    player: Player,
+    enemy: Enemy,
+  ): { player: Player; enemy: Enemy } => {
     let newPlayer = { ...player };
     let newEnemy = { ...enemy };
-    
+
     // Process the monster card effects with proper trigger resolution
     const cardResult = processMonsterCardEffects(card, newPlayer, newEnemy);
     newPlayer = cardResult.player;
     newEnemy = cardResult.enemy;
-    
+
     // Process damage taken relic effects if player took damage
     const initialHealth = player.health;
     const damageDealt = initialHealth - newPlayer.health;
@@ -1842,12 +1926,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         get().drawCards(context.shouldDrawCards!);
       }
     }
-    
+
     // Ensure enemy health doesn't go below 0
     if (newEnemy.health < 0) {
       newEnemy.health = 0;
     }
-    
+
     return { player: newPlayer, enemy: newEnemy };
   },
 
@@ -1856,10 +1940,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
    */
   processAfterAttackEffects: (player: Player, _enemy: Enemy): Player => {
     const newPlayer = { ...player };
-    
+
     // Process any after-attack effects here
     // For now, this is a placeholder for future effects
-    
+
     return newPlayer;
   },
 

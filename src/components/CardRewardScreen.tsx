@@ -4,7 +4,8 @@ import { Card, CardType } from "../types/game";
 import { UnifiedHeader } from "./UnifiedHeader";
 
 export const CardRewardScreen: React.FC = () => {
-  const { combatReward, selectCardReward, skipCardReward, persistentDeck } = useGameStore();
+  const { combatReward, selectCardReward, skipCardReward, persistentDeck } =
+    useGameStore();
 
   if (!combatReward) return null;
 
@@ -98,7 +99,12 @@ export const CardRewardScreen: React.FC = () => {
         </div>
 
         {/* Debug info moved to console */}
-        {(() => { console.log(`[DEBUG] Card reward screen - Your deck now has ${persistentDeck.length} cards.`); return null; })()}
+        {(() => {
+          console.log(
+            `[DEBUG] Card reward screen - Your deck now has ${persistentDeck.length} cards.`,
+          );
+          return null;
+        })()}
 
         <div
           style={{

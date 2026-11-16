@@ -36,7 +36,7 @@ describe("Bug Fixes", () => {
 
       // Simulate a proper combat flow by starting combat first
       startCombat();
-      
+
       // Now simulate combat ending and going to card reward
       const testCard: Card = {
         id: "test_card",
@@ -670,9 +670,10 @@ describe("Bug Fixes", () => {
 
         // Total cards should still be 10 (excluding _copy_ cards)
         const totalCards =
-          afterCombat.hand.filter(c => !c.id.includes('_copy_')).length +
-          afterCombat.drawPile.filter(c => !c.id.includes('_copy_')).length +
-          afterCombat.discardPile.filter(c => !c.id.includes('_copy_')).length;
+          afterCombat.hand.filter((c) => !c.id.includes("_copy_")).length +
+          afterCombat.drawPile.filter((c) => !c.id.includes("_copy_")).length +
+          afterCombat.discardPile.filter((c) => !c.id.includes("_copy_"))
+            .length;
         expect(totalCards).toBe(10);
 
         // Select a card reward
@@ -700,7 +701,8 @@ describe("Bug Fixes", () => {
     });
 
     it("should preserve deck from start of each combat, not just initial deck", () => {
-      const { playCard, selectCardReward, startCombat } = useGameStore.getState();
+      const { playCard, selectCardReward, startCombat } =
+        useGameStore.getState();
 
       // Start fresh
       useGameStore.getState().startNewRun();
@@ -711,7 +713,7 @@ describe("Bug Fixes", () => {
 
       // First combat: add a reward card
       startCombat();
-      
+
       // Set up first combat scenario
       useGameStore.setState((state) => ({
         ...state,
@@ -737,7 +739,9 @@ describe("Bug Fixes", () => {
 
       // Play a card to win combat
       const combatState = useGameStore.getState();
-      const attackCard = combatState.hand.find((card) => card.damage && card.damage > 0);
+      const attackCard = combatState.hand.find(
+        (card) => card.damage && card.damage > 0,
+      );
       expect(attackCard).toBeDefined();
 
       if (attackCard) {
@@ -746,7 +750,7 @@ describe("Bug Fixes", () => {
         // Select a card reward
         const afterCombat = useGameStore.getState();
         expect(afterCombat.gamePhase).toBe(GamePhase.CARD_REWARD);
-        
+
         const rewardCard = afterCombat.combatReward!.cardRewards[0];
         selectCardReward(rewardCard.id);
 
@@ -757,14 +761,16 @@ describe("Bug Fixes", () => {
 
       // Second combat: the deck should start with 11 cards (including the reward)
       startCombat();
-      
+
       const secondCombatState = useGameStore.getState();
       expect(secondCombatState.gamePhase).toBe(GamePhase.COMBAT);
-      
+
       // Should draw 5 cards, leaving 6 in draw pile
       expect(secondCombatState.hand.length).toBe(5);
       expect(secondCombatState.drawPile.length).toBe(6);
-      expect(secondCombatState.hand.length + secondCombatState.drawPile.length).toBe(11);
+      expect(
+        secondCombatState.hand.length + secondCombatState.drawPile.length,
+      ).toBe(11);
 
       // Set up second combat scenario
       useGameStore.setState((state) => ({
@@ -785,26 +791,34 @@ describe("Bug Fixes", () => {
 
       // Play a card to win second combat
       const secondCombatState2 = useGameStore.getState();
-      const attackCard2 = secondCombatState2.hand.find((card) => card.damage && card.damage > 0);
-      
+      const attackCard2 = secondCombatState2.hand.find(
+        (card) => card.damage && card.damage > 0,
+      );
+
       // If no attack card in hand, find one in the draw pile and draw it
       if (!attackCard2) {
-        const drawPileAttackCard = secondCombatState2.drawPile.find((card) => card.damage && card.damage > 0);
+        const drawPileAttackCard = secondCombatState2.drawPile.find(
+          (card) => card.damage && card.damage > 0,
+        );
         expect(drawPileAttackCard).toBeDefined();
-        
+
         if (drawPileAttackCard) {
           // Draw the attack card to hand
           useGameStore.setState((state) => ({
             ...state,
             hand: [...state.hand, drawPileAttackCard],
-            drawPile: state.drawPile.filter(c => c.id !== drawPileAttackCard.id),
+            drawPile: state.drawPile.filter(
+              (c) => c.id !== drawPileAttackCard.id,
+            ),
           }));
-          
+
           // Now play the attack card
           const updatedState = useGameStore.getState();
-          const attackCardInHand = updatedState.hand.find((card) => card.damage && card.damage > 0);
+          const attackCardInHand = updatedState.hand.find(
+            (card) => card.damage && card.damage > 0,
+          );
           expect(attackCardInHand).toBeDefined();
-          
+
           if (attackCardInHand) {
             playCard(attackCardInHand.id, "test_enemy_2");
           }
@@ -816,9 +830,12 @@ describe("Bug Fixes", () => {
       // After second combat, should still have 11 cards (the deck from start of second combat)
       const afterSecondCombat = useGameStore.getState();
       expect(afterSecondCombat.gamePhase).toBe(GamePhase.CARD_REWARD);
-      
+
       // The deck should be restored to the 11 cards from the start of the second combat
-      const totalCards = afterSecondCombat.hand.length + afterSecondCombat.drawPile.length + afterSecondCombat.discardPile.length;
+      const totalCards =
+        afterSecondCombat.hand.length +
+        afterSecondCombat.drawPile.length +
+        afterSecondCombat.discardPile.length;
       expect(totalCards).toBe(11); // Should preserve the 11 cards from start of second combat
     });
 
@@ -1039,7 +1056,7 @@ describe("Bug Fixes", () => {
       // End player turn, process enemy turn, go to 2nd player turn
       await endTurn();
       // Wait for state updates to complete before polling
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
       // Wait for playerTurnThisCombat === 2 and block to be applied (poll up to 500ms)
       let tries = 0;
       let block = 0;
@@ -1049,20 +1066,28 @@ describe("Bug Fixes", () => {
         const state = useGameStore.getState();
         playerTurnThisCombat = state.playerTurnThisCombat;
         block = state.player.block;
-        console.log(`[TEST DEBUG] Try ${tries}: playerTurnThisCombat=${playerTurnThisCombat}, block=${block}`);
+        console.log(
+          `[TEST DEBUG] Try ${tries}: playerTurnThisCombat=${playerTurnThisCombat}, block=${block}`,
+        );
         if (playerTurnThisCombat === 2) {
-          console.log(`[TEST DEBUG] player on turn 2:`, JSON.stringify(state.player));
+          console.log(
+            `[TEST DEBUG] player on turn 2:`,
+            JSON.stringify(state.player),
+          );
         }
         if (playerTurnThisCombat === 2 && block === 14) {
           break;
         }
         tries++;
       }
-      console.log(`[TEST DEBUG] Final: playerTurnThisCombat=${playerTurnThisCombat}, block=${block}`);
+      console.log(
+        `[TEST DEBUG] Final: playerTurnThisCombat=${playerTurnThisCombat}, block=${block}`,
+      );
       expect(block).toBe(14);
       await endTurn();
       // Wait for block to reset (poll up to 200ms)
-      block = 14; tries = 0;
+      block = 14;
+      tries = 0;
       while (block !== 0 && tries < 20) {
         await new Promise((resolve) => setTimeout(resolve, 10));
         block = useGameStore.getState().player.block;

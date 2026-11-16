@@ -55,7 +55,7 @@ export const GameBoard: React.FC = () => {
       const timer = setTimeout(() => {
         resolveStep();
       }, 300);
-      
+
       return () => clearTimeout(timer);
     }
   }, [stepInProgress, resolveStep]);
@@ -74,9 +74,9 @@ export const GameBoard: React.FC = () => {
   // Handle debug mode toggle
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === 'd') {
+      if (event.key.toLowerCase() === "d") {
         event.preventDefault();
-        console.log('[DEBUG] Debug mode toggle key pressed');
+        console.log("[DEBUG] Debug mode toggle key pressed");
         toggleDebugMode();
       }
     };

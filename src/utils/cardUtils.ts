@@ -158,11 +158,11 @@ export const calculateCardDamage = (
     for (const effect of card.effects) {
       if (effect.type === EffectType.DAMAGE) {
         totalDamage += calculateDamage(
-          effect.value, 
-          player, 
-          target, 
-          false, 
-          effect.strengthMultiplier || 1
+          effect.value,
+          player,
+          target,
+          false,
+          effect.strengthMultiplier || 1,
         );
       } else if (effect.type === EffectType.DAMAGE_MULTIPLIER_BLOCK) {
         const blockDamage = player.block * (effect.multiplier || 1);

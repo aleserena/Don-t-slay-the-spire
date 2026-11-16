@@ -18,9 +18,7 @@ describe("Unified Card Selection System", () => {
 
   it("should handle targeting cards with targeting mode as confirmation", () => {
     // Get the actual Strike card from data
-    const strikeCard = getAllCards().find(
-      (card) => card.baseId === "strike",
-    )!;
+    const strikeCard = getAllCards().find((card) => card.baseId === "strike")!;
 
     // Set up combat scenario with a targeting card (Strike)
     useGameStore.setState({
@@ -137,9 +135,7 @@ describe("Unified Card Selection System", () => {
 
   it("should handle non-damage cards with unified confirmation system", () => {
     // Get the actual Defend card from data
-    const defendCard = getAllCards().find(
-      (card) => card.baseId === "defend",
-    )!;
+    const defendCard = getAllCards().find((card) => card.baseId === "defend")!;
 
     // Set up combat scenario with a non-damage card (Defend)
     useGameStore.setState({
