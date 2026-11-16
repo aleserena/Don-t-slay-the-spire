@@ -283,6 +283,237 @@ describe("Game flow", () => {
     });
   });
 
+  describe("other map nodes", () => {
+    it.each([
+      [NodeType.EVENT, GamePhase.EVENT],
+      [NodeType.REST, GamePhase.REST],
+      [NodeType.SHOP, GamePhase.SHOP],
+      [NodeType.TREASURE, GamePhase.RELIC_REWARD],
+    ])("should open the %s screen", (type, phase) => {
+      useGameStore.setState({ map: createMap(type) });
+
+      store().selectNode("node");
+
+      expect(store().gamePhase).toBe(phase);
+      expect(store().map?.nodes[0].completed).toBe(true);
+    });
+
+    it("should stock the shop and present an event", () => {
+      useGameStore.setState({ map: createMap(NodeType.SHOP) });
+      store().selectNode("node");
+      expect(store().currentShop?.cards.length).toBeGreaterThan(0);
+
+      store().returnToMap();
+      expect(store().gamePhase).toBe(GamePhase.MAP);
+      expect(store().currentShop).toBeUndefined();
+
+      useGameStore.setState({ map: createMap(NodeType.EVENT) });
+      store().selectNode("node");
+      expect(store().currentEvent).toBeDefined();
+    });
+  });
+
+  describe("rest site", () => {
+    it("should heal without exceeding max health", () => {
+      useGameStore.setState((state) => ({
+        gamePhase: GamePhase.REST,
+        player: { ...state.player, health: 70, maxHealth: 80 },
+      }));
+
+      store().restAndHeal();
+
+      expect(store().player.health).toBe(80);
+      expect(store().gamePhase).toBe(GamePhase.MAP);
+    });
+
+    it("should open the picker without a card and upgrade with one", () => {
+      useGameStore.setState({ gamePhase: GamePhase.REST });
+
+      store().upgradeCardAtRest();
+      expect(store().showCardUpgradeModal).toBe(true);
+
+      const [card] = store().persistentDeck;
+      store().upgradeCardAtRest(card.id);
+
+      const state = store();
+      expect(state.showCardUpgradeModal).toBe(false);
+      expect(state.gamePhase).toBe(GamePhase.MAP);
+      expect(state.persistentDeck.find((c) => c.id === card.id)?.upgraded).toBe(
+        true,
+      );
+      expect(state.drawPile.find((c) => c.id === card.id)?.upgraded).toBe(true);
+    });
+
+    it("should not upgrade an unknown or already upgraded card", () => {
+      useGameStore.setState({ gamePhase: GamePhase.REST });
+      const [card] = store().persistentDeck;
+      store().upgradeCardAtRest(card.id);
+      useGameStore.setState({ gamePhase: GamePhase.REST });
+
+      store().upgradeCardAtRest(card.id);
+      store().upgradeCardAtRest("missing");
+
+      expect(store().gamePhase).toBe(GamePhase.REST);
+    });
+  });
+
+  describe("shop relics and removal", () => {
+    const relic = {
+      id: "test_relic",
+      name: "Test Relic",
+      description: "",
+      rarity: RelicRarity.COMMON,
+      effects: [],
+    };
+
+    const openShop = (gold: number) =>
+      useGameStore.setState((state) => ({
+        gamePhase: GamePhase.SHOP,
+        player: { ...state.player, gold },
+        currentShop: {
+          cards: [],
+          relics: [{ relic, cost: 150, purchased: false }],
+          removeCardCost: 75,
+        },
+      }));
+
+    it("should buy a relic once", () => {
+      openShop(400);
+      const relicCount = store().player.relics.length;
+
+      store().purchaseShopRelic(0);
+      store().purchaseShopRelic(0);
+
+      expect(store().player.gold).toBe(250);
+      expect(store().player.relics).toHaveLength(relicCount + 1);
+      expect(store().currentShop?.relics[0].purchased).toBe(true);
+    });
+
+    it("should refuse purchases the player cannot afford or that do not exist", () => {
+      openShop(10);
+
+      store().purchaseShopRelic(0);
+      store().purchaseShopRelic(5);
+      store().purchaseShopCard(5);
+      store().removeCardFromDeck(store().persistentDeck[0].id);
+
+      expect(store().player.gold).toBe(10);
+      expect(store().persistentDeck).toHaveLength(10);
+    });
+
+    it("should open the removal picker without a card and ignore unknown cards", () => {
+      openShop(400);
+
+      store().removeCardFromDeck();
+      expect(store().showCardRemovalModal).toBe(true);
+
+      store().removeCardFromDeck("missing");
+      expect(store().player.gold).toBe(400);
+    });
+
+    it("should do nothing outside a shop", () => {
+      const gold = store().player.gold;
+
+      store().purchaseShopCard(0);
+      store().purchaseShopRelic(0);
+      store().removeCardFromDeck(store().persistentDeck[0].id);
+
+      expect(store().player.gold).toBe(gold);
+    });
+  });
+
+  describe("rewards", () => {
+    it("should move on to the relic reward before returning to the map", () => {
+      const [card] = createTestCards(1);
+      const relic = {
+        id: "test_relic",
+        name: "Test Relic",
+        description: "",
+        rarity: RelicRarity.COMMON,
+        effects: [],
+      };
+      useGameStore.setState({
+        gamePhase: GamePhase.CARD_REWARD,
+        combatReward: { gold: 10, cardRewards: [card], relicReward: relic },
+      });
+      const deckSize = store().persistentDeck.length;
+
+      store().selectCardReward("missing");
+      expect(store().gamePhase).toBe(GamePhase.CARD_REWARD);
+
+      store().selectCardReward(card.id);
+      expect(store().gamePhase).toBe(GamePhase.RELIC_REWARD);
+      expect(store().persistentDeck).toHaveLength(deckSize + 1);
+
+      store().selectRelicReward();
+      expect(store().gamePhase).toBe(GamePhase.MAP);
+      expect(store().player.relics).toContainEqual(relic);
+      expect(store().combatReward).toBeUndefined();
+    });
+
+    it("should skip both rewards", () => {
+      useGameStore.setState({
+        gamePhase: GamePhase.CARD_REWARD,
+        combatReward: { gold: 10, cardRewards: [], relicReward: undefined },
+      });
+      const deckSize = store().persistentDeck.length;
+
+      store().selectRelicReward();
+      expect(store().gamePhase).toBe(GamePhase.CARD_REWARD);
+
+      store().skipCardReward();
+      expect(store().gamePhase).toBe(GamePhase.MAP);
+
+      store().skipRelicReward();
+      expect(store().persistentDeck).toHaveLength(deckSize);
+    });
+  });
+
+  describe("title screen and UI state", () => {
+    it("should only continue when there is a saved game", () => {
+      store().loadSavedGame();
+      expect(store().gamePhase).toBe(GamePhase.TITLE);
+
+      useGameStore.setState({ hasSavedGame: true });
+      store().loadSavedGame();
+      expect(store().gamePhase).toBe(GamePhase.MAP);
+
+      store().returnToTitle();
+      expect(store().gamePhase).toBe(GamePhase.TITLE);
+    });
+
+    it("should open and close the card modals and track the selection", () => {
+      const [card] = createTestCards(1);
+
+      store().setSelectedCard(card);
+      expect(store().selectedCard).toBe(card);
+
+      store().openCardRemovalModal();
+      expect(store().showCardRemovalModal).toBe(true);
+      expect(store().selectedCard).toBeNull();
+      store().closeCardRemovalModal();
+      expect(store().showCardRemovalModal).toBe(false);
+
+      store().openCardUpgradeModal();
+      expect(store().showCardUpgradeModal).toBe(true);
+      store().closeCardUpgradeModal();
+      expect(store().showCardUpgradeModal).toBe(false);
+    });
+
+    it("should shuffle the discard pile back into the draw pile", () => {
+      const cards = createTestCards(6);
+      useGameStore.setState({
+        drawPile: cards.slice(0, 2),
+        discardPile: cards.slice(2),
+      });
+
+      store().shuffleDiscardIntoDraw();
+
+      expect(store().drawPile).toHaveLength(6);
+      expect(store().discardPile).toEqual([]);
+    });
+  });
+
   describe("new run", () => {
     it("should reset run progress but keep debug mode", () => {
       useGameStore.setState((state) => ({
