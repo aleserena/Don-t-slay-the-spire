@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Headless simulator** (`src/sim/simulator.ts`, `npm run simulate`): a bot plays seeded runs through the real store and reports win rate, deaths by floor and node type, and per-card pick and win rates. A run that can neither end nor continue is reported as stuck
 - **Map generation**: path-based on a 7-column grid. Six routes from the first floor to the floor before the boss, stepping to the same or a neighbouring column and never crossing. Fixed floors (combat, treasure, rest, boss), weighted types elsewhere with floor limits, no repeated elite/rest/shop in a row, and a guaranteed shop and elite
 - **Encounters by floor** (`src/engine/encounters.ts`): easy, normal and hard tiers plus dedicated elite encounters; `createEncounter` uses them
 - **Victory screen** (`src/components/VictoryScreen.tsx`): run summary with floors climbed, combats won, health, gold, deck size, relics and seed. The store counts `combatsWon`, which is kept in the save
