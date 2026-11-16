@@ -84,7 +84,7 @@ const applyRelicEffect = (
       break;
 
     case EffectType.BLOCK:
-      newPlayer.block += amount;
+      newPlayer.block = Math.max(0, newPlayer.block + amount);
       break;
 
     case EffectType.GAIN_ENERGY:

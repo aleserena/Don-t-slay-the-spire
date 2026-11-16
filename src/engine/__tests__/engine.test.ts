@@ -268,10 +268,16 @@ describe("engine/combat", () => {
   it("should refill energy and reset block at the start of a turn", () => {
     const player = createTestPlayer({ energy: 0, block: 12 });
 
-    const result = startPlayerTurn(player, [], 1);
+    const result = startPlayerTurn(player, [], 2);
 
     expect(result.player).toMatchObject({ energy: 3, block: 0 });
     expect(result.cardsToDraw).toBe(0);
+  });
+
+  it("should keep combat-start block on the first turn", () => {
+    const player = createTestPlayer({ energy: 0, block: 12 });
+
+    expect(startPlayerTurn(player, [], 1).player.block).toBe(12);
   });
 
   it("should remove enemies killed by status effects and reset block", () => {

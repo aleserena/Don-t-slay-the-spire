@@ -1,4 +1,4 @@
-import { StatusType, Player, Enemy } from "../types/game";
+import { StatusType, StatusEffect, Player, Enemy } from "../types/game";
 import { debugConsole } from "./debugUtils";
 
 export const applyStatusEffect = (
@@ -62,59 +62,66 @@ export const getStatusEffectDuration = (
   }
 };
 
-export const processStatusEffects = (
-  entity: Player | Enemy,
-): Player | Enemy => {
-  const newEntity = { ...entity };
+type Combatant = Player | Enemy;
 
-  // Process each status effect
-  newEntity.statusEffects = newEntity.statusEffects
-    .map((effect) => {
-      const newEffect = { ...effect };
+const withoutExpired = (effects: StatusEffect[]): StatusEffect[] =>
+  effects.filter(
+    (effect) =>
+      effect.stacks > 0 &&
+      (effect.duration === undefined || effect.duration > 0),
+  );
 
-      switch (effect.type) {
-        case StatusType.POISON:
-          // Poison deals damage then reduces stacks
-          if ("health" in newEntity) {
-            newEntity.health = Math.max(0, newEntity.health - effect.stacks);
-          }
-          newEffect.stacks = Math.max(0, effect.stacks - 1);
-          break;
+/** Poison deals its stacks as damage (ignoring block), then loses a stack. */
+export const tickPoison = <T extends Combatant>(entity: T): T => {
+  const poison = entity.statusEffects.find(
+    (effect) => effect.type === StatusType.POISON,
+  );
+  if (!poison) return entity;
 
-        case StatusType.WEAK:
-        case StatusType.VULNERABLE:
-          // Reduce stacks by 1 at end of turn
-          newEffect.stacks = Math.max(0, effect.stacks - 1);
-          break;
-
-        case StatusType.STRENGTH:
-        case StatusType.DEXTERITY:
-          // These persist for the entire combat
-          break;
-
-        default:
-          // For other effects with duration, reduce duration
-          if (effect.duration !== undefined) {
-            newEffect.duration = Math.max(0, effect.duration - 1);
-          }
-          break;
-      }
-
-      return newEffect;
-    })
-    .filter((effect) => {
-      // Remove effects with 0 stacks or 0 duration
-      if (effect.stacks !== undefined && effect.stacks <= 0) {
-        return false;
-      }
-      if (effect.duration !== undefined && effect.duration <= 0) {
-        return false;
-      }
-      return true;
-    });
-
-  return newEntity;
+  return {
+    ...entity,
+    health: Math.max(0, entity.health - poison.stacks),
+    statusEffects: withoutExpired(
+      entity.statusEffects.map((effect) =>
+        effect.type === StatusType.POISON
+          ? { ...effect, stacks: effect.stacks - 1 }
+          : effect,
+      ),
+    ),
+  };
 };
+
+const isTimedDebuff = (type: StatusType): boolean =>
+  type === StatusType.WEAK || type === StatusType.VULNERABLE;
+
+/**
+ * Weak and Vulnerable lose a stack, and effects with a duration lose a turn.
+ * `shouldTick` narrows this to some status types, e.g. the ones an entity
+ * already had before the turn began.
+ */
+export const tickDebuffs = <T extends Combatant>(
+  entity: T,
+  shouldTick: (type: StatusType) => boolean = () => true,
+): T => ({
+  ...entity,
+  statusEffects: withoutExpired(
+    entity.statusEffects.map((effect) => {
+      if (effect.type === StatusType.POISON || !shouldTick(effect.type)) {
+        return effect;
+      }
+      if (isTimedDebuff(effect.type)) {
+        return { ...effect, stacks: effect.stacks - 1 };
+      }
+      return effect.duration !== undefined
+        ? { ...effect, duration: effect.duration - 1 }
+        : effect;
+    }),
+  ),
+});
+
+/** A full status tick: poison, then timed debuffs. */
+export const processStatusEffects = (entity: Combatant): Combatant =>
+  tickDebuffs(tickPoison(entity));
 
 export const calculateDamage = (
   baseDamage: number,
@@ -166,6 +173,14 @@ export const calculateDamage = (
     }
   }
 
+  // Flat bonus for the first attack of a combat (Akabeko), added before
+  // the percentage modifiers
+  if (isFirstAttack && "relics" in attacker) {
+    if (attacker.relics?.some((r) => r && r.id === "akabeko")) {
+      damage += 8;
+    }
+  }
+
   // Apply weak debuff (reduces damage by 25%)
   const weak = attacker.statusEffects.find((e) => e.type === StatusType.WEAK);
   if (weak) {
@@ -191,25 +206,6 @@ export const calculateDamage = (
       );
     } else {
       damage = Math.floor(damage * 1.5);
-    }
-  }
-
-  // Apply relic effects if attacker is a player
-  if ("relics" in attacker) {
-    const player = attacker as Player;
-
-    if (!player.relics) {
-      debugConsole.error(
-        "🚨 DAMAGE CALCULATION ERROR: Player missing relics array",
-      );
-    } else {
-      // Apply Akabeko effect (first attack each combat deals 8 additional damage)
-      if (isFirstAttack) {
-        const hasAkabeko = player.relics.some((r) => r && r.id === "akabeko");
-        if (hasAkabeko) {
-          damage += 8;
-        }
-      }
     }
   }
 

@@ -19,7 +19,7 @@ export const createMapSlice: SliceCreator<MapActions> = (set, get) => ({
     const node = state.map.nodes.find((n) => n.id === nodeId);
     if (!node || !node.available || node.completed) return;
 
-    set({ map: completeNode(state.map, nodeId) });
+    set({ map: completeNode(state.map, nodeId), currentFloor: node.y + 1 });
 
     if (isCombatNode(node.type)) {
       get().startCombat(createEncounter(node.type, node.y));

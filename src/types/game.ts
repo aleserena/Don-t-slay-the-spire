@@ -246,6 +246,8 @@ export enum EffectType {
   ADD_CARD_TO_DISCARD = "add_card_to_discard",
   /** Upgrade a card in the deck */
   UPGRADE_CARD = "upgrade_card",
+  /** Relic effect: lose at most `value` block at turn start instead of all */
+  LIMIT_BLOCK_LOSS = "limit_block_loss",
 }
 
 /**

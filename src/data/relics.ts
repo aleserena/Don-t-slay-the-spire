@@ -173,8 +173,8 @@ export const getAllRelics = (): Relic[] => {
       effects: [
         {
           trigger: RelicTrigger.TURN_START,
-          effect: EffectType.BLOCK,
-          value: -15,
+          effect: EffectType.LIMIT_BLOCK_LOSS,
+          value: 15,
         },
       ],
     },

@@ -10,7 +10,7 @@ describe("Power Card Mechanics", () => {
   });
 
   describe("Power Card Attachment", () => {
-    it("should attach power cards to player and discard them normally", () => {
+    it("should attach power cards to player and remove them from play", () => {
       const store = useGameStore.getState();
 
       // Start combat
@@ -49,11 +49,11 @@ describe("Power Card Mechanics", () => {
 
       const finalState = useGameStore.getState();
 
-      // Power card should be in discard pile (discarded normally)
-      expect(finalState.discardPile.length).toBe(initialDiscardSize + 1);
+      // Power card leaves play: it is not discarded, so it cannot be redrawn
+      expect(finalState.discardPile.length).toBe(initialDiscardSize);
       expect(
         finalState.discardPile.find((c) => c.id === "inflame_test"),
-      ).toBeDefined();
+      ).toBeUndefined();
 
       // Power card should be attached to player
       expect(finalState.player.powerCards.length).toBe(
@@ -118,12 +118,12 @@ describe("Power Card Mechanics", () => {
       // Should allow multiple copies of the same power card
       expect(afterSecond).toBe(2);
 
-      // Both cards should be in discard pile
+      // Neither card goes to the discard pile
       const finalState = useGameStore.getState();
       const discardedInflameCards = finalState.discardPile.filter(
         (c) => c.baseId === "inflame",
       );
-      expect(discardedInflameCards.length).toBe(2);
+      expect(discardedInflameCards.length).toBe(0);
     });
 
     it("should stack effects when multiple copies of the same power card are played", () => {
@@ -347,10 +347,12 @@ describe("Power Card Mechanics", () => {
       expect(stateAfterPowerCard.player.powerCards.length).toBe(1);
       expect(stateAfterPowerCard.player.powerCards[0].id).toBe("inflame");
 
-      // Kill all enemies to end combat
+      // Leave one enemy the Strike below will kill
       useGameStore.setState((state) => ({
         ...state,
-        enemies: [],
+        enemies: state.enemies
+          .slice(0, 1)
+          .map((enemy) => ({ ...enemy, health: 1, block: 0 })),
       }));
 
       // Play any card to trigger combat end check
@@ -429,7 +431,9 @@ describe("Power Card Mechanics", () => {
         // End combat by killing all enemies
         useGameStore.setState((state) => ({
           ...state,
-          enemies: [],
+          enemies: state.enemies
+            .slice(0, 1)
+            .map((enemy) => ({ ...enemy, health: 1, block: 0 })),
         }));
 
         // Trigger combat end
@@ -502,15 +506,20 @@ describe("Power Card Mechanics", () => {
       if (drawnInflame) {
         store.playCard(drawnInflame.id);
 
-        // Verify power card is attached and discarded
+        // Verify power card is attached and has left play
         const afterPlay = useGameStore.getState();
         expect(afterPlay.player.powerCards.length).toBe(1);
         expect(
           afterPlay.discardPile.find((c) => c.baseId === "inflame"),
-        ).toBeDefined();
+        ).toBeUndefined();
 
         // End combat
-        useGameStore.setState((state) => ({ ...state, enemies: [] }));
+        useGameStore.setState((state) => ({
+          ...state,
+          enemies: state.enemies
+            .slice(0, 1)
+            .map((enemy) => ({ ...enemy, health: 1, block: 0 })),
+        }));
 
         const strikeCard = {
           id: "strike_end",

@@ -5,6 +5,7 @@
 
 import {
   Card,
+  EffectType,
   Enemy,
   GamePhase,
   IntentType,
@@ -22,7 +23,7 @@ import { selectEnemyCard } from "../data/monsterCards";
 import { processMonsterCardEffects } from "../utils/monsterCardEffects";
 import { processPowerCardEffects } from "../utils/powerCardEffects";
 import { processRelicEffects, RelicContext } from "../utils/relicEffects";
-import { processStatusEffects } from "../utils/statusEffects";
+import { tickPoison } from "../utils/statusEffects";
 import { shuffle } from "../utils/random";
 import { ELITE_HEALTH_MULTIPLIER } from "./constants";
 import { withoutTemporaryCards } from "./deck";
@@ -61,7 +62,10 @@ export const createCombatState = (
 ) => ({
   gamePhase: GamePhase.COMBAT,
   currentTurn: TurnPhase.PLAYER_TURN,
-  enemies,
+  // Every enemy shows what it will do on its first turn
+  enemies: enemies.map((enemy) =>
+    enemy.currentCard ? enemy : chooseNextCard(enemy),
+  ),
   hand: [] as Card[],
   drawPile: shuffle(withoutTemporaryCards(persistentDeck)),
   discardPile: [] as Card[],
@@ -89,6 +93,8 @@ export const createVictoryState = (
   defeatedEnemies: Enemy[],
 ) => {
   const combatReward = createCombatReward(player, defeatedEnemies);
+  // Defeating a boss wins the run
+  const isRunWon = defeatedEnemies.some((enemy) => enemy.isBoss);
 
   return {
     hand: [] as Card[],
@@ -106,13 +112,34 @@ export const createVictoryState = (
     },
     enemies: [] as Enemy[],
     currentTurn: TurnPhase.COMBAT_END,
-    gamePhase: GamePhase.CARD_REWARD,
+    gamePhase: isRunWon ? GamePhase.VICTORY : GamePhase.CARD_REWARD,
     combatReward,
     selectedCard: null,
     playerTurnThisCombat: 0,
     stepInProgress: false,
     stepType: undefined,
   };
+};
+
+/**
+ * Block left at the start of a player turn. Block gained before the first
+ * turn (combat-start effects) is kept; afterwards all block is lost, or at
+ * most the smallest block-loss limit among the player's relics.
+ */
+const getBlockAtTurnStart = (player: Player, turn: number): number => {
+  if (turn <= 1) return Math.max(0, player.block);
+
+  const limits = player.relics
+    .flatMap((relic) => relic.effects)
+    .filter(
+      (effect) =>
+        effect.trigger === RelicTrigger.TURN_START &&
+        effect.effect === EffectType.LIMIT_BLOCK_LOSS,
+    )
+    .map((effect) => effect.value ?? 0);
+  if (limits.length === 0) return 0;
+
+  return Math.max(0, player.block - Math.min(...limits));
 };
 
 /**
@@ -124,7 +151,11 @@ export const startPlayerTurn = (
   enemies: Enemy[],
   turn: number,
 ): { player: Player; enemies: Enemy[]; cardsToDraw: number } => {
-  const refreshed = { ...player, energy: player.maxEnergy, block: 0 };
+  const refreshed = {
+    ...player,
+    energy: player.maxEnergy,
+    block: getBlockAtTurnStart(player, turn),
+  };
 
   const powerResult = processPowerCardEffects(
     PowerTrigger.TURN_START,
@@ -174,12 +205,13 @@ export const chooseNextCard = (enemy: Enemy): Enemy => {
 };
 
 /**
- * Start of the enemy turn: status effects tick (poison damage, etc.), dead
- * enemies are removed and the survivors lose their block.
+ * Start of the enemy turn: poison deals its damage, dead enemies are removed
+ * and the survivors lose their block. Weak and Vulnerable tick later, after
+ * each enemy has acted.
  */
 export const tickEnemies = (enemies: Enemy[]): Enemy[] =>
   enemies
-    .map((enemy) => processStatusEffects(enemy) as Enemy)
+    .map((enemy) => tickPoison(enemy))
     .filter((enemy) => enemy.health > 0)
     .map((enemy) => ({ ...enemy, block: 0 }));
 

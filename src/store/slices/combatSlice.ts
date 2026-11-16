@@ -1,7 +1,6 @@
 import {
   CardType,
   GamePhase,
-  Player,
   PowerTrigger,
   RelicTrigger,
   TurnPhase,
@@ -19,7 +18,8 @@ import { HAND_SIZE } from "../../engine/constants";
 import { drawCards } from "../../engine/deck";
 import { processPowerCardEffects } from "../../utils/powerCardEffects";
 import { processRelicEffects } from "../../utils/relicEffects";
-import { processStatusEffects } from "../../utils/statusEffects";
+import { cardNeedsTarget } from "../../utils/cardUtils";
+import { tickDebuffs, tickPoison } from "../../utils/statusEffects";
 import { shuffle } from "../../utils/random";
 import { CombatActions, SliceCreator } from "../types";
 
@@ -81,12 +81,20 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
     const energyCost = getEnergyCost(card, state.player);
     if (state.player.energy < energyCost) return;
 
+    // A card aimed at a single enemy needs a living target. With only one
+    // enemy there is no choice to make, so it is targeted automatically.
+    let target = targetId;
+    if (cardNeedsTarget(card)) {
+      if (!target && state.enemies.length === 1) target = state.enemies[0].id;
+      if (!state.enemies.some((enemy) => enemy.id === target)) return;
+    }
+
     const isFirstAttack =
       state.firstAttackThisCombat && card.type === CardType.ATTACK;
 
     const result = resolveCardPlay({
       card,
-      targetId,
+      targetId: target,
       energyCost,
       player: { ...state.player, energy: state.player.energy - energyCost },
       enemies: state.enemies,
@@ -104,8 +112,13 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
 
     set({
       hand: result.hand,
-      // Played cards (including power cards) go to the discard pile
-      discardPile: [...state.discardPile, card, ...result.createdCards],
+      // Played cards go to the discard pile, except power cards, which
+      // leave play for the rest of the combat
+      discardPile: [
+        ...state.discardPile,
+        ...(card.type === CardType.POWER ? [] : [card]),
+        ...result.createdCards,
+      ],
       player: result.player,
       enemies: survivors,
       firstAttackThisCombat: isFirstAttack
@@ -150,8 +163,13 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
    */
   processEnemyTurn: async () => {
     const enemiesAtTurnStart = get().enemies;
-    let player = processStatusEffects(get().player) as Player;
+    let player = tickPoison(get().player);
     let enemies = tickEnemies(enemiesAtTurnStart);
+    // Debuffs the player receives during this enemy turn must last until
+    // the next one, so only the ones they already have tick at its end
+    const debuffsAtTurnStart = new Set(
+      player.statusEffects.map((effect) => effect.type),
+    );
 
     const isPlayerDead = () => {
       if (player.health > 0) return false;
@@ -207,8 +225,11 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
       if (STEP_DELAY_MS > 0 && (await combatEndedWhileWaiting())) return;
       showStep("after");
 
-      // Surviving enemies pick their card for next turn
-      enemies = enemies.map((e) => (e.id === enemyId ? chooseNextCard(e) : e));
+      // Surviving enemies lose a stack of their timed debuffs now that they
+      // have acted, and pick their card for next turn
+      enemies = enemies.map((e) =>
+        e.id === enemyId ? chooseNextCard(tickDebuffs(e)) : e,
+      );
       set({ enemies });
     }
 
@@ -217,6 +238,7 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => ({
       return;
     }
 
+    player = tickDebuffs(player, (type) => debuffsAtTurnStart.has(type));
     set({ ...NO_STEP, player, enemies, selectedCard: null });
     get().startPlayerTurn();
   },
