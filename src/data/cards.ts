@@ -7,6 +7,7 @@ import {
   StatusType,
 } from "../types/game";
 import { v4 as uuidv4 } from "uuid";
+import { pickWeighted, Rng } from "../utils/random";
 
 export const createInitialDeck = (): Card[] => {
   const cards: Card[] = [];
@@ -808,50 +809,37 @@ export const getRewardCards = (): Card[] => {
   return getAllCards().filter((card) => card.rarity !== CardRarity.BASE);
 };
 
+/** Relative chance of each rarity being offered as a reward. */
+const REWARD_RARITY_WEIGHTS: Record<CardRarity, number> = {
+  [CardRarity.BASE]: 0, // Base cards never appear as rewards
+  [CardRarity.COMMON]: 70,
+  [CardRarity.UNCOMMON]: 25,
+  [CardRarity.RARE]: 5,
+};
+
 /**
- * Generates a random selection of cards for rewards with proper rarity weighting.
+ * Generates a random selection of distinct cards for rewards, weighted by
+ * rarity.
  *
  * @param count - Number of cards to select (default: 3)
+ * @param rng - Random source (default: Math.random)
  * @returns Array of randomly selected cards for rewards
  */
-export const generateCardRewards = (count: number = 3): Card[] => {
-  const rewardCards = getRewardCards();
-
-  // Rarity weights for selection (higher = more likely)
-  const rarityWeights: Record<CardRarity, number> = {
-    [CardRarity.BASE]: 0, // Base cards never appear as rewards
-    [CardRarity.COMMON]: 70, // 70% chance
-    [CardRarity.UNCOMMON]: 25, // 25% chance
-    [CardRarity.RARE]: 5, // 5% chance
-  };
-
+export const generateCardRewards = (
+  count: number = 3,
+  rng: Rng = Math.random,
+): Card[] => {
+  const availableCards = getRewardCards();
   const selectedCards: Card[] = [];
-  const availableCards = [...rewardCards];
 
-  for (let i = 0; i < count && availableCards.length > 0; i++) {
-    // Calculate total weight for available cards
-    const totalWeight = availableCards.reduce((sum, card) => {
-      return sum + (rarityWeights[card.rarity] || 0);
-    }, 0);
-
-    // Generate random number
-    const random = Math.random() * totalWeight;
-
-    // Select card based on weighted random
-    let currentWeight = 0;
-    let selectedIndex = 0;
-
-    for (let j = 0; j < availableCards.length; j++) {
-      currentWeight += rarityWeights[availableCards[j].rarity] || 0;
-      if (random <= currentWeight) {
-        selectedIndex = j;
-        break;
-      }
-    }
-
-    // Add selected card and remove from available
-    selectedCards.push(availableCards[selectedIndex]);
-    availableCards.splice(selectedIndex, 1);
+  while (selectedCards.length < count && availableCards.length > 0) {
+    const card = pickWeighted(
+      availableCards,
+      (candidate) => REWARD_RARITY_WEIGHTS[candidate.rarity],
+      rng,
+    )!;
+    selectedCards.push(card);
+    availableCards.splice(availableCards.indexOf(card), 1);
   }
 
   return selectedCards;

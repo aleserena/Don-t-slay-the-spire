@@ -1,37 +1,34 @@
-import { useGameStore } from "../store/gameStore";
+/**
+ * Debug logging that is silent unless debug mode is on.
+ *
+ * The flag lives here rather than being read from the game store so that
+ * engine and utility modules can log without importing the store (which
+ * imports them). The store keeps the flag in sync via `setDebugMode`.
+ */
 
-// Debug console wrapper that respects debug mode
-export const debugConsole = {
-  log: (...args: unknown[]) => {
-    const { debugMode } = useGameStore.getState();
-    if (debugMode) {
-      console.log(...args);
-    }
-  },
+let debugEnabled = false;
 
-  error: (...args: unknown[]) => {
-    const { debugMode } = useGameStore.getState();
-    if (debugMode) {
-      console.error(...args);
-    }
-  },
-
-  warn: (...args: unknown[]) => {
-    const { debugMode } = useGameStore.getState();
-    if (debugMode) {
-      console.warn(...args);
-    }
-  },
-
-  info: (...args: unknown[]) => {
-    const { debugMode } = useGameStore.getState();
-    if (debugMode) {
-      console.info(...args);
-    }
-  },
+/** Turns debug logging on or off. Called by the game store. */
+export const setDebugMode = (enabled: boolean): void => {
+  debugEnabled = enabled;
 };
 
-// Alternative approach for cases where we need to check debug mode inline
-export const isDebugMode = (): boolean => {
-  return useGameStore.getState().debugMode;
+export const isDebugMode = (): boolean => debugEnabled;
+
+type ConsoleMethod = "log" | "error" | "warn" | "info";
+
+const createLogger =
+  (method: ConsoleMethod) =>
+  (...args: unknown[]): void => {
+    if (debugEnabled) {
+      console[method](...args);
+    }
+  };
+
+/** Console wrapper that only prints while debug mode is on. */
+export const debugConsole = {
+  log: createLogger("log"),
+  error: createLogger("error"),
+  warn: createLogger("warn"),
+  info: createLogger("info"),
 };

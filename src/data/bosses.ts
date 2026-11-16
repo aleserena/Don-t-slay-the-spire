@@ -1,5 +1,7 @@
 import { Enemy, IntentType } from "../types/game";
 import { getEnemyDeck } from "./monsterCards";
+import { createInstanceId } from "../utils/ids";
+import { pickRandom } from "../utils/random";
 
 export const createSlimeBoss = (): Enemy => ({
   id: "slime_boss",
@@ -101,24 +103,24 @@ export const getAllBosses = (): Enemy[] => [
 
 export const getRandomBoss = (): Enemy => {
   const bosses = getAllBosses();
-  return bosses[Math.floor(Math.random() * bosses.length)];
+  return pickRandom(bosses)!;
 };
 
 export const getBossForFloor = (floor: number): Enemy => {
   if (floor < 5) {
     // Act 1 bosses
     const act1Bosses = [createSlimeBoss(), createGuardian(), createHexaghost()];
-    return act1Bosses[Math.floor(Math.random() * act1Bosses.length)];
+    return pickRandom(act1Bosses)!;
   } else if (floor < 10) {
     // Act 2 bosses
     const act2Bosses = [createChamp(), createCollector(), createCityBoss()];
-    return act2Bosses[Math.floor(Math.random() * act2Bosses.length)];
+    return pickRandom(act2Bosses)!;
   } else {
     // Act 3 bosses (for now, reuse act 2 bosses with higher stats)
     const boss = getRandomBoss();
     return {
       ...boss,
-      id: `${boss.id}_act3_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      id: createInstanceId(boss.id, "act3"),
       health: Math.floor(boss.health * 1.5),
       maxHealth: Math.floor(boss.maxHealth * 1.5),
       intent: {

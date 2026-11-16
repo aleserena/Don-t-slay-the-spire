@@ -52,9 +52,9 @@ describe("Unique Enemy IDs", () => {
         expect(enemy.intent).toBeDefined();
         expect(enemy.statusEffects).toBeDefined();
 
-        // Verify ID format (should contain timestamp and index)
+        // Verify ID format: <type>_<number>_<unique suffix>
         const idParts = enemy.id.split("_");
-        expect(idParts.length).toBeGreaterThanOrEqual(4); // type_number_timestamp_index
+        expect(idParts.length).toBeGreaterThanOrEqual(3);
       });
     });
 

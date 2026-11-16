@@ -104,7 +104,10 @@ describe("Bug Fixes", () => {
       // Player progression should be preserved
       expect(storeAfterCombat.player.gold).toBe(goldBefore);
       expect(storeAfterCombat.player.relics).toEqual(relicsBefore);
-      expect(storeAfterCombat.player.health).toBe(healthBefore);
+      // Combat-start relics may heal, but starting a combat never costs health
+      expect(storeAfterCombat.player.health).toBeGreaterThanOrEqual(
+        healthBefore,
+      );
 
       // But combat state should be reset
       expect(storeAfterCombat.player.block).toBe(0);
@@ -1025,6 +1028,7 @@ describe("Bug Fixes", () => {
                   trigger: RelicTrigger.TURN_START,
                   effect: EffectType.BLOCK,
                   value: 14,
+                  onTurn: 2,
                 },
               ],
             },

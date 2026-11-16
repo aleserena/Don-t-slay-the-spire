@@ -29,6 +29,7 @@ describe("StatusEffects", () => {
     block: 0,
     intent: { type: IntentType.ATTACK, value: 10 },
     statusEffects: [],
+    deck: [],
   });
 
   describe("applyStatusEffect", () => {

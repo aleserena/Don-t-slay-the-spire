@@ -7,6 +7,8 @@ import {
   getEnhancedCardDescription,
   getActualCardDamage,
 } from "../utils/cardUtils";
+import { getEnergyCost } from "../engine/cardPlay";
+import { getCardCostLabel, getCardTypeGradient } from "../utils/cardDisplay";
 
 interface HandAreaProps {
   selectedCardId: string | null;
@@ -40,15 +42,8 @@ export const HandArea: React.FC<HandAreaProps> = ({
     };
   }, []);
 
-  const canPlayCard = (card: Card): boolean => {
-    // Whirlwind can always be played regardless of energy (even with 0 energy)
-    if (card.baseId === "whirlwind") {
-      return true;
-    }
-    // For other cards, check normal cost
-    const cardCost = typeof card.cost === "number" ? card.cost : 0;
-    return player.energy >= cardCost;
-  };
+  const canPlayCard = (card: Card): boolean =>
+    player.energy >= getEnergyCost(card, player);
 
   const getCardDamage = (card: Card): number => {
     let baseDamage = getCardDisplayDamage(card, player, enemies);
@@ -62,19 +57,6 @@ export const HandArea: React.FC<HandAreaProps> = ({
     }
 
     return baseDamage;
-  };
-
-  const getCardTypeColor = (type: string): string => {
-    switch (type) {
-      case "attack":
-        return "#ff6b6b, #ee5a52";
-      case "skill":
-        return "#4ecdc4, #44a08d";
-      case "power":
-        return "#ffe66d, #ffcc02";
-      default:
-        return "#95a5a6, #7f8c8d";
-    }
   };
 
   const handleCardClick = (card: Card) => {
@@ -148,7 +130,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
             style={{
               width: "120px",
               height: "160px",
-              background: `linear-gradient(135deg, ${getCardTypeColor(card.type)})`,
+              background: getCardTypeGradient(card.type),
               border: isSelected
                 ? "3px solid #ffd700"
                 : isConfirming
@@ -209,7 +191,7 @@ export const HandArea: React.FC<HandAreaProps> = ({
                 zIndex: 20,
               }}
             >
-              {card.baseId === "whirlwind" ? "X" : card.cost}
+              {getCardCostLabel(card)}
             </div>
 
             {/* Confirmation Indicator */}

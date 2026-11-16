@@ -1,0 +1,11 @@
+# Store text files with LF in the repository; let Git pick the working-tree
+# line ending per platform.
+* text=auto
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

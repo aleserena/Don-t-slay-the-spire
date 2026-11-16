@@ -21,8 +21,6 @@ export const GameBoard: React.FC = () => {
     currentTurn,
     endTurn,
     toggleDebugMode,
-    stepInProgress,
-    resolveStep,
   } = useGameStore();
   const [previousHandSize, setPreviousHandSize] = useState(hand.length);
   const [previousDiscardSize, setPreviousDiscardSize] = useState(
@@ -47,19 +45,6 @@ export const GameBoard: React.FC = () => {
     previousDrawSize,
   ]);
 
-  // Handle animation steps automatically
-  useEffect(() => {
-    if (stepInProgress) {
-      // Auto-resolve after 300ms to prevent freezing
-      // In a real implementation, this would wait for actual animations
-      const timer = setTimeout(() => {
-        resolveStep();
-      }, 300);
-
-      return () => clearTimeout(timer);
-    }
-  }, [stepInProgress, resolveStep]);
-
   // Handle hand size changes for card drawing animation
   useEffect(() => {
     if (hand.length > previousHandSize) {
@@ -76,7 +61,6 @@ export const GameBoard: React.FC = () => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === "d") {
         event.preventDefault();
-        console.log("[DEBUG] Debug mode toggle key pressed");
         toggleDebugMode();
       }
     };

@@ -472,7 +472,6 @@ export interface Player {
  * @property {boolean} [firstAttackThisCombat] - Whether this is the first attack in combat
  * @property {number} [playerTurnThisCombat] - Track which player turn it is in combat
  * @property {boolean} stepInProgress - Whether a step is in progress
- * @property {() => void} [_resolveStep] - Optional resolve function for the step
  * @property {stepType?: 'before' | 'attack' | 'after'} stepType - The type of step
  * @property {Card[]} persistentDeck - Cards in the player's persistent deck
  *
@@ -489,9 +488,6 @@ export interface Player {
  *   gamePhase: GamePhase.COMBAT,
  *   playerTurnThisCombat: 1,
  *   stepInProgress: true,
- *   _resolveStep: () => {
- *     // Implementation of _resolveStep function
- *   },
  *   stepType: 'before',
  *   persistentDeck: [/* persistent deck cards *\/]
  * };
@@ -513,7 +509,6 @@ export interface GameState {
   firstAttackThisCombat?: boolean;
   playerTurnThisCombat?: number; // Track which player turn it is in combat
   stepInProgress: boolean;
-  _resolveStep?: (value?: unknown) => void;
   stepType?: "before" | "attack" | "after";
   persistentDeck: Card[];
 }
@@ -657,6 +652,7 @@ export interface RelicEffect {
   value?: number;
   statusType?: StatusType;
   target?: string;
+  onTurn?: number;
 }
 
 /**

@@ -42,7 +42,6 @@ npm run preview      # Preview production build
 
 # Testing
 npm test             # Run all tests
-npm run test:watch   # Run tests in watch mode
 npm run test:coverage # Run tests with coverage report
 
 # Code Quality
@@ -51,7 +50,8 @@ npm run lint:fix     # Fix ESLint issues
 npm run format       # Format code with Prettier
 npm run format:check # Check code formatting
 npm run type-check   # Run TypeScript type checking
-npm run validate     # Run all quality checks
+npm run validate     # Run all quality checks (lint, format, types, tests)
+npm run fix          # Auto-fix lint and formatting issues
 
 # Documentation
 npm run docs         # Generate documentation
@@ -69,26 +69,43 @@ npm run analyze      # Analyze bundle size
 src/
 ├── components/          # React UI components
 │   ├── GameBoard.tsx    # Main game interface
-│   ├── PlayerArea.tsx   # Player stats and hand
-│   ├── EnemyArea.tsx    # Enemy display and intents
-│   ├── MapView.tsx      # Map navigation
+│   ├── CardStatBadges.tsx # Damage/block badges shared by every card view
 │   └── ...              # Other UI components
+├── engine/              # Game rules as pure functions (no store, no React)
+│   ├── cardPlay.ts      # Resolving a played card
+│   ├── combat.ts        # Combat setup, turn start, enemy turn, victory
+│   ├── deck.ts          # Drawing, card instances, temporary cards
+│   ├── events.ts        # Event outcomes
+│   ├── rewards.ts       # Combat rewards, treasure, shop inventory
+│   └── constants.ts     # Tunable numbers (hand size, prices, ...)
 ├── store/
-│   └── gameStore.ts     # Main game state management (Zustand)
-├── data/                # Game data definitions
-│   ├── cards.ts         # Player card definitions
-│   ├── enemies.ts       # Enemy definitions
-│   ├── relics.ts        # Relic definitions
-│   └── ...              # Other game data
-├── types/
-│   ├── game.ts          # Core game type definitions
-│   └── map.ts           # Map-related types
-├── utils/               # Game logic utilities
-│   ├── statusEffects.ts # Status effect processing
-│   ├── cardUtils.ts     # Card-related utilities
-│   └── ...              # Other utilities
-└── __tests__/           # Test files
+│   ├── gameStore.ts     # Zustand store: composes the slices
+│   ├── initialState.ts  # New-run state
+│   ├── types.ts         # Store state and action types
+│   └── slices/          # Actions grouped by area (run, map, combat,
+│                        # rewards, shop); they sequence engine functions
+├── data/                # Game content: cards, enemies, relics, events
+├── types/               # Shared type definitions
+├── utils/               # Shared helpers
+│   ├── random.ts        # shuffle, pickRandom, pickWeighted, seeded RNG
+│   ├── ids.ts           # Unique instance ids
+│   ├── cardDisplay.ts   # How a card is presented, derived from its data
+│   ├── debugUtils.ts    # Logging that respects debug mode
+│   └── ...              # Status, relic and power card effects, map generation
+└── test/setup.ts        # Test setup and shared test factories
 ```
+
+**Where new code goes**
+
+- A game rule → a pure function in `src/engine`, with a unit test.
+- Something the player does → an action in the matching store slice that
+  calls the engine.
+- New content → `src/data`. The engine and the UI must not check for
+  specific card, relic or enemy ids; describe the behavior in the data
+  (effects, triggers, `onTurn`) instead.
+- Randomness → `src/utils/random.ts`, never `Math.random` sorting or
+  `Date.now()` ids.
+- Logging → `debugConsole` (ESLint forbids `console` elsewhere).
 
 ### Key Technologies
 
@@ -101,7 +118,7 @@ src/
 
 ### State Management
 
-The game uses **Zustand** for state management with a single store (`gameStore.ts`) that contains:
+The game uses **Zustand** for state management with a single store (`gameStore.ts`), built from slices, that contains:
 
 - **Game State**: Player, enemies, deck, hand, current phase
 - **UI State**: Modals, card selection, debug mode
@@ -166,9 +183,9 @@ npm run test:watch
 
 ### Automated Quality Checks
 The project includes automated quality checks that run:
-- **On every commit** (pre-commit hooks)
-- **On every push** (GitHub Actions CI)
-- **Before merging** (PR checks)
+- **On every commit** (the pre-commit hook runs `npm run validate`)
+- **On every push to `master` and on every pull request** (GitHub Actions CI:
+  lint, format check, type check, tests with coverage floors, build)
 
 These checks ensure:
 - ✅ All tests pass

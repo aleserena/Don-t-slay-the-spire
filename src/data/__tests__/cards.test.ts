@@ -6,6 +6,7 @@ import {
   generateCardRewards,
 } from "../cards";
 import { CardType, CardRarity, Card } from "../../types/game";
+import { createSeededRng } from "../../utils/random";
 
 describe("Cards Data", () => {
   describe("createInitialDeck", () => {
@@ -300,10 +301,12 @@ describe("Cards Data", () => {
     });
 
     it("should respect rarity weighting", () => {
-      // Generate many rewards to test weighting
+      // Generate many rewards to test weighting. A seeded random source
+      // keeps the test deterministic.
+      const rng = createSeededRng(12345);
       const allRewards: Card[] = [];
-      for (let i = 0; i < 100; i++) {
-        allRewards.push(...generateCardRewards(1));
+      for (let i = 0; i < 1000; i++) {
+        allRewards.push(...generateCardRewards(1, rng));
       }
 
       const commonCount = allRewards.filter(

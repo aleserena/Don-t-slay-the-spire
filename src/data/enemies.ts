@@ -1,5 +1,7 @@
 import { Enemy, IntentType, MonsterCardType } from "../types/game";
 import { getEnemyDeck, selectEnemyCard } from "./monsterCards";
+import { createInstanceId } from "../utils/ids";
+import { pickRandom } from "../utils/random";
 
 const convertCardTypeToIntentType = (cardType: MonsterCardType): IntentType => {
   switch (cardType) {
@@ -348,9 +350,7 @@ export const getRandomEnemy = (): Enemy => {
     createSneakyGremlin,
   ];
 
-  const randomEnemyCreator =
-    enemies[Math.floor(Math.random() * enemies.length)];
-  return randomEnemyCreator();
+  return pickRandom(enemies)!();
 };
 
 export const getRandomEnemyEncounter = (): Enemy[] => {
@@ -366,16 +366,11 @@ export const getRandomEnemyEncounter = (): Enemy[] => {
     () => [createSentryBot(), createSentryBot()], // Twin sentries
   ];
 
-  const randomEncounter =
-    encounterTypes[Math.floor(Math.random() * encounterTypes.length)];
-  const enemies = randomEncounter();
+  const enemies = pickRandom(encounterTypes)!();
 
-  // Ensure unique IDs by adding timestamp, random number, and index
-  const timestamp = Date.now();
-  const randomSuffix = Math.floor(Math.random() * 10000);
-
-  return enemies.map((enemy, index) => ({
+  // Two enemies of the same kind must not share an id
+  return enemies.map((enemy) => ({
     ...enemy,
-    id: `${enemy.id.split("_")[0]}_${enemy.id.split("_")[1]}_${timestamp}_${randomSuffix}_${index}`,
+    id: createInstanceId(enemy.id.split("_").slice(0, 2).join("_")),
   }));
 };

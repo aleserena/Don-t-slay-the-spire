@@ -5,6 +5,7 @@ import {
   EffectType,
   StatusType,
 } from "../types/game";
+import { pickRandom } from "../utils/random";
 
 export const getAllRelics = (): Relic[] => {
   return [
@@ -144,6 +145,7 @@ export const getAllRelics = (): Relic[] => {
           trigger: RelicTrigger.TURN_START,
           effect: EffectType.BLOCK,
           value: 14,
+          onTurn: 2,
         },
       ],
     },
@@ -234,7 +236,7 @@ export const getRandomRelic = (rarity?: RelicRarity): Relic => {
   const filteredRelics = rarity
     ? relics.filter((r) => r.rarity === rarity)
     : relics;
-  return filteredRelics[Math.floor(Math.random() * filteredRelics.length)];
+  return pickRandom(filteredRelics)!;
 };
 
 export const getStarterRelic = (): Relic => {
