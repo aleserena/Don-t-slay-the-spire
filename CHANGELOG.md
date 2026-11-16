@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **Combat start**: Combats entered from the map now shuffle the deck, apply turn-start relic and power effects on turn 1, and deal the first hand immediately instead of after a timer
+- **Events**: Upgrade-card and remove-card outcomes are implemented; losing the last health in an event ends the run
+- **Unique ids**: Card, enemy and enemy-card instances use UUID-based ids instead of timestamps, which could collide
+- **Shuffling**: Replaced the biased random-sort shuffle with Fisher-Yates
+- **Victory cleanup**: All status effects are cleared when a combat is won
+- **Relic offers**: Rewards, treasure and shops skip relics the player already owns; shops always stock two relics
+- **Enemy turn**: An enemy turn in progress stops if the combat goes away (e.g. new run)
+- **Flaky test**: The rarity weighting test uses a seeded random source
+
+### Changed
+- **Store**: `gameStore.ts` (1,950 lines) is split into slices (`run`, `map`, `combat`, `reward`, `shop`) that sequence pure rule functions in `src/engine`
+- **Relic effects**: Turn-limited, draw and retaliation effects are driven by relic data (`onTurn`, effect type) instead of checks for specific relic ids
+- **Card views**: Deck grid, reward and shop screens share `CardStatBadges`, which reads damage and block from card effects instead of per-card markup. Attack cards that had no badge before now show one
+- **Combat-start relics**: `startCombat` applies them (previously only the map path did)
+- **Logging**: Engine logging goes through `debugConsole` and is silent unless debug mode is on; ESLint forbids direct `console` use
+- **Removed**: Unused store state and actions (`_resolveStep`, `resolveStep`, `originalDeckBeforeCombat`, `processBeforeAttackEffects`, `processAfterAttackEffects`, `processEnemyAttack`) and `processEventConsequence` (replaced by `src/engine/events.ts`)
+
+### Tooling
+- **CI**: Runs on pushes to `master` and on all pull requests (it previously only watched `main`, `develop` and `newCards`, so it never ran for the default branch); adds a build step, npm caching, a pinned Node version (`.nvmrc`) and cancels superseded runs
+- **Type checking**: Test files are now type-checked
+- **Coverage**: Floors for `src/engine` and `src/store`
+- **Formatting**: `.gitattributes` and Prettier `endOfLine: auto` so the format check passes on Windows checkouts
+- **Scripts**: `validate` only checks (it no longer rewrites files); `fix` applies lint and format fixes; `husky` and `prettier` moved to devDependencies
+- **Tests**: 346 tests (from 273), with shared test factories and a seedable random source
+
 ## [1.26.0] - 2024-12-19
 
 ### Changed

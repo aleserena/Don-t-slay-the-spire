@@ -38,6 +38,15 @@ module.exports = {
     "react/react-in-jsx-scope": "off",
     "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     "@typescript-eslint/no-explicit-any": "warn",
+    // Log through debugConsole (src/utils/debugUtils.ts) so output respects
+    // debug mode
+    "no-console": "error",
   },
+  overrides: [
+    {
+      files: ["src/utils/debugUtils.ts", "**/*.test.ts", "**/*.test.tsx"],
+      rules: { "no-console": "off" },
+    },
+  ],
   ignorePatterns: ["dist", "coverage", "node_modules"],
 };

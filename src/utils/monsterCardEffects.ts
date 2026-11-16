@@ -21,18 +21,10 @@ export const processMonsterCardEffects = (
   player: Player,
   enemy: Enemy,
 ): MonsterCardResult => {
-  console.log(
-    `[DEBUG] processMonsterCardEffects called - card: ${card.name}, damage: ${card.damage}, effects: ${card.effects?.length || 0}`,
-  );
-  console.log(
-    `[DEBUG] Player state before: health=${player.health}, block=${player.block}`,
-  );
-
   let newPlayer = { ...player };
   let newEnemy = { ...enemy };
 
   if (card.effects) {
-    console.log(`[DEBUG] Processing ${card.effects.length} card effects`);
     for (const effect of card.effects) {
       switch (effect.type) {
         case EffectType.DAMAGE:
@@ -46,18 +38,11 @@ export const processMonsterCardEffects = (
             const blockUsed = Math.min(newPlayer.block, finalDamage);
             const damageAfterBlock = Math.max(0, finalDamage - newPlayer.block);
 
-            console.log(
-              `[DEBUG] Effect damage: ${effect.value}, finalDamage: ${finalDamage}, blockUsed: ${blockUsed}, damageAfterBlock: ${damageAfterBlock}`,
-            );
-
             newPlayer = {
               ...newPlayer,
               health: newPlayer.health - damageAfterBlock,
               block: newPlayer.block - blockUsed,
             };
-            console.log(
-              `[DEBUG] Player state after effect: health=${newPlayer.health}, block=${newPlayer.block}`,
-            );
           }
           break;
 
@@ -112,23 +97,15 @@ export const processMonsterCardEffects = (
     (!card.effects ||
       !card.effects.some((effect) => effect.type === EffectType.DAMAGE))
   ) {
-    console.log(`[DEBUG] Processing legacy damage: ${card.damage}`);
     const finalDamage = calculateDamage(card.damage, newEnemy, newPlayer);
     const blockUsed = Math.min(newPlayer.block, finalDamage);
     const damageAfterBlock = Math.max(0, finalDamage - newPlayer.block);
-
-    console.log(
-      `[DEBUG] Legacy damage: ${card.damage}, finalDamage: ${finalDamage}, blockUsed: ${blockUsed}, damageAfterBlock: ${damageAfterBlock}`,
-    );
 
     newPlayer = {
       ...newPlayer,
       health: newPlayer.health - damageAfterBlock,
       block: newPlayer.block - blockUsed,
     };
-    console.log(
-      `[DEBUG] Player state after legacy damage: health=${newPlayer.health}, block=${newPlayer.block}`,
-    );
   }
 
   // Legacy support: Handle cards with direct block property

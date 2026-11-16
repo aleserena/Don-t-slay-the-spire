@@ -2,7 +2,6 @@
   "name": "slay-the-spire-clone",
   "version": "1.22.0",
   "description": "A roguelike deck-building card game inspired by Slay the Spire",
-  "main": "index.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -15,18 +14,16 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "type-check": "tsc --noEmit",
-    "validate": "npm run lint:fix && npm run format && npm run type-check && npm run test:coverage",
-    "pre-commit": "npm run validate",
+    "validate": "npm run lint && npm run format:check && npm run type-check && npm test",
     "analyze": "npm run build && npx vite-bundle-analyzer dist",
     "docs": "typedoc --out docs src",
     "docs:serve": "npx serve docs",
-    "clean": "rm -rf dist coverage docs",
-    "prepare": "husky"
+    "clean": "node -e \"for (const d of ['dist','coverage','docs']) require('fs').rmSync(d,{recursive:true,force:true})\"",
+    "prepare": "husky",
+    "fix": "npm run lint:fix && npm run format"
   },
   "dependencies": {
     "framer-motion": "^10.16.16",
-    "husky": "^9.1.7",
-    "prettier": "^3.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "uuid": "^9.0.1",
@@ -49,7 +46,9 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "globals": "^16.3.0",
+    "husky": "^9.1.7",
     "jsdom": "^26.1.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
     "vitest": "^3.1.4"
@@ -63,5 +62,9 @@
     "typescript"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  }
 }

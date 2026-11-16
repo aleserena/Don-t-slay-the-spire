@@ -1,41 +1,18 @@
 import React from "react";
 import { useGameStore } from "../store/gameStore";
-import { Card, CardType } from "../types/game";
+import { Card } from "../types/game";
 import { UnifiedHeader } from "./UnifiedHeader";
+import { CardStatBadges } from "./CardStatBadges";
+import {
+  getCardCostLabel,
+  getCardTypeColor,
+  getRarityColor,
+} from "../utils/cardDisplay";
 
 export const CardRewardScreen: React.FC = () => {
-  const { combatReward, selectCardReward, skipCardReward, persistentDeck } =
-    useGameStore();
+  const { combatReward, selectCardReward, skipCardReward } = useGameStore();
 
   if (!combatReward) return null;
-
-  const getCardTypeColor = (type: CardType): string => {
-    switch (type) {
-      case CardType.ATTACK:
-        return "#ff6b6b";
-      case CardType.SKILL:
-        return "#4ecdc4";
-      case CardType.POWER:
-        return "#ffe66d";
-      default:
-        return "#95a5a6";
-    }
-  };
-
-  const getRarityColor = (rarity: string): string => {
-    switch (rarity) {
-      case "base":
-        return "#34495e"; // Dark gray for base cards (shouldn't appear as rewards)
-      case "common":
-        return "#95a5a6";
-      case "uncommon":
-        return "#3498db";
-      case "rare":
-        return "#f39c12";
-      default:
-        return "#95a5a6";
-    }
-  };
 
   return (
     <div
@@ -98,14 +75,6 @@ export const CardRewardScreen: React.FC = () => {
           Choose a card to add to your deck
         </div>
 
-        {/* Debug info moved to console */}
-        {(() => {
-          console.log(
-            `[DEBUG] Card reward screen - Your deck now has ${persistentDeck.length} cards.`,
-          );
-          return null;
-        })()}
-
         <div
           style={{
             display: "flex",
@@ -120,8 +89,6 @@ export const CardRewardScreen: React.FC = () => {
               key={card.id}
               card={card}
               onSelect={() => selectCardReward(card.id)}
-              getCardTypeColor={getCardTypeColor}
-              getRarityColor={getRarityColor}
             />
           ))}
         </div>
@@ -156,16 +123,9 @@ export const CardRewardScreen: React.FC = () => {
 interface CardRewardCardProps {
   card: Card;
   onSelect: () => void;
-  getCardTypeColor: (type: CardType) => string;
-  getRarityColor: (rarity: string) => string;
 }
 
-const CardRewardCard: React.FC<CardRewardCardProps> = ({
-  card,
-  onSelect,
-  getCardTypeColor,
-  getRarityColor,
-}) => {
+const CardRewardCard: React.FC<CardRewardCardProps> = ({ card, onSelect }) => {
   return (
     <div
       onClick={onSelect}
@@ -213,7 +173,7 @@ const CardRewardCard: React.FC<CardRewardCardProps> = ({
           zIndex: 20,
         }}
       >
-        {card.baseId === "whirlwind" ? "X" : card.cost}
+        {getCardCostLabel(card)}
       </div>
 
       {/* Rarity indicator */}
@@ -269,184 +229,7 @@ const CardRewardCard: React.FC<CardRewardCardProps> = ({
           marginBottom: "15px",
         }}
       >
-        {/* Generic damage - only for cards without special displays */}
-        {card.damage &&
-          card.damage > 0 &&
-          card.baseId !== "body_slam" &&
-          card.baseId !== "bash" &&
-          card.baseId !== "cleave" &&
-          card.baseId !== "whirlwind" &&
-          card.baseId !== "twin_strike" &&
-          card.baseId !== "anger" && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                fontSize: "16px",
-                fontWeight: "bold",
-                color: "#fff",
-                background: "rgba(255, 107, 107, 0.9)",
-                padding: "4px 8px",
-                borderRadius: "8px",
-                border: "2px solid rgba(255, 255, 255, 0.3)",
-                textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-              }}
-            >
-              <span style={{ marginRight: "4px" }}>⚔️</span>
-              {card.damage}
-            </div>
-          )}
-
-        {/* Special handling for effect-based damage cards */}
-        {card.baseId === "bash" && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "#fff",
-              background: "rgba(255, 107, 107, 0.9)",
-              padding: "4px 8px",
-              borderRadius: "8px",
-              border: "2px solid rgba(255, 255, 255, 0.3)",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-            }}
-          >
-            <span style={{ marginRight: "4px" }}>⚔️</span>
-            {card.upgraded ? "10" : "8"}
-          </div>
-        )}
-
-        {card.baseId === "cleave" && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "#fff",
-              background: "rgba(255, 107, 107, 0.9)",
-              padding: "4px 8px",
-              borderRadius: "8px",
-              border: "2px solid rgba(255, 255, 255, 0.3)",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-            }}
-          >
-            <span style={{ marginRight: "4px" }}>⚔️</span>
-            {card.upgraded ? "11" : "8"} to ALL
-          </div>
-        )}
-
-        {card.baseId === "whirlwind" && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "#fff",
-              background: "rgba(255, 107, 107, 0.9)",
-              padding: "4px 8px",
-              borderRadius: "8px",
-              border: "2px solid rgba(255, 255, 255, 0.3)",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-            }}
-          >
-            <span style={{ marginRight: "4px" }}>⚔️</span>
-            {card.upgraded ? "8" : "5"}×X to ALL
-          </div>
-        )}
-
-        {card.baseId === "twin_strike" && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "#fff",
-              background: "rgba(255, 107, 107, 0.9)",
-              padding: "4px 8px",
-              borderRadius: "8px",
-              border: "2px solid rgba(255, 255, 255, 0.3)",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-            }}
-          >
-            <span style={{ marginRight: "4px" }}>⚔️</span>
-            {card.upgraded ? "6" : "5"} × 2
-          </div>
-        )}
-
-        {card.baseId === "anger" && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "#fff",
-              background: "rgba(255, 107, 107, 0.9)",
-              padding: "4px 8px",
-              borderRadius: "8px",
-              border: "2px solid rgba(255, 255, 255, 0.3)",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-            }}
-          >
-            <span style={{ marginRight: "4px" }}>⚔️</span>
-            {card.upgraded ? "8" : "6"}
-          </div>
-        )}
-
-        {/* Block display */}
-        {card.block && card.block > 0 && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "#fff",
-              background: "rgba(68, 68, 255, 0.9)",
-              padding: "4px 8px",
-              borderRadius: "8px",
-              border: "2px solid rgba(255, 255, 255, 0.3)",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-            }}
-          >
-            <span style={{ marginRight: "4px" }}>🛡️</span>
-            {card.block}
-          </div>
-        )}
-
-        {/* Body Slam special display */}
-        {card.baseId === "body_slam" && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "#fff",
-              background: "rgba(255, 107, 107, 0.9)",
-              padding: "4px 8px",
-              borderRadius: "8px",
-              border: "2px solid rgba(255, 255, 255, 0.3)",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-            }}
-          >
-            <span style={{ marginRight: "4px" }}>⚔️</span>
-            {card.upgraded ? "2x" : "1x"} Block
-          </div>
-        )}
+        <CardStatBadges card={card} size="medium" />
       </div>
 
       {/* Description */}

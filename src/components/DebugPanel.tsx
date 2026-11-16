@@ -10,6 +10,7 @@ import {
 import { getAllCards } from "../data/cards";
 import { getAllRelics } from "../data/relics";
 import { Card } from "../types/game";
+import { createInstanceId } from "../utils/ids";
 
 export const DebugPanel: React.FC = () => {
   const {
@@ -106,7 +107,7 @@ export const DebugPanel: React.FC = () => {
     const randomCard = allCards[Math.floor(Math.random() * allCards.length)];
     const cardWithId = {
       ...randomCard,
-      id: `${randomCard.baseId}_debug_${Date.now()}`,
+      id: createInstanceId(randomCard.baseId, "debug"),
     };
 
     useGameStore.setState({
@@ -139,7 +140,7 @@ export const DebugPanel: React.FC = () => {
       powerCardIds[Math.floor(Math.random() * powerCardIds.length)];
 
     const powerCard: Card = {
-      id: `${randomPowerCardId}_debug_${Date.now()}`,
+      id: createInstanceId(randomPowerCardId, "debug"),
       baseId: randomPowerCardId,
       name:
         randomPowerCardId === "metallicize"
@@ -273,7 +274,10 @@ export const DebugPanel: React.FC = () => {
     const allCards = getAllCards();
     const card = allCards.find((c) => c.baseId === cardId);
     if (card) {
-      const cardWithId = { ...card, id: `${card.baseId}_debug_${Date.now()}` };
+      const cardWithId = {
+        ...card,
+        id: createInstanceId(card.baseId, "debug"),
+      };
       useGameStore.setState({
         hand: [...hand, cardWithId],
       });

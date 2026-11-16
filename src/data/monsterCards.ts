@@ -5,6 +5,8 @@ import {
   TargetType,
   StatusType,
 } from "../types/game";
+import { createInstanceId } from "../utils/ids";
+import { pickWeighted } from "../utils/random";
 
 // Cultist Cards
 export const cultistCards: MonsterCard[] = [
@@ -602,27 +604,6 @@ export const selectEnemyCard = (
   );
   const cardsToChooseFrom = preferredCards.length > 0 ? preferredCards : deck;
 
-  // Weight selection by priority
-  const totalPriority = cardsToChooseFrom.reduce(
-    (sum, card) => sum + card.priority,
-    0,
-  );
-  let random = Math.random() * totalPriority;
-
-  for (const card of cardsToChooseFrom) {
-    random -= card.priority;
-    if (random <= 0) {
-      return {
-        ...card,
-        id: `${card.baseId}_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      };
-    }
-  }
-
-  // Fallback to first card
-  const fallbackCard = cardsToChooseFrom[0];
-  return {
-    ...fallbackCard,
-    id: `${fallbackCard.baseId}_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-  };
+  const card = pickWeighted(cardsToChooseFrom, (c) => c.priority)!;
+  return { ...card, id: createInstanceId(card.baseId) };
 };
