@@ -5,7 +5,7 @@ import { ConsequenceType, EventChoice, EventConsequence } from "../types/map";
 import { getAllCards } from "../data/cards";
 import { getAllRelics } from "../data/relics";
 import { canUpgradeCard, upgradeCard } from "../utils/cardUpgrades";
-import { pickRandom } from "../utils/random";
+import { pickRandom, Rng } from "../utils/random";
 import { createCardInstance, removeCard, replaceCard } from "./deck";
 import { pickRelicReward } from "./rewards";
 
@@ -26,20 +26,30 @@ const RANDOM_CARD_TYPES: Record<string, CardType> = {
   random_skill: CardType.SKILL,
 };
 
-const resolveRelic = (player: Player, relicId?: string): Relic | undefined => {
+const resolveRelic = (
+  player: Player,
+  relicId: string | undefined,
+  rng: Rng,
+): Relic | undefined => {
   if (!relicId) return undefined;
   const rarity = RANDOM_RELIC_RARITIES[relicId];
   return rarity
-    ? pickRelicReward(player, [rarity])
+    ? pickRelicReward(player, [rarity], rng)
     : getAllRelics().find((relic) => relic.id === relicId);
 };
 
-const resolveCard = (cardId?: string): Card | undefined => {
+const resolveCard = (
+  cardId: string | undefined,
+  rng: Rng,
+): Card | undefined => {
   if (!cardId) return undefined;
   const cards = getAllCards();
   const type = RANDOM_CARD_TYPES[cardId];
   return type
-    ? pickRandom(cards.filter((card) => card.type === type))
+    ? pickRandom(
+        cards.filter((card) => card.type === type),
+        rng,
+      )
     : cards.find((card) => card.baseId === cardId);
 };
 
@@ -52,17 +62,19 @@ const findDeckCard = (
   deck: Card[],
   cardId: string | undefined,
   isEligible: (card: Card) => boolean,
+  rng: Rng,
 ): Card | undefined => {
   const eligible = deck.filter(isEligible);
   return (
     eligible.find((card) => card.id === cardId || card.baseId === cardId) ??
-    pickRandom(eligible)
+    pickRandom(eligible, rng)
   );
 };
 
 export const applyEventConsequence = (
   consequence: EventConsequence,
   { player, persistentDeck }: EventOutcome,
+  rng: Rng = Math.random,
 ): EventOutcome => {
   const amount = consequence.value || 0;
 
@@ -105,7 +117,7 @@ export const applyEventConsequence = (
       };
 
     case ConsequenceType.GAIN_RELIC: {
-      const relic = resolveRelic(player, consequence.relicId);
+      const relic = resolveRelic(player, consequence.relicId, rng);
       return relic
         ? {
             persistentDeck,
@@ -115,7 +127,7 @@ export const applyEventConsequence = (
     }
 
     case ConsequenceType.GAIN_CARD: {
-      const card = resolveCard(consequence.cardId);
+      const card = resolveCard(consequence.cardId, rng);
       return card
         ? {
             player,
@@ -129,6 +141,7 @@ export const applyEventConsequence = (
         persistentDeck,
         consequence.cardId,
         canUpgradeCard,
+        rng,
       );
       return card
         ? {
@@ -139,7 +152,12 @@ export const applyEventConsequence = (
     }
 
     case ConsequenceType.REMOVE_CARD: {
-      const card = findDeckCard(persistentDeck, consequence.cardId, () => true);
+      const card = findDeckCard(
+        persistentDeck,
+        consequence.cardId,
+        () => true,
+        rng,
+      );
       return card
         ? { player, persistentDeck: removeCard(persistentDeck, card.id) }
         : { player, persistentDeck };
@@ -154,8 +172,9 @@ export const applyEventConsequence = (
 export const applyEventChoice = (
   choice: EventChoice,
   outcome: EventOutcome,
+  rng: Rng = Math.random,
 ): EventOutcome =>
   choice.consequences.reduce(
-    (current, consequence) => applyEventConsequence(consequence, current),
+    (current, consequence) => applyEventConsequence(consequence, current, rng),
     outcome,
   );

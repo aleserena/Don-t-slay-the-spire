@@ -6,7 +6,7 @@ import {
   StatusType,
   CardType,
 } from "../types/game";
-import { pickRandom } from "../utils/random";
+import { pickRandom, Rng } from "../utils/random";
 
 export const getAllRelics = (): Relic[] => {
   return [
@@ -234,12 +234,15 @@ export const getAllRelics = (): Relic[] => {
   ];
 };
 
-export const getRandomRelic = (rarity?: RelicRarity): Relic => {
+export const getRandomRelic = (
+  rarity?: RelicRarity,
+  rng: Rng = Math.random,
+): Relic => {
   const relics = getAllRelics();
   const filteredRelics = rarity
     ? relics.filter((r) => r.rarity === rarity)
     : relics;
-  return pickRandom(filteredRelics)!;
+  return pickRandom(filteredRelics, rng)!;
 };
 
 export const getStarterRelic = (): Relic => {

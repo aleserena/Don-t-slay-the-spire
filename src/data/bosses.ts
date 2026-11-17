@@ -1,7 +1,7 @@
 import { Enemy, IntentType } from "../types/game";
 import { getEnemyDeck } from "./monsterCards";
 import { createInstanceId } from "../utils/ids";
-import { pickRandom } from "../utils/random";
+import { pickRandom, Rng } from "../utils/random";
 
 export const createSlimeBoss = (): Enemy => ({
   id: "slime_boss",
@@ -101,28 +101,31 @@ export const getAllBosses = (): Enemy[] => [
   createCityBoss(),
 ];
 
-export const getRandomBoss = (): Enemy => {
+export const getRandomBoss = (rng: Rng = Math.random): Enemy => {
   const bosses = getAllBosses();
-  return pickRandom(bosses)!;
+  return pickRandom(bosses, rng)!;
 };
 
 /** Floors in one act; the last one holds the act's boss. */
 const FLOORS_PER_ACT = 15;
 
 /** Picks the boss for a map floor (0-based) from the act that floor is in. */
-export const getBossForFloor = (floor: number): Enemy => {
+export const getBossForFloor = (
+  floor: number,
+  rng: Rng = Math.random,
+): Enemy => {
   const act = Math.floor(floor / FLOORS_PER_ACT);
   if (act <= 0) {
     // Act 1 bosses
     const act1Bosses = [createSlimeBoss(), createGuardian(), createHexaghost()];
-    return pickRandom(act1Bosses)!;
+    return pickRandom(act1Bosses, rng)!;
   } else if (act === 1) {
     // Act 2 bosses
     const act2Bosses = [createChamp(), createCollector(), createCityBoss()];
-    return pickRandom(act2Bosses)!;
+    return pickRandom(act2Bosses, rng)!;
   } else {
     // Act 3 bosses (for now, reuse act 2 bosses with higher stats)
-    const boss = getRandomBoss();
+    const boss = getRandomBoss(rng);
     return {
       ...boss,
       id: createInstanceId(boss.id, "act3"),

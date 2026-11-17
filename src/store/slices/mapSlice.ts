@@ -8,6 +8,7 @@ import { applyEventChoice } from "../../engine/events";
 import { createShop, createTreasureReward } from "../../engine/rewards";
 import { upgradeCard } from "../../utils/cardUpgrades";
 import { completeNode } from "../../utils/mapGeneration";
+import { createSeededRng } from "../../utils/random";
 import { createOutOfCombatPiles } from "../initialState";
 import { MapActions, SliceCreator } from "../types";
 
@@ -19,33 +20,50 @@ export const createMapSlice: SliceCreator<MapActions> = (set, get) => ({
     const node = state.map.nodes.find((n) => n.id === nodeId);
     if (!node || !node.available || node.completed) return;
 
-    set({ map: completeNode(state.map, nodeId), currentFloor: node.y + 1 });
+    const rng = createSeededRng(state.rngState);
+    // The node is marked as entered in the same update that leaves the map,
+    // so the run is never on the map with a node entered but not played
+    const entered = {
+      map: completeNode(state.map, nodeId),
+      currentFloor: node.y + 1,
+    };
 
     if (isCombatNode(node.type)) {
-      get().startCombat(createEncounter(node.type, node.y));
+      const enemies = createEncounter(node.type, node.y, rng);
+      set({ ...entered, gamePhase: GamePhase.COMBAT, rngState: rng.state });
+      get().startCombat(enemies);
       return;
     }
 
     switch (node.type) {
       case NodeType.EVENT:
-        set({ gamePhase: GamePhase.EVENT, currentEvent: getRandomEvent() });
+        set({
+          ...entered,
+          gamePhase: GamePhase.EVENT,
+          currentEvent: getRandomEvent(rng),
+          rngState: rng.state,
+        });
         break;
 
       case NodeType.REST:
-        set({ gamePhase: GamePhase.REST });
+        set({ ...entered, gamePhase: GamePhase.REST });
         break;
 
       case NodeType.TREASURE:
         set({
+          ...entered,
           gamePhase: GamePhase.RELIC_REWARD,
-          combatReward: createTreasureReward(state.player),
+          combatReward: createTreasureReward(state.player, rng),
+          rngState: rng.state,
         });
         break;
 
       case NodeType.SHOP:
         set({
+          ...entered,
           gamePhase: GamePhase.SHOP,
-          currentShop: createShop(state.player),
+          currentShop: createShop(state.player, rng),
+          rngState: rng.state,
         });
         break;
     }
@@ -68,14 +86,17 @@ export const createMapSlice: SliceCreator<MapActions> = (set, get) => ({
     const choice = state.currentEvent?.choices.find((c) => c.id === choiceId);
     if (!choice) return;
 
-    const outcome = applyEventChoice(choice, {
-      player: state.player,
-      persistentDeck: state.persistentDeck,
-    });
+    const rng = createSeededRng(state.rngState);
+    const outcome = applyEventChoice(
+      choice,
+      { player: state.player, persistentDeck: state.persistentDeck },
+      rng,
+    );
 
     set({
       ...createOutOfCombatPiles(outcome.persistentDeck),
       player: outcome.player,
+      rngState: rng.state,
       // An event can cost the player their last health
       gamePhase:
         outcome.player.health > 0 ? GamePhase.MAP : GamePhase.GAME_OVER,

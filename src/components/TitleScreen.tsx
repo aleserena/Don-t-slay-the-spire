@@ -110,7 +110,7 @@ export const TitleScreen: React.FC = () => {
         >
           {/* New Game Button */}
           <button
-            onClick={startNewGame}
+            onClick={() => startNewGame()}
             style={{
               padding: "20px 60px",
               fontSize: "24px",

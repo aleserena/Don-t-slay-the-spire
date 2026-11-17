@@ -12,7 +12,7 @@ import {
 import { Shop } from "../types/map";
 import { generateCardRewards } from "../data/cards";
 import { getAllRelics } from "../data/relics";
-import { pickRandom, randomInt, shuffle } from "../utils/random";
+import { pickRandom, randomInt, shuffle, Rng } from "../utils/random";
 import {
   CARD_REWARD_COUNT,
   SHOP_CARD_BASE_COST,
@@ -70,29 +70,34 @@ const getObtainableRelics = (
 export const pickRelicReward = (
   player: Player,
   rarities: RelicRarity[],
-): Relic | undefined => pickRandom(getObtainableRelics(player, rarities));
+  rng: Rng = Math.random,
+): Relic | undefined => pickRandom(getObtainableRelics(player, rarities), rng);
 
 /** Rewards for winning a combat; defeating an elite also awards a relic. */
 export const createCombatReward = (
   player: Player,
   defeatedEnemies: Enemy[],
+  rng: Rng = Math.random,
 ): CombatReward => ({
-  gold: randomInt(VICTORY_GOLD_MIN, VICTORY_GOLD_MAX),
-  cardRewards: generateCardRewards(CARD_REWARD_COUNT),
+  gold: randomInt(VICTORY_GOLD_MIN, VICTORY_GOLD_MAX, rng),
+  cardRewards: generateCardRewards(CARD_REWARD_COUNT, rng),
   relicReward: defeatedEnemies.some((enemy) => enemy.isElite)
-    ? pickRelicReward(player, ELITE_RELIC_RARITIES)
+    ? pickRelicReward(player, ELITE_RELIC_RARITIES, rng)
     : undefined,
 });
 
-export const createTreasureReward = (player: Player): CombatReward => ({
+export const createTreasureReward = (
+  player: Player,
+  rng: Rng = Math.random,
+): CombatReward => ({
   gold: 0,
   cardRewards: [],
-  relicReward: pickRelicReward(player, TREASURE_RELIC_RARITIES),
+  relicReward: pickRelicReward(player, TREASURE_RELIC_RARITIES, rng),
   isTreasureReward: true,
 });
 
-export const createShop = (player: Player): Shop => ({
-  cards: generateCardRewards(SHOP_CARD_COUNT).map((card) => ({
+export const createShop = (player: Player, rng: Rng = Math.random): Shop => ({
+  cards: generateCardRewards(SHOP_CARD_COUNT, rng).map((card) => ({
     card,
     cost: getShopCardCost(card),
     purchased: false,
@@ -104,6 +109,7 @@ export const createShop = (player: Player): Shop => ({
       RelicRarity.RARE,
       RelicRarity.BOSS,
     ]),
+    rng,
   )
     .slice(0, SHOP_RELIC_COUNT)
     .map((relic) => ({

@@ -2,7 +2,8 @@ import React from "react";
 import { useGameStore } from "../store/gameStore";
 
 export const GameOverScreen: React.FC = () => {
-  const { startNewGame, returnToTitle, player, currentFloor } = useGameStore();
+  const { startNewGame, returnToTitle, player, currentFloor, seed } =
+    useGameStore();
 
   return (
     <div
@@ -197,6 +198,11 @@ export const GameOverScreen: React.FC = () => {
               >
                 🏗️ {currentFloor}
               </div>
+              <div
+                style={{ fontSize: "12px", color: "#7f8c8d", marginTop: "5px" }}
+              >
+                Seed {seed}
+              </div>
             </div>
 
             <div
@@ -240,7 +246,7 @@ export const GameOverScreen: React.FC = () => {
         >
           {/* New Game Button */}
           <button
-            onClick={startNewGame}
+            onClick={() => startNewGame()}
             style={{
               padding: "20px 40px",
               fontSize: "20px",

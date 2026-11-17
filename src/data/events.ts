@@ -1,5 +1,5 @@
 import { Event, ConsequenceType } from "../types/map";
-import { pickRandom } from "../utils/random";
+import { pickRandom, Rng } from "../utils/random";
 
 export const getAllEvents = (): Event[] => {
   return [
@@ -210,7 +210,7 @@ export const getAllEvents = (): Event[] => {
   ];
 };
 
-export const getRandomEvent = (): Event => {
+export const getRandomEvent = (rng: Rng = Math.random): Event => {
   const events = getAllEvents();
-  return pickRandom(events)!;
+  return pickRandom(events, rng)!;
 };

@@ -1,18 +1,19 @@
 import { MapNode, NodeType, GameMap } from "../types/map";
 import { v4 as uuidv4 } from "uuid";
+import { Rng } from "./random";
 
 const MAP_WIDTH = 7;
 const MAP_HEIGHT = 15;
 
-export const generateMap = (): GameMap => {
+export const generateMap = (rng: Rng = Math.random): GameMap => {
   const nodes: MapNode[] = [];
 
   // Generate nodes for each floor
   for (let y = 0; y < MAP_HEIGHT; y++) {
-    const nodesInFloor = getNodesPerFloor(y);
+    const nodesInFloor = getNodesPerFloor(y, rng);
 
     for (let x = 0; x < nodesInFloor; x++) {
-      const nodeType = getNodeType(y);
+      const nodeType = getNodeType(y, rng);
       const nodeX = calculateNodeX(x, nodesInFloor);
 
       const node: MapNode = {
@@ -30,7 +31,7 @@ export const generateMap = (): GameMap => {
   }
 
   // Generate connections between nodes
-  generateConnections(nodes);
+  generateConnections(nodes, rng);
 
   // Make starting nodes available
   const startingNodes = nodes.filter((n) => n.y === 0);
@@ -46,13 +47,13 @@ export const generateMap = (): GameMap => {
   };
 };
 
-const getNodesPerFloor = (floor: number): number => {
+const getNodesPerFloor = (floor: number, rng: Rng): number => {
   // Vary the number of nodes per floor for interesting branching
   if (floor === 0) return 1; // Start with one node
   if (floor === MAP_HEIGHT - 1) return 1; // End with one boss node
-  if (floor < 3) return Math.floor(Math.random() * 2) + 2; // 2-3 nodes
-  if (floor < MAP_HEIGHT - 3) return Math.floor(Math.random() * 3) + 2; // 2-4 nodes
-  return Math.floor(Math.random() * 2) + 2; // 2-3 nodes near end
+  if (floor < 3) return Math.floor(rng() * 2) + 2; // 2-3 nodes
+  if (floor < MAP_HEIGHT - 3) return Math.floor(rng() * 3) + 2; // 2-4 nodes
+  return Math.floor(rng() * 2) + 2; // 2-3 nodes near end
 };
 
 const calculateNodeX = (index: number, totalNodes: number): number => {
@@ -61,27 +62,27 @@ const calculateNodeX = (index: number, totalNodes: number): number => {
   return Math.floor(spacing * (index + 1));
 };
 
-const getNodeType = (floor: number): NodeType => {
+const getNodeType = (floor: number, rng: Rng): NodeType => {
   if (floor === 0) return NodeType.COMBAT; // Always start with combat
   if (floor === MAP_HEIGHT - 1) return NodeType.BOSS; // Always end with boss
 
   // Elite floors (every 8 floors)
   if (floor % 8 === 7) {
-    return Math.random() < 0.7 ? NodeType.ELITE : NodeType.COMBAT;
+    return rng() < 0.7 ? NodeType.ELITE : NodeType.COMBAT;
   }
 
   // Rest floors (every 6 floors)
   if (floor % 6 === 5) {
-    return Math.random() < 0.6 ? NodeType.REST : NodeType.COMBAT;
+    return rng() < 0.6 ? NodeType.REST : NodeType.COMBAT;
   }
 
   // Shop floors (every 10 floors)
   if (floor % 10 === 9) {
-    return Math.random() < 0.8 ? NodeType.SHOP : NodeType.COMBAT;
+    return rng() < 0.8 ? NodeType.SHOP : NodeType.COMBAT;
   }
 
   // Random distribution for other floors
-  const rand = Math.random();
+  const rand = rng();
   if (rand < 0.6) return NodeType.COMBAT;
   if (rand < 0.75) return NodeType.EVENT;
   if (rand < 0.85) return NodeType.TREASURE;
@@ -90,7 +91,7 @@ const getNodeType = (floor: number): NodeType => {
   return NodeType.ELITE;
 };
 
-const generateConnections = (nodes: MapNode[]): void => {
+const generateConnections = (nodes: MapNode[], rng: Rng): void => {
   // Group nodes by floor
   const nodesByFloor: MapNode[][] = [];
   for (let y = 0; y < MAP_HEIGHT; y++) {
@@ -130,7 +131,7 @@ const generateConnections = (nodes: MapNode[]): void => {
       // Each node connects to 1-2 additional nodes on the next floor
       const maxAdditionalConnections = Math.min(2, nextFloor.length);
       const additionalConnections = Math.min(
-        Math.floor(Math.random() * 2) + 1,
+        Math.floor(rng() * 2) + 1,
         maxAdditionalConnections,
       );
 

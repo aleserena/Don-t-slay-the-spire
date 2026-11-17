@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Seeded runs**: the store keeps `seed` and `rngState`; every random pick in the engine, data generators and map generation takes the run's random source, so a run is reproducible from its seed. `startNewGame(seed?)` and `startNewRun(seed?)` accept a seed
+- **Save and continue**: `src/store/saveGame.ts` writes a versioned snapshot to local storage while the run is on the map (`installAutosave`, called from `main.tsx`), and `loadSavedGame` restores it. Unreadable or other-version saves count as no save
+- **`SeededRng`**: `createSeededRng` exposes its `state`, and `createSeededRng(rng.state)` continues the sequence
 - **Trigger pipeline** (`src/engine/triggers.ts`): combat raises events (`combat_start`, `turn_start`, `turn_end`, `card_played`, `card_exhausted`, `hp_lost`, `block_gained`, `enemy_died`) and `dispatch` applies every power and relic effect that listens, powers first. Effects can raise further events; chains stop at a fixed depth
 - **Combat counters**: per-combat bookkeeping in the store (`combat`) for attacks played this turn, once-per-combat effects, energy owed next turn and statuses that expire at turn end
 - **Effect primitives** (`src/engine/effects.ts`): `takeDamage` and `getCardEffects`, shared by player cards, enemy cards, powers and relics

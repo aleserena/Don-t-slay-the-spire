@@ -15,6 +15,10 @@ export interface StoreState extends GameState {
   debugMode: boolean;
   /** Current floor number */
   currentFloor: number;
+  /** Seed the run was started with; the same seed gives the same run */
+  seed: number;
+  /** Position of the run's random source, advanced by every random pick */
+  rngState: number;
   /** Whether there is a saved game available */
   hasSavedGame: boolean;
   /** 1-based player turn of the current combat (0 before the first turn) */
@@ -23,9 +27,12 @@ export interface StoreState extends GameState {
 
 export interface RunActions {
   /** Resets all progress and returns to the title screen */
-  startNewRun: () => void;
-  /** Resets all progress and goes straight to the map */
-  startNewGame: () => void;
+  startNewRun: (seed?: number) => void;
+  /**
+   * Resets all progress and goes straight to the map. The same seed always
+   * produces the same run; without one a random seed is used.
+   */
+  startNewGame: (seed?: number) => void;
   returnToTitle: () => void;
   /** Continues a previously saved game, if there is one */
   loadSavedGame: () => void;

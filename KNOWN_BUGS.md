@@ -19,11 +19,17 @@ These cards need a mechanic of their own. They are listed in `src/data/__tests__
 - An enemy's retaliation and random-target effects during the enemy turn only see the enemy that is acting
 - The event reward `random_curse` resolves to nothing
 - Map node types are rolled independently (a floor can be all shops, and there is no guaranteed rest before the boss); encounters do not scale with the floor
-- Saving and loading a run is not implemented (`loadSavedGame` only resumes the in-memory run)
+- There is no way to type a seed in the UI; `startNewGame(seed)` accepts one and the Game Over screen shows it
+- A run is saved on the map only: closing the browser during a combat, event or shop returns to the map before that node
 - Event choices that cost gold can be picked without having the gold
 - The hand view (`HandArea.tsx`) still has per-card markup for a few cards; the other card views read everything from card data
 
 ## Fixed
+
+### Seeded runs and saving (unreleased)
+- A run in progress is saved while it is on the map and can be continued from the title screen; the save is removed when the run ends
+- A run is reproducible from its seed: the same seed and choices give the same map, fights, draws and rewards
+- Entering a map node and leaving the map are one state change, so a node is never marked as entered without being played
 
 ### Effect and trigger pipeline (unreleased)
 - Relic triggers for cards played, turn end, cards exhausted and enemy deaths fire; relic effects can be limited to a card type, to once per combat, or to turns without attacks

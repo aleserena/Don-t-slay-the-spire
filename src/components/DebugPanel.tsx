@@ -588,7 +588,7 @@ export const DebugPanel: React.FC = () => {
             </div>
             <div style={{ display: "flex", gap: "4px", marginTop: "8px" }}>
               <button
-                onClick={startNewGame}
+                onClick={() => startNewGame()}
                 style={{ ...buttonStyle, flex: 1 }}
               >
                 🆕 New Game

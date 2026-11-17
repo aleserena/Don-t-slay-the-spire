@@ -1,7 +1,7 @@
 import { Enemy, IntentType, MonsterCardType } from "../types/game";
 import { getEnemyDeck, selectEnemyCard } from "./monsterCards";
 import { createInstanceId } from "../utils/ids";
-import { pickRandom } from "../utils/random";
+import { pickRandom, Rng } from "../utils/random";
 
 const convertCardTypeToIntentType = (cardType: MonsterCardType): IntentType => {
   switch (cardType) {
@@ -333,7 +333,7 @@ export const getAllEnemies = () => [
   createSneakyGremlin(),
 ];
 
-export const getRandomEnemy = (): Enemy => {
+export const getRandomEnemy = (rng: Rng = Math.random): Enemy => {
   const enemies = [
     createTestEnemy,
     createJawWorm,
@@ -350,15 +350,15 @@ export const getRandomEnemy = (): Enemy => {
     createSneakyGremlin,
   ];
 
-  return pickRandom(enemies)!();
+  return pickRandom(enemies, rng)!();
 };
 
-export const getRandomEnemyEncounter = (): Enemy[] => {
+export const getRandomEnemyEncounter = (rng: Rng = Math.random): Enemy[] => {
   const encounterTypes = [
     // Single enemy encounters
-    () => [getRandomEnemy()],
+    () => [getRandomEnemy(rng)],
     // Two enemy encounters
-    () => [getRandomEnemy(), getRandomEnemy()],
+    () => [getRandomEnemy(rng), getRandomEnemy(rng)],
     // Specific encounters
     () => [createRedLouse(), createGreenLouse()],
     () => [createTestEnemy(), createLooter()],
@@ -366,7 +366,7 @@ export const getRandomEnemyEncounter = (): Enemy[] => {
     () => [createSentryBot(), createSentryBot()], // Twin sentries
   ];
 
-  const enemies = pickRandom(encounterTypes)!();
+  const enemies = pickRandom(encounterTypes, rng)!();
 
   // Two enemies of the same kind must not share an id
   return enemies.map((enemy) => ({
