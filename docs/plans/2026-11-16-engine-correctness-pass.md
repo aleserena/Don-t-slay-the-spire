@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Zustand, Vitest.
 
-**Spec:** the review findings in this conversation (bugs 1–9, 11, 14). This file lives in `plans/` because `npm run clean` deletes `docs/`.
+**Spec:** the review findings in this conversation (bugs 1–9, 11, 14).
 
 ## Global Constraints
 

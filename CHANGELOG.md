@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Theme for every screen**: `src/styles/components.css` and `src/styles/screens.css` style the header, cards, combat, map, shop, rest site, events and rewards from the tokens in `theme.css`. New shared pieces in `src/components/ui`: `CardView`, `HealthBar`, `BlockPill`, `StatusList`, `Modal`, `RelicTile`, and icon tables. Tests fail if a component sets a color or an inline style other than data-driven geometry
+- **Docs**: a new README and `docs/` with architecture, content, interface, simulator and development guides; the implementation plans moved to `docs/plans`
 - **Content-free interface**: no component names a card, relic or enemy (enforced by a test). Card badges are read from card effects with the player's modifiers applied, and the damage preview on enemies is worked out by the engine (`src/engine/preview.ts`)
 - **Branding config** (`src/config/branding.ts`): the game's name and descriptive text in one place. The UI is now named "Deckbuilder"
 - **Theme** (`src/styles/theme.css`) and shared pieces (`src/components/ui`): custom properties for colors, spacing and type; `Button`, `Screen`, `Stat`; title, defeat and victory screens use them
@@ -25,6 +27,9 @@ All notable changes to this project will be documented in this file.
 - **Hand limit**: 10 cards
 
 ### Changed
+- **Package name**: `deckbuilder` (was `slay-the-spire-clone`)
+- **Statuses and powers** explain themselves in tooltips on hover or keyboard focus; dialogs close with Escape or a click outside
+- **Removed**: `DEVELOPMENT_RULES.md`, `DEVELOPMENT_TOOLS.md`, `QUICK_START_GUIDE.md`, `DEVELOPMENT_IMPLEMENTATION_SUMMARY.md` and `MONSTER_CARD_PREVIEW.md` (replaced by `docs/`), `src/App.css`, and the `docs`/`docs:serve` scripts (TypeDoc was never installed)
 - **Store subscriptions**: components subscribe to the fields they read (`useShallow`) instead of the whole store
 - **Removed**: the unused `GameUI` component
 - **Elites**: elite nodes no longer use a normal encounter with 1.5x health (`ELITE_HEALTH_MULTIPLIER` is removed)

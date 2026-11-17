@@ -1,6 +1,6 @@
 /**
  * Encounters by floor, the run summary and event costs
- * (plans/2026-11-16-run-structure.md).
+ * (docs/plans/2026-11-16-run-structure.md).
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";

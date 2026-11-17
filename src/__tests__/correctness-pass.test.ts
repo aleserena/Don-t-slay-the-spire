@@ -1,6 +1,6 @@
 /**
  * Regression tests for the engine correctness pass
- * (plans/2026-11-16-engine-correctness-pass.md).
+ * (docs/plans/2026-11-16-engine-correctness-pass.md).
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { useGameStore } from "../store/gameStore";

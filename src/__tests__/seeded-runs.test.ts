@@ -1,6 +1,6 @@
 /**
  * A run must be reproducible from its seed
- * (plans/2026-11-16-seeded-runs-and-saves.md).
+ * (docs/plans/2026-11-16-seeded-runs-and-saves.md).
  */
 import { describe, expect, it } from "vitest";
 import { useGameStore } from "../store/gameStore";
