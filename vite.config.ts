@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { configDefaults } from "vitest/config";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -17,6 +18,8 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
+    // The simulation report has its own config (npm run simulate)
+    exclude: [...configDefaults.exclude, "**/*.sim.test.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html", "lcov"],
