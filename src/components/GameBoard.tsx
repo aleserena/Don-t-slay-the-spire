@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
 import { Card, TurnPhase } from "../types/game";
-import { UnifiedHeader } from "./UnifiedHeader";
-import { PlayerArea } from "./PlayerArea";
-import { EnemyArea } from "./EnemyArea";
-import { HandArea } from "./HandArea";
-import { DebugPanel } from "./DebugPanel";
-import { cardNeedsTarget, isMultiTargetCard } from "../utils/cardUtils";
+import { cardNeedsTarget } from "../utils/cardUtils";
 import { CardGrid } from "./CardGrid";
 import { DamageDebugPanel } from "./DamageDebugPanel";
+import { DebugPanel } from "./DebugPanel";
+import { EnemyArea } from "./EnemyArea";
+import { HandArea } from "./HandArea";
+import { PlayerArea } from "./PlayerArea";
+import { UnifiedHeader } from "./UnifiedHeader";
+import { Button } from "./ui";
+import { ICON } from "./ui/icons";
 
+/** The combat screen: both sides, the hand, the piles and the turn button. */
 export const GameBoard: React.FC = () => {
   const {
     selectedCard,
@@ -19,7 +22,6 @@ export const GameBoard: React.FC = () => {
     enemies,
     drawPile,
     discardPile,
-    hand,
     currentTurn,
     endTurn,
     toggleDebugMode,
@@ -31,66 +33,25 @@ export const GameBoard: React.FC = () => {
       enemies: state.enemies,
       drawPile: state.drawPile,
       discardPile: state.discardPile,
-      hand: state.hand,
       currentTurn: state.currentTurn,
       endTurn: state.endTurn,
       toggleDebugMode: state.toggleDebugMode,
     })),
   );
-  const [previousHandSize, setPreviousHandSize] = useState(hand.length);
-  const [previousDiscardSize, setPreviousDiscardSize] = useState(
-    discardPile.length,
-  );
-  const [previousDrawSize, setPreviousDrawSize] = useState(drawPile.length);
   const [showDiscardPile, setShowDiscardPile] = useState(false);
   const [confirmingCard, setConfirmingCard] = useState<Card | null>(null);
 
-  // Watch for card draws and discards
-  useEffect(() => {
-    // No animations - just track state changes
-    setPreviousHandSize(hand.length);
-    setPreviousDiscardSize(discardPile.length);
-    setPreviousDrawSize(drawPile.length);
-  }, [
-    hand.length,
-    discardPile.length,
-    drawPile.length,
-    previousHandSize,
-    previousDiscardSize,
-    previousDrawSize,
-  ]);
-
-  // Handle hand size changes for card drawing animation
-  useEffect(() => {
-    if (hand.length > previousHandSize) {
-      // Cards were drawn - could trigger animation here
-      setPreviousHandSize(hand.length);
-    } else if (hand.length < previousHandSize) {
-      // Cards were played - could trigger animation here
-      setPreviousHandSize(hand.length);
-    }
-  }, [hand.length, previousHandSize]);
+  const isPlayerTurn = currentTurn === TurnPhase.PLAYER_TURN;
 
   const handleCardSelect = (card: Card) => {
-    const needsTarget = cardNeedsTarget(card);
-    const isMultiTarget = isMultiTargetCard(card);
-
-    if (needsTarget) {
-      // If the same card is already selected, deselect it
-      if (selectedCard && selectedCard.id === card.id) {
+    if (cardNeedsTarget(card)) {
+      // Selecting the selected card again deselects it
+      if (selectedCard?.id === card.id) {
         setSelectedCard(null);
         return;
       }
-
-      // For targeting cards, just select them
       setSelectedCard(card);
-    } else if (isMultiTarget) {
-      // For multi-target cards, play them immediately and clear selection
-      playCard(card.id);
-      setSelectedCard(null);
     } else {
-      // For all other cards (non-targeting), play them immediately and clear selection
-      // This handles both confirmation cards and direct-play cards
       playCard(card.id);
       setSelectedCard(null);
     }
@@ -98,20 +59,16 @@ export const GameBoard: React.FC = () => {
   };
 
   const handleEnemyTarget = (enemyId: string) => {
-    if (confirmingCard) {
-      playCard(confirmingCard.id, enemyId);
-      setConfirmingCard(null);
-      setSelectedCard(null);
-    }
+    if (!confirmingCard) return;
+    playCard(confirmingCard.id, enemyId);
+    setConfirmingCard(null);
+    setSelectedCard(null);
   };
 
   const handleCardConfirming = (card: Card | null) => {
     setConfirmingCard(card);
-    // If we're setting a confirming card and there's a selected targeting card,
-    // clear the targeting selection to prevent conflicts
-    if (card && selectedCard) {
-      setSelectedCard(null);
-    }
+    // A card waiting for confirmation replaces one waiting for a target
+    if (card && selectedCard) setSelectedCard(null);
   };
 
   // Keyboard: E ends the turn, Escape cancels a selection, and while a
@@ -127,7 +84,7 @@ export const GameBoard: React.FC = () => {
         event.preventDefault();
         toggleDebugMode();
       } else if (key === "e") {
-        if (currentTurn === TurnPhase.PLAYER_TURN) {
+        if (isPlayerTurn) {
           event.preventDefault();
           void endTurn();
         }
@@ -148,7 +105,7 @@ export const GameBoard: React.FC = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
-    currentTurn,
+    isPlayerTurn,
     endTurn,
     enemies,
     playCard,
@@ -158,255 +115,77 @@ export const GameBoard: React.FC = () => {
   ]);
 
   return (
-    <div
-      style={{
-        width: "100vw",
-        height: "100vh",
-        background: "linear-gradient(135deg, #1a1a2e, #16213e)",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* Game UI - Top */}
+    <main className="page combat" aria-label="Combat">
       <UnifiedHeader />
 
-      {/* End Turn Button - Outside header */}
-      {currentTurn === TurnPhase.PLAYER_TURN && (
-        <div
-          style={{
-            position: "absolute",
-            top: "80px",
-            right: "20px",
-            zIndex: 200,
-          }}
-        >
-          <button
+      {isPlayerTurn && (
+        <div className="combat__controls">
+          <Button
+            variant="primary"
             onClick={() => void endTurn()}
             aria-keyshortcuts="E"
-            style={{
-              padding: "12px 24px",
-              fontSize: "16px",
-              fontWeight: "bold",
-              background: "#4CAF50",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#45a049";
-              e.currentTarget.style.transform = "scale(1.05)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#4CAF50";
-              e.currentTarget.style.transform = "scale(1)";
-            }}
           >
             End Turn
-          </button>
-          <div className="key-hints" style={{ marginTop: "8px" }}>
+          </Button>
+          <div className="key-hints">
             <kbd>1</kbd>-<kbd>9</kbd> card or target · <kbd>E</kbd> end turn ·{" "}
             <kbd>Esc</kbd> cancel
           </div>
         </div>
       )}
 
-      {/* Main Combat Area - Player on left, Enemies on right */}
-      <div
-        style={{
-          flex: "1",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "40px 80px",
-          gap: "80px",
-          maxWidth: "1200px",
-          margin: "0 auto",
-        }}
-      >
-        {/* Player Area - Left side */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: "0 0 auto",
-          }}
-        >
-          <PlayerArea />
-        </div>
-
-        {/* VS Indicator - Centered */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "64px",
-            fontWeight: "bold",
-            color: "#ffd700",
-            textShadow: "3px 3px 6px rgba(0,0,0,0.8)",
-            flex: "0 0 auto",
-          }}
-        >
+      <div className="combat__field">
+        <PlayerArea />
+        <div className="combat__versus" aria-hidden="true">
           VS
         </div>
-
-        {/* Enemy Area - Right side */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: "1",
-          }}
-        >
-          <EnemyArea
-            selectedCard={selectedCard}
-            confirmingCard={confirmingCard}
-            onEnemyTarget={handleEnemyTarget}
-          />
-        </div>
+        <EnemyArea
+          selectedCard={selectedCard}
+          confirmingCard={confirmingCard}
+          onEnemyTarget={handleEnemyTarget}
+        />
       </div>
 
-      {/* Bottom Area - Deck, Hand, and Discard */}
-      <div
-        style={{
-          height: "200px",
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "center",
-          padding: "20px 40px",
-          background: "rgba(0, 0, 0, 0.3)",
-          position: "relative",
-          overflow: "visible",
-        }}
-      >
-        {/* Deck Pile - Left */}
-        <div
-          style={{
-            position: "absolute",
-            left: "40px",
-            bottom: "20px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
-          <div
-            style={{
-              width: "80px",
-              height: "110px",
-              background: "linear-gradient(135deg, #2c3e50, #34495e)",
-              border: "2px solid #3498db",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: "14px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              transition: "transform 0.2s ease",
-              boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.transform = "scale(1.05)")
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          >
-            📚 {drawPile.length}
+      <div className="combat__tray">
+        <div className="pile" data-kind="draw">
+          <div className="pile__cards">
+            <span aria-hidden="true">{ICON.deck}</span> {drawPile.length}
           </div>
-          <div
-            style={{
-              color: "white",
-              fontSize: "12px",
-              fontWeight: "bold",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-            }}
-          >
-            Deck
-          </div>
+          Deck
         </div>
 
-        {/* Hand Area - Center */}
         <HandArea
           selectedCardId={selectedCard?.id || null}
           onCardSelect={handleCardSelect}
           onCardConfirming={handleCardConfirming}
         />
 
-        {/* Discard Pile - Right */}
-        <div
-          style={{
-            position: "absolute",
-            right: "40px",
-            bottom: "20px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "10px",
-          }}
+        <button
+          type="button"
+          className="pile"
+          data-kind="discard"
+          onClick={() => setShowDiscardPile(true)}
+          aria-label={`Discard pile, ${discardPile.length} cards. Show cards.`}
         >
-          <div
-            onClick={() => setShowDiscardPile(true)}
-            style={{
-              width: "80px",
-              height: "110px",
-              background: "linear-gradient(135deg, #8e44ad, #9b59b6)",
-              border: "2px solid #e74c3c",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: "14px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              transition: "transform 0.2s ease",
-              boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.transform = "scale(1.05)")
-            }
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          >
-            🗂️ {discardPile.length}
+          <div className="pile__cards">
+            <span aria-hidden="true">{ICON.discard}</span> {discardPile.length}
           </div>
-          <div
-            style={{
-              color: "white",
-              fontSize: "12px",
-              fontWeight: "bold",
-              textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-            }}
-          >
-            Discard
-          </div>
-        </div>
+          Discard
+        </button>
       </div>
 
-      {/* Discard Pile Modal - Using CardGrid */}
       {showDiscardPile && (
         <CardGrid
           cards={discardPile}
           title="Discard Pile"
+          tone="warning"
           onClose={() => setShowDiscardPile(false)}
-          borderColor="#f39c12"
         />
       )}
 
-      {/* Debug Panel */}
       <DebugPanel />
-
-      {/* Damage Debug Panel */}
       <DamageDebugPanel />
-    </div>
+    </main>
   );
 };
 

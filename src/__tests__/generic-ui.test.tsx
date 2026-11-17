@@ -123,7 +123,7 @@ describe("no content in the interface", () => {
       ...getAllRelics().map((relic) => relic.name),
       ...getAllEnemies().map((enemy) => enemy.name),
       ...getAllBosses().map((boss) => boss.name),
-    ];
+    ].filter((name) => !engineWords.has(name.toLowerCase()));
 
     for (const [file, source] of Object.entries(sources)) {
       for (const id of ids) {
@@ -140,6 +140,39 @@ describe("no content in the interface", () => {
       if (file.includes("/config/")) continue;
       expect(source.includes(BRANDING.title), file).toBe(false);
       expect(/spire/i.test(source), `${file} mentions a spire`).toBe(false);
+    }
+  });
+});
+
+describe("look comes from the theme", () => {
+  const sources = import.meta.glob("../components/**/*.tsx", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
+
+  // Developer tools, not part of the game's interface
+  const isDebugTool = (file: string) => /Debug/.test(file);
+
+  it("keeps colors out of components", () => {
+    const color = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|linear-gradient/;
+
+    for (const [file, source] of Object.entries(sources)) {
+      if (isDebugTool(file)) continue;
+      expect(color.test(source), `${file} sets a color`).toBe(false);
+    }
+  });
+
+  it("uses inline styles only for geometry that depends on data", () => {
+    // The health bar's width and a map node's position
+    const allowed = ["ui/Combat.tsx", "MapView.tsx"];
+
+    for (const [file, source] of Object.entries(sources)) {
+      if (isDebugTool(file)) continue;
+      if (allowed.some((name) => file.endsWith(name))) continue;
+      expect(/\bstyle=/.test(source), `${file} has an inline style`).toBe(
+        false,
+      );
     }
   });
 });
