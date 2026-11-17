@@ -1,9 +1,16 @@
 import React from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
 import { UnifiedHeader } from "./UnifiedHeader";
 
 export const RelicRewardScreen: React.FC = () => {
-  const { combatReward, selectRelicReward, skipRelicReward } = useGameStore();
+  const { combatReward, selectRelicReward, skipRelicReward } = useGameStore(
+    useShallow((state) => ({
+      combatReward: state.combatReward,
+      selectRelicReward: state.selectRelicReward,
+      skipRelicReward: state.skipRelicReward,
+    })),
+  );
 
   if (!combatReward?.relicReward) return null;
 

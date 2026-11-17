@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
 import {
   getStatusEffectIcon,
@@ -9,7 +10,11 @@ import {
 import { StatusEffect } from "../types/game";
 
 export const PlayerArea: React.FC = () => {
-  const { player } = useGameStore();
+  const { player } = useGameStore(
+    useShallow((state) => ({
+      player: state.player,
+    })),
+  );
   const [hoveredStatusEffect, setHoveredStatusEffect] =
     useState<StatusEffect | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });

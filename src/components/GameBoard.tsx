@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
-import { Card } from "../types/game";
+import { Card, TurnPhase } from "../types/game";
 import { UnifiedHeader } from "./UnifiedHeader";
 import { PlayerArea } from "./PlayerArea";
 import { EnemyArea } from "./EnemyArea";
@@ -15,13 +16,27 @@ export const GameBoard: React.FC = () => {
     selectedCard,
     setSelectedCard,
     playCard,
+    enemies,
     drawPile,
     discardPile,
     hand,
     currentTurn,
     endTurn,
     toggleDebugMode,
-  } = useGameStore();
+  } = useGameStore(
+    useShallow((state) => ({
+      selectedCard: state.selectedCard,
+      setSelectedCard: state.setSelectedCard,
+      playCard: state.playCard,
+      enemies: state.enemies,
+      drawPile: state.drawPile,
+      discardPile: state.discardPile,
+      hand: state.hand,
+      currentTurn: state.currentTurn,
+      endTurn: state.endTurn,
+      toggleDebugMode: state.toggleDebugMode,
+    })),
+  );
   const [previousHandSize, setPreviousHandSize] = useState(hand.length);
   const [previousDiscardSize, setPreviousDiscardSize] = useState(
     discardPile.length,
@@ -55,21 +70,6 @@ export const GameBoard: React.FC = () => {
       setPreviousHandSize(hand.length);
     }
   }, [hand.length, previousHandSize]);
-
-  // Handle debug mode toggle
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "d") {
-        event.preventDefault();
-        toggleDebugMode();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-    return () => {
-      window.removeEventListener("keydown", handleKeyPress);
-    };
-  }, [toggleDebugMode]);
 
   const handleCardSelect = (card: Card) => {
     const needsTarget = cardNeedsTarget(card);
@@ -114,6 +114,49 @@ export const GameBoard: React.FC = () => {
     }
   };
 
+  // Keyboard: E ends the turn, Escape cancels a selection, and while a
+  // card is waiting for a target 1-9 pick the enemy. D toggles debug mode.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const element = event.target as HTMLElement | null;
+      if (element && /^(INPUT|TEXTAREA|SELECT)$/.test(element.tagName)) return;
+
+      const key = event.key.toLowerCase();
+      if (key === "d") {
+        event.preventDefault();
+        toggleDebugMode();
+      } else if (key === "e") {
+        if (currentTurn === TurnPhase.PLAYER_TURN) {
+          event.preventDefault();
+          void endTurn();
+        }
+      } else if (key === "escape") {
+        setSelectedCard(null);
+        setConfirmingCard(null);
+      } else if (/^[1-9]$/.test(key) && selectedCard) {
+        const enemy = enemies[Number(key) - 1];
+        if (enemy && cardNeedsTarget(selectedCard)) {
+          event.preventDefault();
+          playCard(selectedCard.id, enemy.id);
+          setConfirmingCard(null);
+          setSelectedCard(null);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    currentTurn,
+    endTurn,
+    enemies,
+    playCard,
+    selectedCard,
+    setSelectedCard,
+    toggleDebugMode,
+  ]);
+
   return (
     <div
       style={{
@@ -130,7 +173,7 @@ export const GameBoard: React.FC = () => {
       <UnifiedHeader />
 
       {/* End Turn Button - Outside header */}
-      {currentTurn === "player_turn" && (
+      {currentTurn === TurnPhase.PLAYER_TURN && (
         <div
           style={{
             position: "absolute",
@@ -140,7 +183,8 @@ export const GameBoard: React.FC = () => {
           }}
         >
           <button
-            onClick={endTurn}
+            onClick={() => void endTurn()}
+            aria-keyshortcuts="E"
             style={{
               padding: "12px 24px",
               fontSize: "16px",
@@ -164,6 +208,10 @@ export const GameBoard: React.FC = () => {
           >
             End Turn
           </button>
+          <div className="key-hints" style={{ marginTop: "8px" }}>
+            <kbd>1</kbd>-<kbd>9</kbd> card or target · <kbd>E</kbd> end turn ·{" "}
+            <kbd>Esc</kbd> cancel
+          </div>
         </div>
       )}
 

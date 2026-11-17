@@ -1,15 +1,9 @@
 import React, { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
-import {
-  StatusType,
-  GamePhase,
-  CardType,
-  CardRarity,
-  TurnPhase,
-} from "../types/game";
+import { StatusType, GamePhase, TurnPhase } from "../types/game";
 import { getAllCards } from "../data/cards";
 import { getAllRelics } from "../data/relics";
-import { Card } from "../types/game";
 import { createInstanceId } from "../utils/ids";
 
 export const DebugPanel: React.FC = () => {
@@ -27,7 +21,23 @@ export const DebugPanel: React.FC = () => {
     debugMode,
     startNewGame,
     returnToTitle,
-  } = useGameStore();
+  } = useGameStore(
+    useShallow((state) => ({
+      player: state.player,
+      enemies: state.enemies,
+      hand: state.hand,
+      drawPile: state.drawPile,
+      discardPile: state.discardPile,
+      exhaustPile: state.exhaustPile,
+      gamePhase: state.gamePhase,
+      currentFloor: state.currentFloor,
+      drawCards: state.drawCards,
+      endTurn: state.endTurn,
+      debugMode: state.debugMode,
+      startNewGame: state.startNewGame,
+      returnToTitle: state.returnToTitle,
+    })),
+  );
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -135,44 +145,30 @@ export const DebugPanel: React.FC = () => {
   };
 
   const handleAddPowerCard = () => {
-    const powerCardIds = ["inflame", "metallicize", "demon_form"];
-    const randomPowerCardId =
-      powerCardIds[Math.floor(Math.random() * powerCardIds.length)];
-
-    const powerCard: Card = {
-      id: createInstanceId(randomPowerCardId, "debug"),
-      baseId: randomPowerCardId,
-      name:
-        randomPowerCardId === "metallicize"
-          ? "Metallicize"
-          : randomPowerCardId === "demon_form"
-            ? "Demon Form"
-            : "Inflame",
-      cost: randomPowerCardId === "demon_form" ? 3 : 1,
-      type: "power" as CardType,
-      rarity: "uncommon" as CardRarity,
-      description:
-        randomPowerCardId === "metallicize"
-          ? "At the end of your turn, gain 3 Block."
-          : randomPowerCardId === "demon_form"
-            ? "At the start of each turn, gain 2 Strength."
-            : "Gain 2 Strength.",
-      upgraded: false,
-    };
+    const powerCards = getAllCards().filter((card) => card.type === "power");
+    const card = powerCards[Math.floor(Math.random() * powerCards.length)];
+    if (!card) return;
 
     useGameStore.setState({
-      hand: [...hand, powerCard],
+      hand: [...hand, { ...card, id: createInstanceId(card.baseId, "debug") }],
     });
   };
 
-  const handleAddEnergyCore = () => {
-    const energyCore = getAllRelics().find((r) => r.id === "energy_core");
-    if (energyCore && !player.relics.some((r) => r.id === "energy_core")) {
+  /** Adds a relic that grants energy every turn, if the player lacks one. */
+  const handleAddEnergyRelic = () => {
+    const energyRelic = getAllRelics().find(
+      (relic) =>
+        !player.relics.some((owned) => owned.id === relic.id) &&
+        relic.effects.some(
+          (effect) =>
+            effect.trigger === "turn_start" &&
+            effect.effect === "gain_energy" &&
+            !effect.nextTurn,
+        ),
+    );
+    if (energyRelic) {
       useGameStore.setState({
-        player: {
-          ...player,
-          relics: [...player.relics, energyCore],
-        },
+        player: { ...player, relics: [...player.relics, energyRelic] },
       });
     }
   };
@@ -485,26 +481,21 @@ export const DebugPanel: React.FC = () => {
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
                 gap: "4px",
+                maxHeight: "160px",
+                overflowY: "auto",
               }}
             >
-              {[
-                "strike",
-                "defend",
-                "bash",
-                "cleave",
-                "whirlwind",
-                "twin_strike",
-              ].map((cardId) => (
+              {getAllCards().map((card) => (
                 <button
-                  key={cardId}
-                  onClick={() => handleAddSpecificCard(cardId)}
+                  key={card.baseId}
+                  onClick={() => handleAddSpecificCard(card.baseId)}
                   style={{
                     ...buttonStyle,
                     fontSize: "10px",
                     padding: "4px 6px",
                   }}
                 >
-                  {cardId.replace("_", " ")}
+                  {card.name}
                 </button>
               ))}
             </div>
@@ -526,8 +517,8 @@ export const DebugPanel: React.FC = () => {
             <button onClick={handleAddRandomRelic} style={buttonStyle}>
               🏺 Add Random Relic
             </button>
-            <button onClick={handleAddEnergyCore} style={buttonStyle}>
-              🔋 Add Energy Core
+            <button onClick={handleAddEnergyRelic} style={buttonStyle}>
+              🔋 Add Energy Relic
             </button>
             <div style={{ fontSize: "10px", marginTop: "8px" }}>
               <strong>Game Phase:</strong>

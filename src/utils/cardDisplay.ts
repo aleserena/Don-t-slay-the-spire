@@ -3,7 +3,16 @@
  * need to know about individual cards.
  */
 
-import { Card, CardType, EffectType, TargetType } from "../types/game";
+import {
+  Card,
+  CardType,
+  EffectType,
+  Enemy,
+  Player,
+  TargetType,
+} from "../types/game";
+import { getCardEffects } from "../engine/effects";
+import { calculateBlock, calculateDamage } from "./statusEffects";
 
 /** Start and end colors of the background gradient for each card type. */
 const CARD_TYPE_COLORS: Record<CardType, [string, string]> = {
@@ -45,36 +54,71 @@ export interface CardStatBadge {
   label: string;
 }
 
-const isDamageEffect = (type: EffectType): boolean =>
-  type === EffectType.DAMAGE ||
-  type === EffectType.DAMAGE_MULTIPLIER_BLOCK ||
-  type === EffectType.DAMAGE_MULTIPLIER_ENERGY;
+/**
+ * The player whose modifiers (Strength, Dexterity, first-attack bonus,
+ * current block and energy) the badges should include. Without it the
+ * badges show the card's own numbers.
+ */
+export interface BadgeContext {
+  player: Player;
+  /** Whether the card would be the first attack of the combat. */
+  isFirstAttack?: boolean;
+}
+
+/** Stands in for "an enemy with no statuses" when working out damage. */
+const NEUTRAL_TARGET = { statusEffects: [] } as unknown as Enemy;
 
 const allEnemiesSuffix = (target: TargetType): string =>
   target === TargetType.ALL_ENEMIES ? " to ALL" : "";
 
 /**
- * The damage and block badges to show on a card, read from its effects:
+ * The damage and block badges to show on a card, read from its effects, so
+ * no screen needs to know about individual cards:
  *
  * - repeated identical hits are shown once as `5 × 2`
  * - hits on every enemy are marked `to ALL`
- * - damage per energy spent is shown as `5×X`
- * - damage based on the player's block is shown as `1x Block`
+ * - damage per energy spent is shown as `5×X` (or `5×3` with a player)
+ * - damage based on the player's block is shown as `1x Block` (or the
+ *   number, with a player)
+ *
+ * Ongoing effects of power cards are not shown: they do not happen when the
+ * card is played.
  */
-export const getCardStatBadges = (card: Card): CardStatBadge[] => {
-  const effects = card.effects ?? [];
+export const getCardStatBadges = (
+  card: Card,
+  context?: BadgeContext,
+): CardStatBadge[] => {
+  const effects = getCardEffects(card).filter((effect) => !effect.trigger);
   const badges: CardStatBadge[] = [];
   const hits: { value: number; target: TargetType; count: number }[] = [];
+  const player = context?.player;
+
+  // The first-attack bonus applies to the first hit of the card only
+  let firstAttack =
+    (context?.isFirstAttack ?? false) && card.type === CardType.ATTACK;
+  const damageOf = (value: number, strengthMultiplier?: number): number => {
+    if (!player) return value;
+    const damage = calculateDamage(
+      value,
+      player,
+      NEUTRAL_TARGET,
+      firstAttack,
+      strengthMultiplier,
+    );
+    firstAttack = false;
+    return damage;
+  };
 
   for (const effect of effects) {
     if (effect.type !== EffectType.DAMAGE) continue;
+    const value = damageOf(effect.value, effect.strengthMultiplier);
     const sameHit = hits.find(
-      (hit) => hit.value === effect.value && hit.target === effect.target,
+      (hit) => hit.value === value && hit.target === effect.target,
     );
     if (sameHit) {
       sameHit.count++;
     } else {
-      hits.push({ value: effect.value, target: effect.target, count: 1 });
+      hits.push({ value, target: effect.target, count: 1 });
     }
   }
 
@@ -90,27 +134,29 @@ export const getCardStatBadges = (card: Card): CardStatBadge[] => {
     if (effect.type === EffectType.DAMAGE_MULTIPLIER_ENERGY) {
       badges.push({
         kind: "damage",
-        label: `${effect.value}×X${allEnemiesSuffix(effect.target)}`,
+        label: `${damageOf(effect.value)}×${
+          player ? player.energy : "X"
+        }${allEnemiesSuffix(effect.target)}`,
       });
     } else if (effect.type === EffectType.DAMAGE_MULTIPLIER_BLOCK) {
+      const multiplier = effect.multiplier || 1;
       badges.push({
         kind: "damage",
-        label: `${effect.multiplier || 1}x Block`,
+        label: player
+          ? String(damageOf(player.block * multiplier))
+          : `${multiplier}x Block`,
       });
     }
   }
 
-  // Cards that only carry a direct damage number and no damage effects
-  if (
-    card.damage &&
-    card.damage > 0 &&
-    !effects.some((effect) => isDamageEffect(effect.type))
-  ) {
-    badges.push({ kind: "damage", label: String(card.damage) });
-  }
-
-  if (card.block && card.block > 0) {
-    badges.push({ kind: "block", label: String(card.block) });
+  for (const effect of effects) {
+    if (effect.type !== EffectType.BLOCK || effect.value <= 0) continue;
+    badges.push({
+      kind: "block",
+      label: String(
+        player ? calculateBlock(effect.value, player) : effect.value,
+      ),
+    });
   }
 
   return badges;

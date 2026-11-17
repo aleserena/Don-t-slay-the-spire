@@ -1,13 +1,24 @@
 import React, { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
+import { cardNeedsTarget } from "../utils/cardUtils";
+import { previewCardPlay } from "../engine/preview";
+import { asButton } from "./ui/asButton";
 import {
-  cardNeedsTarget,
-  isMultiTargetCard,
-  getCardDamagePreview,
-} from "../utils/cardUtils";
-import { calculateDamage } from "../utils/statusEffects";
+  calculateDamage,
+  getStatusEffectColor,
+  getStatusEffectDescription,
+  getStatusEffectIcon,
+  getStatusEffectName,
+} from "../utils/statusEffects";
 import MonsterCardPreview from "./MonsterCardPreview";
-import { MonsterCard, Card, Enemy, StatusEffect } from "../types/game";
+import {
+  MonsterCard,
+  Card,
+  Enemy,
+  StatusEffect,
+  StatusType,
+} from "../types/game";
 
 interface EnemyAreaProps {
   selectedCard: Card | null;
@@ -20,7 +31,14 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({
   confirmingCard,
   onEnemyTarget,
 }) => {
-  const { enemies, player } = useGameStore();
+  const { enemies, player, firstAttackThisCombat, combat } = useGameStore(
+    useShallow((state) => ({
+      enemies: state.enemies,
+      player: state.player,
+      firstAttackThisCombat: state.firstAttackThisCombat,
+      combat: state.combat,
+    })),
+  );
   const [hoveredStatusEffect, setHoveredStatusEffect] =
     useState<StatusEffect | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -63,122 +81,30 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({
     setMonsterCardPosition({ x: event.clientX, y: event.clientY });
   };
 
-  const getStatusEffectIcon = (type: string): string => {
-    switch (type) {
-      case "poison":
-        return "☠️";
-      case "vulnerable":
-        return "💔";
-      case "weak":
-        return "😵";
-      case "strength":
-        return "💪";
-      default:
-        return "❓";
-    }
-  };
-
-  const getStatusEffectName = (type: string): string => {
-    switch (type) {
-      case "poison":
-        return "Poison";
-      case "vulnerable":
-        return "Vulnerable";
-      case "weak":
-        return "Weak";
-      case "strength":
-        return "Strength";
-      default:
-        return "Unknown";
-    }
-  };
-
-  const getStatusEffectDescription = (type: string): string => {
-    switch (type) {
-      case "poison":
-        return "Takes damage at the end of turn equal to poison stacks.";
-      case "vulnerable":
-        return "Takes 50% more damage from attacks.";
-      case "weak":
-        return "Deals 25% less damage with attacks.";
-      case "strength":
-        return "Deals additional damage with attacks equal to strength stacks.";
-      default:
-        return "Unknown effect.";
-    }
-  };
-
-  const getStatusEffectColor = (type: string): string => {
-    switch (type) {
-      case "poison":
-        return "rgba(155, 89, 182, 0.8)";
-      case "vulnerable":
-        return "rgba(231, 76, 60, 0.8)";
-      case "weak":
-        return "rgba(241, 196, 15, 0.8)";
-      case "strength":
-        return "rgba(46, 204, 113, 0.8)";
-      default:
-        return "rgba(149, 165, 166, 0.8)";
-    }
-  };
-
   const needsTarget = selectedCard && cardNeedsTarget(selectedCard);
 
+  /** What the card being aimed or confirmed would do to this enemy. */
   const getDamagePreview = (enemy: Enemy) => {
-    // Show damage preview for selected card (targeting) or confirming card (confirmation phase)
     const cardToPreview = selectedCard || confirmingCard;
     if (!cardToPreview) return null;
 
-    // Show damage preview for cards that need targeting or multi-target cards
-    const showPreview =
-      cardNeedsTarget(cardToPreview) || isMultiTargetCard(cardToPreview);
-    if (!showPreview) return null;
-
-    // For Whirlwind, calculate damage correctly using energy multiplier
-    if (cardToPreview.id === "whirlwind") {
-      const energyEffect = cardToPreview.effects?.find(
-        (effect: { type: string; value: number }) =>
-          effect.type === "damage_multiplier_energy",
-      );
-      if (energyEffect) {
-        const hitsCount = player.energy;
-        const damagePerHit = calculateDamage(
-          energyEffect.value,
-          player,
-          enemy,
-          false,
-        );
-        const totalDamage = damagePerHit * hitsCount;
-        const actualDamage = Math.max(0, totalDamage - enemy.block);
-        const isVulnerable = enemy.statusEffects.some(
-          (effect: StatusEffect) => effect.type === "vulnerable",
-        );
-        const wouldKill = actualDamage >= enemy.health;
-
-        return {
-          totalDamage,
-          actualDamage,
-          isVulnerable,
-          wouldKill,
-          hitsCount,
-        };
-      }
-    }
-
-    const cardPreview = getCardDamagePreview(cardToPreview, player, [enemy]);
-    if (!cardPreview || cardPreview.previews.length === 0) return null;
-
-    const preview = cardPreview.previews[0];
-
-    if (preview.totalDamage <= 0) return null;
+    const preview = previewCardPlay({
+      card: cardToPreview,
+      player,
+      enemies,
+      targetId: enemy.id,
+      isFirstAttack: firstAttackThisCombat,
+      counters: combat,
+    })[enemy.id];
+    if (!preview) return null;
 
     return {
       totalDamage: preview.totalDamage,
-      actualDamage: preview.actualDamage,
-      isVulnerable: preview.isVulnerable,
+      actualDamage: preview.healthLost,
+      isVulnerable: enemy.statusEffects.some(
+        (effect) => effect.type === StatusType.VULNERABLE,
+      ),
       wouldKill: preview.wouldKill,
-      hitsCount: preview.hitsCount,
     };
   };
 
@@ -193,13 +119,27 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({
         minHeight: "200px",
       }}
     >
-      {enemies.map((enemy) => {
+      {enemies.map((enemy, index) => {
         const damagePreview = getDamagePreview(enemy);
 
         return (
           <div
             key={enemy.id}
             className="enemy-card"
+            {...asButton(() => onEnemyTarget(enemy.id), {
+              disabled: !needsTarget,
+              label: `${index + 1}: ${enemy.name}, ${enemy.health} of ${
+                enemy.maxHealth
+              } health${enemy.block > 0 ? `, ${enemy.block} block` : ""}${
+                enemy.intent.card ? `. Next: ${enemy.intent.card.name}` : ""
+              }${
+                damagePreview
+                  ? `. This card deals ${damagePreview.actualDamage} damage${
+                      damagePreview.wouldKill ? " and defeats it" : ""
+                    }`
+                  : ""
+              }`,
+            })}
             style={{
               width: "180px",
               minHeight: "220px",
@@ -217,7 +157,6 @@ export const EnemyArea: React.FC<EnemyAreaProps> = ({
               transform: needsTarget ? "scale(1.05)" : "scale(1)",
               position: "relative",
             }}
-            onClick={() => needsTarget && onEnemyTarget(enemy.id)}
             onMouseEnter={(e) => {
               if (needsTarget) {
                 e.currentTarget.style.transform = "scale(1.1)";

@@ -1,4 +1,5 @@
 import React from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
 import { ShopCard, ShopRelic } from "../types/map";
 import { UnifiedHeader } from "./UnifiedHeader";
@@ -23,7 +24,21 @@ export const ShopScreen: React.FC = () => {
     removeCardFromDeck,
     openCardRemovalModal,
     closeCardRemovalModal,
-  } = useGameStore();
+  } = useGameStore(
+    useShallow((state) => ({
+      currentShop: state.currentShop,
+      player: state.player,
+      drawPile: state.drawPile,
+      discardPile: state.discardPile,
+      showCardRemovalModal: state.showCardRemovalModal,
+      returnToMap: state.returnToMap,
+      purchaseShopCard: state.purchaseShopCard,
+      purchaseShopRelic: state.purchaseShopRelic,
+      removeCardFromDeck: state.removeCardFromDeck,
+      openCardRemovalModal: state.openCardRemovalModal,
+      closeCardRemovalModal: state.closeCardRemovalModal,
+    })),
+  );
 
   if (!currentShop) return null;
 

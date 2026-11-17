@@ -118,11 +118,10 @@ export const cardNeedsTarget = (card: Card): boolean =>
 /**
  * Check if card targets all enemies (multi-target)
  */
-export const isMultiTargetCard = (card: Card): boolean => {
-  // Cards that hit all enemies
-  const multiTargetCards = ["cleave", "whirlwind"];
-  return multiTargetCards.includes(card.baseId);
-};
+export const isMultiTargetCard = (card: Card): boolean =>
+  getCardEffects(card).some(
+    (effect) => !effect.trigger && effect.target === TargetType.ALL_ENEMIES,
+  );
 
 /**
  * Calculates the total damage a card would deal to a specific enemy
