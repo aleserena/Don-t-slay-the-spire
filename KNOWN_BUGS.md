@@ -22,10 +22,18 @@ These cards need a mechanic of their own. They are listed in `src/data/__tests__
 - One enemy (`createLagavulin`) has no deck of its own and is not used in any encounter
 - There is no way to type a seed in the UI; `startNewGame(seed)` accepts one and the Game Over screen shows it
 - A run is saved on the map only: closing the browser during a combat, event or shop returns to the map before that node
-- Most screens still style themselves with inline styles and hard-coded colors instead of the theme (`src/styles/theme.css`); only the title, defeat and victory screens use it
-- The package name, README and older docs still use the old name
+
+### Content
+- Cards, relics, enemies, bosses and events are placeholders modelled on Slay the Spire and are to be replaced with original content (see `docs/CONTENT.md`)
+
+### Interface
+- Icons are emoji, text is English and written in the components, and the layout targets desktop screens
 
 ## Fixed
+
+### Theme and docs (unreleased)
+- Every screen takes its colors and layout from the theme; no component sets a color or inline style beyond data-driven geometry (enforced by tests)
+- The package, README and docs no longer use the old name; the docs describe the current engine instead of planned tooling that does not exist
 
 ### Run structure (unreleased)
 - The map is built from routes that never cross, with a combat to start, a treasure halfway, a rest site before the boss, and at least one shop and one elite

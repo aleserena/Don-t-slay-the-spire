@@ -1,6 +1,6 @@
 /**
  * Store-level tests for the effect and trigger pipeline
- * (plans/2026-11-16-effect-trigger-pipeline.md). Mechanics are exercised
+ * (docs/plans/2026-11-16-effect-trigger-pipeline.md). Mechanics are exercised
  * with fixture cards and relics; a few existing entries are checked at the
  * end to pin their annotations.
  */

@@ -35,6 +35,61 @@
   --color-energy: #f1c40f;
   --color-gold: #f1c40f;
 
+  --color-overlay: rgba(0, 0, 0, 0.8);
+  --color-info: #3498db;
+  --color-warning: #f39c12;
+
+  /* Health bar, by how much is left */
+  --color-health-high: #2ecc71;
+  --color-health-mid: #e67e22;
+  --color-health-low: #e74c3c;
+
+  /* Card types: start and end of the card's background */
+  --card-attack-from: #ff6b6b;
+  --card-attack-to: #ee5a52;
+  --card-skill-from: #4ecdc4;
+  --card-skill-to: #44a08d;
+  --card-power-from: #e0b93a;
+  --card-power-to: #c99a12;
+  --card-other-from: #95a5a6;
+  --card-other-to: #7f8c8d;
+
+  /* Rarities */
+  --rarity-base: #5d6d7e;
+  --rarity-starter: #5d6d7e;
+  --rarity-common: #95a5a6;
+  --rarity-uncommon: #3498db;
+  --rarity-rare: #f39c12;
+  --rarity-boss: #e74c3c;
+
+  /* Map nodes */
+  --node-combat: #ff6b6b;
+  --node-elite: #ff8c42;
+  --node-boss: #8b0000;
+  --node-event: #4ecdc4;
+  --node-shop: #45b7d1;
+  --node-rest: #96ceb4;
+  --node-treasure: #feca57;
+
+  /* Statuses */
+  --status-poison: #8b5a2b;
+  --status-weak: #c0564f;
+  --status-vulnerable: #2a9d8f;
+  --status-strength: #3d9970;
+  --status-dexterity: #4a90a4;
+  --status-other: #7f8c8d;
+
+  /* What an enemy is about to do */
+  --intent-attack: #c0392b;
+  --intent-defend: #2980b9;
+  --intent-buff: #27ae60;
+  --intent-debuff: #8e44ad;
+  --intent-unknown: #7f8c8d;
+
+  /* The two sides of a combat */
+  --side-player: #2ecc71;
+  --side-enemy: #9b59b6;
+
   /* Shape and rhythm */
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -60,6 +115,13 @@
 :focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+/* The app fills the window; each screen scrolls inside it */
+.app {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* A full-page screen */
@@ -117,6 +179,10 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
+}
+
+.panel > .btn {
+  margin-top: var(--space-4);
 }
 
 .panel__title {

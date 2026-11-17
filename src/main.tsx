@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import "./styles/theme.css";
+import "./styles/components.css";
+import "./styles/screens.css";
 import { installAutosave } from "./store/autosave";
 import { useGameStore } from "./store/gameStore";
 

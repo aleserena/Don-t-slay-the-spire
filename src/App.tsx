@@ -10,7 +10,6 @@ import { TitleScreen } from "./components/TitleScreen";
 import { GameOverScreen } from "./components/GameOverScreen";
 import { VictoryScreen } from "./components/VictoryScreen";
 import { GamePhase } from "./types/game";
-import "./App.css";
 
 function App() {
   const gamePhase = useGameStore((state) => state.gamePhase);
@@ -42,14 +41,7 @@ function App() {
     }
   };
 
-  return (
-    <div
-      className="App"
-      style={{ width: "100vw", height: "100vh", overflow: "hidden" }}
-    >
-      {renderCurrentPhase()}
-    </div>
-  );
+  return <div className="app">{renderCurrentPhase()}</div>;
 }
 
 export default App;

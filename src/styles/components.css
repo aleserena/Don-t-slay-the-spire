@@ -1,0 +1,699 @@
+/*
+ * Shared pieces: header, cards, badges, health bars, statuses, tooltips,
+ * modals, relic tiles. All values come from theme.css.
+ *
+ * What differs by content (a card's type, a relic's rarity, a status) is
+ * set with a data attribute on the element and colored here, so components
+ * carry no colors.
+ */
+
+/* ---------------------------------------------------------------- page */
+
+/* A screen with the header on top and its content below */
+.page {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, var(--color-bg), var(--color-bg-alt));
+  color: var(--color-text);
+  overflow: hidden;
+}
+
+.page__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  overflow-y: auto;
+}
+
+.page__body--centered {
+  justify-content: center;
+}
+
+.page__title {
+  margin: 0;
+  font-size: 36px;
+  color: var(--color-accent);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.page__section-title {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-xl);
+  color: var(--color-text);
+}
+
+.page__section {
+  width: 100%;
+  max-width: 1100px;
+}
+
+.page__top {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/* -------------------------------------------------------------- header */
+
+.header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-overlay);
+  border-bottom: 2px solid var(--color-accent);
+  z-index: 100;
+}
+
+.header__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.header__title {
+  font-size: var(--font-size-xl);
+  font-weight: bold;
+  color: var(--color-accent);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* A small labelled value or action in the header */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: bold;
+  color: var(--chip-color, var(--color-text));
+  background: color-mix(in srgb, var(--chip-color, #fff) 20%, transparent);
+  border: 2px solid var(--chip-color, var(--color-border));
+  border-radius: var(--radius-md);
+}
+
+button.chip {
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+button.chip:hover {
+  background: color-mix(in srgb, var(--chip-color, #fff) 40%, transparent);
+  transform: scale(1.05);
+}
+
+.chip[data-kind="health"] {
+  --chip-color: var(--color-health);
+}
+
+.chip[data-kind="gold"] {
+  --chip-color: var(--color-gold);
+}
+
+.chip[data-kind="relics"] {
+  --chip-color: var(--side-enemy);
+}
+
+.chip[data-kind="deck"] {
+  --chip-color: var(--color-info);
+}
+
+/* ---------------------------------------------------------------- cards */
+
+.card {
+  --card-from: var(--card-other-from);
+  --card-to: var(--card-other-to);
+  --card-width: 150px;
+  --card-height: 200px;
+
+  position: relative;
+  width: var(--card-width);
+  min-height: var(--card-height);
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  color: var(--color-text);
+  text-align: center;
+  background: linear-gradient(135deg, var(--card-from), var(--card-to));
+  border: 2px solid var(--card-border, var(--color-text));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.card[data-type="attack"] {
+  --card-from: var(--card-attack-from);
+  --card-to: var(--card-attack-to);
+}
+
+.card[data-type="skill"] {
+  --card-from: var(--card-skill-from);
+  --card-to: var(--card-skill-to);
+}
+
+.card[data-type="power"] {
+  --card-from: var(--card-power-from);
+  --card-to: var(--card-power-to);
+}
+
+.card[data-size="hand"] {
+  --card-width: 120px;
+  --card-height: 160px;
+  font-size: 11px;
+}
+
+.card[data-size="large"] {
+  --card-width: 200px;
+  --card-height: 270px;
+  font-size: var(--font-size-md);
+  border-width: 3px;
+}
+
+/* Outside the hand the border shows the rarity */
+.card:not([data-size="hand"])[data-rarity="base"] {
+  --card-border: var(--rarity-base);
+}
+.card:not([data-size="hand"])[data-rarity="common"] {
+  --card-border: var(--rarity-common);
+}
+.card:not([data-size="hand"])[data-rarity="uncommon"] {
+  --card-border: var(--rarity-uncommon);
+}
+.card:not([data-size="hand"])[data-rarity="rare"] {
+  --card-border: var(--rarity-rare);
+}
+
+.card[role="button"] {
+  cursor: pointer;
+}
+
+.card[role="button"]:not([aria-disabled="true"]):hover {
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: var(--shadow-lg);
+  z-index: 10;
+}
+
+.card[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.card.is-selected {
+  --card-border: var(--color-accent);
+  border-width: 3px;
+  transform: translateY(-15px) scale(1.1);
+  box-shadow:
+    0 12px 24px color-mix(in srgb, var(--color-accent) 60%, transparent),
+    0 0 30px color-mix(in srgb, var(--color-accent) 40%, transparent);
+  z-index: 15;
+}
+
+.card.is-confirming {
+  --card-border: var(--color-danger);
+  border-width: 3px;
+  transform: translateY(-12px) scale(1.08);
+  box-shadow:
+    0 12px 24px color-mix(in srgb, var(--color-danger) 60%, transparent),
+    0 0 30px color-mix(in srgb, var(--color-danger) 40%, transparent);
+  z-index: 14;
+}
+
+.card.is-sold {
+  opacity: 0.45;
+}
+
+.card__cost {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: bold;
+  color: #000;
+  background: var(--color-accent);
+  border: 2px solid var(--color-text);
+  border-radius: 50%;
+  box-shadow: var(--shadow-md);
+}
+
+.card__price {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  padding: 2px var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+  color: #000;
+  background: var(--color-gold);
+  border: 2px solid var(--color-text);
+  border-radius: var(--radius-md);
+}
+
+.card__price[data-affordable="false"] {
+  color: var(--color-text);
+  background: var(--color-danger);
+}
+
+.card__name {
+  margin-top: var(--space-2);
+  font-size: 1.1em;
+  font-weight: bold;
+  line-height: 1.2;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.card__meta {
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.85;
+}
+
+.card__badges {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+
+.card__text {
+  font-size: 0.85em;
+  line-height: 1.3;
+  opacity: 0.9;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.card__footer {
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.8em;
+  font-weight: bold;
+  color: #000;
+  background: var(--color-accent);
+  border-radius: var(--radius-sm);
+}
+
+.card__sold {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xl);
+  font-weight: bold;
+  color: var(--color-danger);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: inherit;
+}
+
+/* A short instruction floating above a card */
+.card__banner {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px var(--space-3);
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+  color: #000;
+  background: var(--color-accent);
+  border: 2px solid var(--color-text);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  animation: pulse 2s infinite;
+  z-index: 25;
+}
+
+.card.is-confirming .card__banner {
+  color: var(--color-text);
+  background: var(--color-danger);
+}
+
+.card-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+/* Damage and block numbers on a card */
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: bold;
+  color: var(--color-text);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-sm);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.badge[data-kind="damage"] {
+  background: color-mix(in srgb, var(--color-danger) 90%, transparent);
+}
+
+.badge[data-kind="block"] {
+  background: color-mix(in srgb, var(--color-block) 90%, transparent);
+}
+
+.badge[data-size="tiny"] {
+  font-size: 11px;
+}
+
+.badge[data-size="small"] {
+  font-size: var(--font-size-sm);
+}
+
+/* ------------------------------------------------------ health and stats */
+
+.meter {
+  width: 100%;
+  padding: var(--space-2);
+  background: var(--color-surface-strong);
+  border-radius: var(--radius-md);
+}
+
+.meter__row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+}
+
+.meter__track {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.meter__fill {
+  height: 100%;
+  background: var(--color-health-high);
+  transition: width 0.5s ease;
+}
+
+.meter[data-level="mid"] .meter__fill {
+  background: var(--color-health-mid);
+}
+
+.meter[data-level="low"] .meter__fill {
+  background: var(--color-health-low);
+}
+
+/* A one-line fact about a combatant: block, energy */
+.pill {
+  width: 100%;
+  padding: 6px var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+  text-align: center;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-md);
+}
+
+.pill[data-kind="block"] {
+  background: color-mix(in srgb, var(--color-info) 80%, transparent);
+}
+
+.pill[data-kind="energy"] {
+  color: #000;
+  background: color-mix(in srgb, var(--color-energy) 85%, transparent);
+}
+
+/* -------------------------------------------------------------- statuses */
+
+.statuses {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status {
+  --status-color: var(--status-other);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px var(--space-2);
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--color-text);
+  background: var(--status-color);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  cursor: help;
+}
+
+.status[data-status="poison"] {
+  --status-color: var(--status-poison);
+}
+.status[data-status="weak"] {
+  --status-color: var(--status-weak);
+}
+.status[data-status="vulnerable"] {
+  --status-color: var(--status-vulnerable);
+}
+.status[data-status="strength"] {
+  --status-color: var(--status-strength);
+}
+.status[data-status="dexterity"] {
+  --status-color: var(--status-dexterity);
+}
+
+/* Shown while its parent is hovered or focused */
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 260px;
+  display: none;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: normal;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--color-text);
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid var(--status-color, var(--color-border));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.tooltip--below {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
+.tooltip__title {
+  font-size: var(--font-size-md);
+  font-weight: bold;
+  color: var(--status-color, var(--color-accent));
+}
+
+.tooltip__note {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+:hover > .tooltip,
+:focus-visible > .tooltip {
+  display: flex;
+}
+
+/* ---------------------------------------------------------------- modal */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: var(--color-overlay);
+  z-index: 1000;
+}
+
+.modal__panel {
+  --modal-color: var(--color-info);
+
+  width: min(1000px, 100%);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  border: 3px solid var(--modal-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal__panel[data-tone="danger"] {
+  --modal-color: var(--color-danger);
+}
+.modal__panel[data-tone="accent"] {
+  --modal-color: var(--color-accent);
+}
+.modal__panel[data-tone="warning"] {
+  --modal-color: var(--color-warning);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal__title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.modal__close {
+  width: 36px;
+  height: 36px;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--color-text);
+  background: var(--color-danger);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.modal__close:hover {
+  background: var(--color-danger-hover);
+}
+
+.modal__body {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  overflow-y: auto;
+}
+
+/* ---------------------------------------------------------------- relics */
+
+.relic {
+  --relic-color: var(--rarity-common);
+
+  position: relative;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  font: inherit;
+  color: var(--color-text);
+  text-align: center;
+  background: color-mix(in srgb, var(--relic-color) 22%, var(--color-bg));
+  border: 2px solid var(--relic-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.relic[data-rarity="starter"] {
+  --relic-color: var(--rarity-starter);
+}
+.relic[data-rarity="uncommon"] {
+  --relic-color: var(--rarity-uncommon);
+}
+.relic[data-rarity="rare"] {
+  --relic-color: var(--rarity-rare);
+}
+.relic[data-rarity="boss"] {
+  --relic-color: var(--rarity-boss);
+}
+
+.relic[data-size="large"] {
+  width: min(420px, 100%);
+  padding: var(--space-5);
+  border-width: 3px;
+}
+
+button.relic,
+.relic[role="button"] {
+  cursor: pointer;
+}
+
+button.relic:hover:not(:disabled),
+.relic[role="button"]:not([aria-disabled="true"]):hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: var(--shadow-lg);
+}
+
+.relic[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.relic.is-sold {
+  opacity: 0.45;
+}
+
+.relic__name {
+  font-size: var(--font-size-lg);
+  font-weight: bold;
+  color: var(--color-accent);
+}
+
+.relic__rarity {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--relic-color);
+}
+
+.relic__text {
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}

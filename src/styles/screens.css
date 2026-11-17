@@ -1,0 +1,552 @@
+/*
+ * Layout of the individual screens: combat, map, shop, rest site, events
+ * and rewards. Colors and sizes come from theme.css; the pieces the screens
+ * are built from are in components.css.
+ */
+
+/* --------------------------------------------------------------- combat */
+
+.combat {
+  position: relative;
+}
+
+.combat__controls {
+  position: absolute;
+  top: 80px;
+  right: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  z-index: 200;
+}
+
+.combat__field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 80px;
+  padding: var(--space-6) 80px;
+}
+
+.combat__versus {
+  font-size: 64px;
+  font-weight: bold;
+  color: var(--color-accent);
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+}
+
+.combat__tray {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.combat__enemies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.hand {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  min-height: 160px;
+}
+
+/* The draw and discard piles */
+.pile {
+  --pile-color: var(--color-info);
+
+  flex: 0 0 auto;
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  font: inherit;
+  font-weight: bold;
+  color: var(--color-text);
+  background: none;
+  border: none;
+}
+
+.pile__cards {
+  width: 80px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-lg);
+  background: color-mix(in srgb, var(--pile-color) 30%, var(--color-bg));
+  border: 2px solid var(--pile-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  transition: transform 0.2s ease;
+}
+
+.pile[data-kind="discard"] {
+  --pile-color: var(--side-enemy);
+}
+
+button.pile {
+  cursor: pointer;
+}
+
+button.pile:hover .pile__cards {
+  transform: scale(1.05);
+}
+
+/* The player or an enemy */
+.combatant {
+  --side-color: var(--side-player);
+
+  position: relative;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-4);
+  color: var(--color-text);
+  text-align: center;
+  background: color-mix(in srgb, var(--side-color) 20%, var(--color-bg));
+  border: 3px solid var(--side-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.combatant[data-side="enemy"] {
+  --side-color: var(--side-enemy);
+  width: 180px;
+  background: color-mix(in srgb, var(--side-color) 75%, var(--color-bg));
+  border-width: 2px;
+  border-color: var(--color-text);
+}
+
+.combatant__name {
+  font-size: var(--font-size-xl);
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.combatant[data-side="enemy"] .combatant__name {
+  font-size: var(--font-size-lg);
+}
+
+/* An enemy that can be picked as the target of the selected card */
+.combatant.is-targetable {
+  border-width: 3px;
+  border-color: var(--color-accent);
+  cursor: pointer;
+  transform: scale(1.05);
+  box-shadow:
+    0 8px 16px color-mix(in srgb, var(--color-accent) 40%, transparent),
+    0 0 20px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.combatant.is-targetable:hover {
+  transform: scale(1.1);
+}
+
+.combatant__powers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+.combatant__powers-title {
+  width: 100%;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--color-accent);
+}
+
+.power {
+  position: relative;
+  padding: var(--space-1) var(--space-2);
+  font-size: 11px;
+  font-weight: bold;
+  color: #000;
+  background: linear-gradient(
+    135deg,
+    var(--card-power-from),
+    var(--card-power-to)
+  );
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-md);
+  cursor: help;
+}
+
+/* What an enemy will do next turn */
+.intent {
+  --intent-color: var(--intent-unknown);
+
+  position: relative;
+  width: 100%;
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--intent-color) 85%, transparent);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-md);
+  cursor: help;
+}
+
+.intent[data-intent="attack"] {
+  --intent-color: var(--intent-attack);
+}
+.intent[data-intent="defend"] {
+  --intent-color: var(--intent-defend);
+}
+.intent[data-intent="buff"] {
+  --intent-color: var(--intent-buff);
+}
+.intent[data-intent="debuff"] {
+  --intent-color: var(--intent-debuff);
+}
+
+.intent__label {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.intent__value {
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+}
+
+.intent__card {
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* What the selected card would do to an enemy */
+.damage-preview {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  min-width: 60px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--color-text);
+  background: var(--color-warning);
+  border: 2px solid var(--color-text);
+  border-radius: var(--radius-lg);
+  z-index: 20;
+}
+
+.damage-preview.is-lethal {
+  background: var(--color-danger);
+}
+
+.damage-preview__detail {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+/* An enemy's card, shown in a tooltip */
+.monster-card {
+  min-width: 220px;
+  text-align: left;
+}
+
+.monster-card__stats {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.monster-card__effects {
+  margin: 0;
+  padding-left: var(--space-4);
+  text-align: left;
+  color: var(--color-text-muted);
+}
+
+/* ------------------------------------------------------------------ map */
+
+.map {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-5);
+  overflow: auto;
+}
+
+.map__board {
+  --cell: 100px;
+
+  position: relative;
+  flex: 0 0 auto;
+  width: calc(var(--columns) * var(--cell));
+  height: calc(var(--rows) * var(--cell));
+}
+
+.map__lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.map__lines line {
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 2;
+}
+
+.map-node {
+  --node-color: var(--color-text-faint);
+
+  position: absolute;
+  left: calc(var(--x) * var(--cell) + 8px);
+  top: calc(var(--row) * var(--cell) + 8px);
+  width: calc(var(--cell) - 16px);
+  height: calc(var(--cell) - 16px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--color-text);
+  background: rgba(50, 50, 50, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  opacity: 0.5;
+  transform: scale(0.9);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  z-index: 2;
+}
+
+.map-node[data-node="combat"] {
+  --node-color: var(--node-combat);
+}
+.map-node[data-node="elite"] {
+  --node-color: var(--node-elite);
+}
+.map-node[data-node="boss"] {
+  --node-color: var(--node-boss);
+}
+.map-node[data-node="event"] {
+  --node-color: var(--node-event);
+}
+.map-node[data-node="shop"] {
+  --node-color: var(--node-shop);
+}
+.map-node[data-node="rest"] {
+  --node-color: var(--node-rest);
+}
+.map-node[data-node="treasure"] {
+  --node-color: var(--node-treasure);
+}
+
+.map-node.is-available {
+  background: var(--node-color);
+  border: 3px solid var(--color-accent);
+  opacity: 1;
+  transform: scale(1);
+  cursor: pointer;
+}
+
+.map-node.is-available:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent) 60%, transparent);
+}
+
+.map-node.is-completed {
+  background: rgba(100, 100, 100, 0.5);
+  opacity: 1;
+}
+
+.map-node__icon {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.map-node__label {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.map-node__done {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: var(--font-size-lg);
+  color: var(--color-health-high);
+}
+
+.map__legend {
+  position: fixed;
+  top: 250px;
+  right: var(--space-5);
+  min-width: 170px;
+  text-align: left;
+  border-color: var(--color-accent);
+  background: var(--color-overlay);
+  z-index: 50;
+}
+
+.map__legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+}
+
+.map__legend-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ----------------------------------------------------- rest and rewards */
+
+/* A large button offering one of a few options */
+.option {
+  --option-color: var(--color-info);
+
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  font: inherit;
+  color: var(--color-text);
+  text-align: center;
+  background: color-mix(in srgb, var(--option-color) 25%, var(--color-bg));
+  border: 3px solid var(--option-color);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.option[data-tone="heal"] {
+  --option-color: var(--node-rest);
+}
+
+.option[data-tone="accent"] {
+  --option-color: var(--color-accent);
+}
+
+.option:hover:not(:disabled) {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px
+    color-mix(in srgb, var(--option-color) 40%, transparent);
+}
+
+.option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.option__icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.option__title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  color: var(--option-color);
+}
+
+.option__text {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.option__note {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* --------------------------------------------------------------- events */
+
+.event {
+  width: min(700px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  text-align: center;
+}
+
+.event__text {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.event__choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.choice {
+  padding: var(--space-4) var(--space-5);
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: bold;
+  color: var(--color-text);
+  text-align: left;
+  background: linear-gradient(135deg, var(--card-skill-from), var(--node-shop));
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.choice:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px
+    color-mix(in srgb, var(--card-skill-from) 30%, transparent);
+}
+
+.choice:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.choice__effects {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  font-weight: normal;
+  opacity: 0.85;
+}

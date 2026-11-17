@@ -1,5 +1,5 @@
 /**
- * Rules of the generated map (plans/2026-11-16-run-structure.md), checked
+ * Rules of the generated map (docs/plans/2026-11-16-run-structure.md), checked
  * over many seeds.
  */
 import { describe, expect, it } from "vitest";
