@@ -1,4 +1,5 @@
 import React from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
 import { canUpgradeCard, getUpgradePreview } from "../utils/cardUpgrades";
 import { UnifiedHeader } from "./UnifiedHeader";
@@ -13,7 +14,17 @@ export const RestScreen: React.FC = () => {
     upgradeCardAtRest,
     openCardUpgradeModal,
     closeCardUpgradeModal,
-  } = useGameStore();
+  } = useGameStore(
+    useShallow((state) => ({
+      drawPile: state.drawPile,
+      discardPile: state.discardPile,
+      showCardUpgradeModal: state.showCardUpgradeModal,
+      restAndHeal: state.restAndHeal,
+      upgradeCardAtRest: state.upgradeCardAtRest,
+      openCardUpgradeModal: state.openCardUpgradeModal,
+      closeCardUpgradeModal: state.closeCardUpgradeModal,
+    })),
+  );
 
   const upgradableCards = [...drawPile, ...discardPile].filter(canUpgradeCard);
 

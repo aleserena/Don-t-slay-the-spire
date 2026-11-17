@@ -1,9 +1,19 @@
 import React, { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
+import { BRANDING } from "../config/branding";
 import { CardGrid } from "./CardGrid";
 
 export const UnifiedHeader: React.FC = () => {
-  const { player, drawPile, discardPile, exhaustPile, hand } = useGameStore();
+  const { player, drawPile, discardPile, exhaustPile, hand } = useGameStore(
+    useShallow((state) => ({
+      player: state.player,
+      drawPile: state.drawPile,
+      discardPile: state.discardPile,
+      exhaustPile: state.exhaustPile,
+      hand: state.hand,
+    })),
+  );
   const [showDeck, setShowDeck] = useState(false);
   const [showRelics, setShowRelics] = useState(false);
 
@@ -93,7 +103,7 @@ export const UnifiedHeader: React.FC = () => {
             textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
           }}
         >
-          Slay the Spire Clone
+          {BRANDING.title}
         </div>
 
         {/* Right side - Deck View and Gold */}

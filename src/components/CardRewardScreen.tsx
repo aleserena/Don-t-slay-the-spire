@@ -1,4 +1,5 @@
 import React from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
 import { Card } from "../types/game";
 import { UnifiedHeader } from "./UnifiedHeader";
@@ -10,7 +11,13 @@ import {
 } from "../utils/cardDisplay";
 
 export const CardRewardScreen: React.FC = () => {
-  const { combatReward, selectCardReward, skipCardReward } = useGameStore();
+  const { combatReward, selectCardReward, skipCardReward } = useGameStore(
+    useShallow((state) => ({
+      combatReward: state.combatReward,
+      selectCardReward: state.selectCardReward,
+      skipCardReward: state.skipCardReward,
+    })),
+  );
 
   if (!combatReward) return null;
 

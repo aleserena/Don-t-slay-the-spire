@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Content-free interface**: no component names a card, relic or enemy (enforced by a test). Card badges are read from card effects with the player's modifiers applied, and the damage preview on enemies is worked out by the engine (`src/engine/preview.ts`)
+- **Branding config** (`src/config/branding.ts`): the game's name and descriptive text in one place. The UI is now named "Deckbuilder"
+- **Theme** (`src/styles/theme.css`) and shared pieces (`src/components/ui`): custom properties for colors, spacing and type; `Button`, `Screen`, `Stat`; title, defeat and victory screens use them
+- **Keyboard and screen-reader support**: map nodes, cards and enemies are focusable and labelled; in combat `1`-`9`/`0` pick a card and then a target, `E` ends the turn, `Esc` cancels
 - **Headless simulator** (`src/sim`, `npm run simulate`, `npm run simulate:impact`): bots play seeded runs through the real store. Three bots (random, greedy, one-turn lookahead) are compared on the same seeds; the report gives win rate with a 95% interval, survival by floor, costliest encounters, and card and relic statistics. The state is checked against invariants after every action, and a run that can neither end nor continue is reported as stuck. Experiments start every run with one extra relic or card to measure its effect
 - **Map generation**: path-based on a 7-column grid. Six routes from the first floor to the floor before the boss, stepping to the same or a neighbouring column and never crossing. Fixed floors (combat, treasure, rest, boss), weighted types elsewhere with floor limits, no repeated elite/rest/shop in a row, and a guaranteed shop and elite
 - **Encounters by floor** (`src/engine/encounters.ts`): easy, normal and hard tiers plus dedicated elite encounters; `createEncounter` uses them
@@ -21,6 +25,8 @@ All notable changes to this project will be documented in this file.
 - **Hand limit**: 10 cards
 
 ### Changed
+- **Store subscriptions**: components subscribe to the fields they read (`useShallow`) instead of the whole store
+- **Removed**: the unused `GameUI` component
 - **Elites**: elite nodes no longer use a normal encounter with 1.5x health (`ELITE_HEALTH_MULTIPLIER` is removed)
 - **Power cards**: the power left in play is derived from the card's triggered effects, so `src/data/powerCards.ts` no longer keeps a second copy of them
 - **Legacy `damage`/`block` fields**: read in one place (`getCardEffects`) when resolving a card

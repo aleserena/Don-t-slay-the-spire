@@ -1,8 +1,15 @@
 import React from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
 
 export const DamageDebugPanel: React.FC = () => {
-  const { debugMode, player, enemies } = useGameStore();
+  const { debugMode, player, enemies } = useGameStore(
+    useShallow((state) => ({
+      debugMode: state.debugMode,
+      player: state.player,
+      enemies: state.enemies,
+    })),
+  );
 
   // Don't render if debug mode is off
   if (!debugMode) {

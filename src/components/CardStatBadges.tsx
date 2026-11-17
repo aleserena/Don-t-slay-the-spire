@@ -1,21 +1,32 @@
 import React from "react";
 import { Card } from "../types/game";
-import { CardStatBadge, getCardStatBadges } from "../utils/cardDisplay";
+import {
+  BadgeContext,
+  CardStatBadge,
+  getCardStatBadges,
+} from "../utils/cardDisplay";
 
-type BadgeSize = "small" | "medium";
+type BadgeSize = "tiny" | "small" | "medium";
 
 interface CardStatBadgesProps {
   card: Card;
-  /** `small` for card grids, `medium` for the larger reward and shop cards */
+  /**
+   * `tiny` for the hand, `small` for card grids, `medium` for the larger
+   * reward and shop cards
+   */
   size?: BadgeSize;
+  /** Shows the numbers with this player's modifiers applied */
+  context?: BadgeContext;
 }
 
 const SIZE_STYLES: Record<BadgeSize, React.CSSProperties> = {
+  tiny: { fontSize: "11px", padding: "4px 8px", borderRadius: "8px" },
   small: { fontSize: "14px", padding: "3px 6px", borderRadius: "6px" },
   medium: { fontSize: "16px", padding: "4px 8px", borderRadius: "8px" },
 };
 
 const ICON_SPACING: Record<BadgeSize, string> = {
+  tiny: "3px",
   small: "3px",
   medium: "4px",
 };
@@ -32,14 +43,16 @@ const KIND_STYLES: Record<
 export const CardStatBadges: React.FC<CardStatBadgesProps> = ({
   card,
   size = "medium",
+  context,
 }) => (
   <>
-    {getCardStatBadges(card).map((badge) => (
+    {getCardStatBadges(card, context).map((badge) => (
       <div
         key={`${badge.kind}-${badge.label}`}
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "center",
           fontWeight: "bold",
           color: "#fff",
           background: KIND_STYLES[badge.kind].background,

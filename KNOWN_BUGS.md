@@ -22,7 +22,8 @@ These cards need a mechanic of their own. They are listed in `src/data/__tests__
 - One enemy (`createLagavulin`) has no deck of its own and is not used in any encounter
 - There is no way to type a seed in the UI; `startNewGame(seed)` accepts one and the Game Over screen shows it
 - A run is saved on the map only: closing the browser during a combat, event or shop returns to the map before that node
-- The hand view (`HandArea.tsx`) still has per-card markup for a few cards; the other card views read everything from card data
+- Most screens still style themselves with inline styles and hard-coded colors instead of the theme (`src/styles/theme.css`); only the title, defeat and victory screens use it
+- The package name, README and older docs still use the old name
 
 ## Fixed
 

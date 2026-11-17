@@ -1,10 +1,18 @@
 import React from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
+import { BRANDING } from "../config/branding";
+import { asButton } from "./ui/asButton";
 import { NodeType } from "../types/map";
 import { UnifiedHeader } from "./UnifiedHeader";
 
 export const MapView: React.FC = () => {
-  const { map, selectNode } = useGameStore();
+  const { map, selectNode } = useGameStore(
+    useShallow((state) => ({
+      map: state.map,
+      selectNode: state.selectNode,
+    })),
+  );
 
   if (!map) return null;
 
@@ -164,7 +172,7 @@ export const MapView: React.FC = () => {
               textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
             }}
           >
-            The Spire - Floor {map.floor + 1}
+            {BRANDING.mapName} - Floor {map.floor + 1}
           </h1>
 
           <div
@@ -212,7 +220,16 @@ export const MapView: React.FC = () => {
             {map.nodes.map((node) => (
               <div
                 key={node.id}
-                onClick={() => handleNodeClick(node.id)}
+                {...asButton(() => handleNodeClick(node.id), {
+                  disabled: !node.available || node.completed,
+                  label: `${node.type} node, floor ${node.y + 1}, ${
+                    node.completed
+                      ? "completed"
+                      : node.available
+                        ? "available"
+                        : "not reachable yet"
+                  }`,
+                })}
                 style={{
                   position: "absolute",
                   left: `${node.x * 100}px`,

@@ -1,10 +1,17 @@
 import React from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
 import { EventConsequence } from "../types/map";
 import { canChooseEventOption, getChoiceGoldCost } from "../engine/events";
 
 export const EventScreen: React.FC = () => {
-  const { currentEvent, selectEventChoice, player } = useGameStore();
+  const { currentEvent, selectEventChoice, player } = useGameStore(
+    useShallow((state) => ({
+      currentEvent: state.currentEvent,
+      selectEventChoice: state.selectEventChoice,
+      player: state.player,
+    })),
+  );
 
   if (!currentEvent) return null;
 

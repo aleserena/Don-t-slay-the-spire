@@ -1,14 +1,14 @@
 import React, { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useGameStore } from "../store/gameStore";
 import { Card } from "../types/game";
 import {
   cardNeedsTarget,
-  getCardDisplayDamage,
   getEnhancedCardDescription,
-  getActualCardDamage,
 } from "../utils/cardUtils";
+import { CardStatBadges } from "./CardStatBadges";
+import { asButton } from "./ui/asButton";
 import { getEnergyCost } from "../engine/cardPlay";
-import { getFirstAttackBonus } from "../utils/statusEffects";
 import { getCardCostLabel, getCardTypeGradient } from "../utils/cardDisplay";
 
 interface HandAreaProps {
@@ -22,40 +22,18 @@ export const HandArea: React.FC<HandAreaProps> = ({
   onCardSelect,
   onCardConfirming,
 }) => {
-  const { hand, player, enemies, firstAttackThisCombat } = useGameStore();
+  const { hand, player, firstAttackThisCombat } = useGameStore(
+    useShallow((state) => ({
+      hand: state.hand,
+      player: state.player,
+      firstAttackThisCombat: state.firstAttackThisCombat,
+    })),
+  );
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [confirmingCard, setConfirmingCard] = useState<string | null>(null);
 
-  // Add CSS animation for pulse effect
-  React.useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
-      @keyframes pulse {
-        0% { opacity: 1; transform: translateX(-50%) scale(1); }
-        50% { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
-        100% { opacity: 1; transform: translateX(-50%) scale(1); }
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
   const canPlayCard = (card: Card): boolean =>
     player.energy >= getEnergyCost(card, player);
-
-  const getCardDamage = (card: Card): number => {
-    let baseDamage = getCardDisplayDamage(card, player, enemies);
-
-    // Add the first-attack bonus for attack cards
-    if (card.type === "attack" && firstAttackThisCombat) {
-      baseDamage += getFirstAttackBonus(player);
-    }
-
-    return baseDamage;
-  };
 
   const handleCardClick = (card: Card) => {
     if (!canPlayCard(card)) return;
@@ -103,8 +81,37 @@ export const HandArea: React.FC<HandAreaProps> = ({
     }
   };
 
+  // Keyboard: 1-9 and 0 act on the card in that position, Escape cancels.
+  // While a card is waiting for a target the digits pick the enemy instead
+  // (handled by the board).
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const element = event.target as HTMLElement | null;
+      if (element && /^(INPUT|TEXTAREA|SELECT)$/.test(element.tagName)) return;
+
+      if (event.key === "Escape") {
+        setConfirmingCard(null);
+        onCardConfirming?.(null);
+        return;
+      }
+      if (!/^[0-9]$/.test(event.key) || selectedCardId) return;
+
+      const card = hand[event.key === "0" ? 9 : Number(event.key) - 1];
+      if (card) {
+        event.preventDefault();
+        handleCardClick(card);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
   return (
     <div
+      role="group"
+      aria-label="Hand"
       style={{
         display: "flex",
         gap: "10px",
@@ -120,11 +127,21 @@ export const HandArea: React.FC<HandAreaProps> = ({
         const isHovered = hoveredCard === card.id;
         const isConfirming = confirmingCard === card.id;
         const playable = canPlayCard(card);
-        const damage = getCardDamage(card);
 
         return (
           <div
             key={`${card.id}-${index}`}
+            {...asButton(() => handleCardClick(card), {
+              disabled: !playable,
+              label: `${index < 10 ? `${(index + 1) % 10}: ` : ""}${
+                card.name
+              }, cost ${getCardCostLabel(card)}. ${card.description}${
+                playable ? "" : " Not enough energy."
+              }${isSelected ? " Selected: choose a target." : ""}${
+                isConfirming ? " Activate again to play." : ""
+              }`,
+            })}
+            aria-pressed={isSelected || isConfirming}
             style={{
               width: "120px",
               height: "160px",
@@ -164,7 +181,6 @@ export const HandArea: React.FC<HandAreaProps> = ({
               zIndex: isSelected ? 15 : isConfirming ? 14 : isHovered ? 10 : 1,
               position: "relative",
             }}
-            onClick={() => handleCardClick(card)}
             onMouseEnter={() => setHoveredCard(card.id)}
             onMouseLeave={() => setHoveredCard(null)}
           >
@@ -268,151 +284,11 @@ export const HandArea: React.FC<HandAreaProps> = ({
                 gap: "4px",
               }}
             >
-              {/* Generic Damage - only for cards without special displays */}
-              {((card.damage !== undefined && card.damage > 0) ||
-                card.effects?.some(
-                  (effect) =>
-                    effect.type === "damage" ||
-                    effect.type === "damage_multiplier_block" ||
-                    effect.type === "damage_multiplier_energy",
-                )) &&
-              card.baseId !== "body_slam" &&
-              card.baseId !== "cleave" &&
-              card.baseId !== "whirlwind" &&
-              card.baseId !== "twin_strike" &&
-              card.baseId !== "bash" &&
-              card.baseId !== "anger" ? (
-                <div
-                  style={{
-                    background: "rgba(255, 107, 107, 0.9)",
-                    padding: "4px 8px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    fontSize: "11px",
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  ⚔️ {damage}
-                </div>
-              ) : null}
-
-              {/* Block */}
-              {card.block !== undefined && card.block > 0 ? (
-                <div
-                  style={{
-                    background: "rgba(68, 68, 255, 0.9)",
-                    padding: "4px 8px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    fontSize: "11px",
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  🛡️ {card.block}
-                </div>
-              ) : null}
-
-              {/* Special Effects - These replace the generic damage display */}
-              {card.baseId === "bash" && (
-                <div
-                  style={{
-                    background: "rgba(255, 107, 107, 0.9)",
-                    padding: "4px 8px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    fontSize: "10px",
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  ⚔️ {getActualCardDamage(card, player)}
-                </div>
-              )}
-              {card.baseId === "cleave" && (
-                <div
-                  style={{
-                    background: "rgba(255, 107, 107, 0.9)",
-                    padding: "4px 8px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    fontSize: "10px",
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  ⚔️ {damage} to ALL
-                </div>
-              )}
-              {card.baseId === "whirlwind" && (
-                <div
-                  style={{
-                    background: "rgba(255, 107, 107, 0.9)",
-                    padding: "4px 8px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    fontSize: "10px",
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  ⚔️ 5×{player.energy} to ALL
-                </div>
-              )}
-              {card.baseId === "body_slam" && (
-                <div
-                  style={{
-                    background: "rgba(255, 107, 107, 0.9)",
-                    padding: "4px 8px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    fontSize: "10px",
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  ⚔️ {card.upgraded ? "2x" : "1x"} Block
-                </div>
-              )}
-              {card.baseId === "twin_strike" && (
-                <div
-                  style={{
-                    background: "rgba(255, 107, 107, 0.9)",
-                    padding: "4px 8px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    fontSize: "10px",
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  ⚔️ {getActualCardDamage(card, player)} × 2
-                </div>
-              )}
-              {card.baseId === "anger" && (
-                <div
-                  style={{
-                    background: "rgba(255, 107, 107, 0.9)",
-                    padding: "4px 8px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    fontSize: "10px",
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    textShadow: "1px 1px 2px rgba(0,0,0,0.8)",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  ⚔️ {getActualCardDamage(card, player)}
-                </div>
-              )}
+              <CardStatBadges
+                card={card}
+                size="tiny"
+                context={{ player, isFirstAttack: firstAttackThisCombat }}
+              />
             </div>
 
             {/* Card Description */}
