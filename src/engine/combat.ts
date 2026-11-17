@@ -17,25 +17,18 @@ import {
 } from "../types/game";
 import { NodeType } from "../types/map";
 import { getBossForFloor } from "../data/bosses";
-import { getRandomEnemyEncounter } from "../data/enemies";
 import { selectEnemyCard } from "../data/monsterCards";
 import { processMonsterCardEffects } from "../utils/monsterCardEffects";
 import { tickPoison } from "../utils/statusEffects";
 import { shuffle, Rng } from "../utils/random";
-import { ELITE_HEALTH_MULTIPLIER, MAX_BONUS_ENERGY } from "./constants";
+import { MAX_BONUS_ENERGY } from "./constants";
 import { withoutTemporaryCards } from "./deck";
+import { createCombatEncounter, createEliteEncounter } from "./encounters";
 import { createCombatReward } from "./rewards";
 import { createBattle, createCombatCounters, dispatch } from "./triggers";
 
 export const isCombatNode = (type: NodeType): boolean =>
   type === NodeType.COMBAT || type === NodeType.ELITE || type === NodeType.BOSS;
-
-const toElite = (enemy: Enemy): Enemy => ({
-  ...enemy,
-  isElite: true,
-  health: Math.floor(enemy.health * ELITE_HEALTH_MULTIPLIER),
-  maxHealth: Math.floor(enemy.maxHealth * ELITE_HEALTH_MULTIPLIER),
-});
 
 /** Creates the enemies for a combat, elite or boss map node. */
 export const createEncounter = (
@@ -51,9 +44,9 @@ export const createEncounter = (
     case NodeType.BOSS:
       return [getBossForFloor(floor, rng)].map(withOpeningCard);
     case NodeType.ELITE:
-      return getRandomEnemyEncounter(rng).map(toElite).map(withOpeningCard);
+      return createEliteEncounter(floor, rng).map(withOpeningCard);
     default:
-      return getRandomEnemyEncounter(rng).map(withOpeningCard);
+      return createCombatEncounter(floor, rng).map(withOpeningCard);
   }
 };
 

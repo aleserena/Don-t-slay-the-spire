@@ -62,6 +62,7 @@ export const createNewRunState = (
     showCardRemovalModal: false,
     showCardUpgradeModal: false,
     currentFloor: 1,
+    combatsWon: 0,
     hasSavedGame: false,
     playerTurnThisCombat: 0,
     combat: createCombatCounters(),

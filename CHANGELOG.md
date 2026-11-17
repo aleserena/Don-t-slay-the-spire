@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Map generation**: path-based on a 7-column grid. Six routes from the first floor to the floor before the boss, stepping to the same or a neighbouring column and never crossing. Fixed floors (combat, treasure, rest, boss), weighted types elsewhere with floor limits, no repeated elite/rest/shop in a row, and a guaranteed shop and elite
+- **Encounters by floor** (`src/engine/encounters.ts`): easy, normal and hard tiers plus dedicated elite encounters; `createEncounter` uses them
+- **Victory screen** (`src/components/VictoryScreen.tsx`): run summary with floors climbed, combats won, health, gold, deck size, relics and seed. The store counts `combatsWon`, which is kept in the save
+- **Event costs**: `getChoiceGoldCost` and `canChooseEventOption`; the store rejects and the event screen disables choices the player cannot pay for
 - **Seeded runs**: the store keeps `seed` and `rngState`; every random pick in the engine, data generators and map generation takes the run's random source, so a run is reproducible from its seed. `startNewGame(seed?)` and `startNewRun(seed?)` accept a seed
 - **Save and continue**: `src/store/saveGame.ts` writes a versioned snapshot to local storage while the run is on the map (`installAutosave`, called from `main.tsx`), and `loadSavedGame` restores it. Unreadable or other-version saves count as no save
 - **`SeededRng`**: `createSeededRng` exposes its `state`, and `createSeededRng(rng.state)` continues the sequence
@@ -16,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - **Hand limit**: 10 cards
 
 ### Changed
+- **Elites**: elite nodes no longer use a normal encounter with 1.5x health (`ELITE_HEALTH_MULTIPLIER` is removed)
 - **Power cards**: the power left in play is derived from the card's triggered effects, so `src/data/powerCards.ts` no longer keeps a second copy of them
 - **Legacy `damage`/`block` fields**: read in one place (`getCardEffects`) when resolving a card
 - **`cardNeedsTarget`**: decided from card effects instead of a list of card ids

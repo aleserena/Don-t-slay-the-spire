@@ -55,11 +55,12 @@ export const createCombatSlice: SliceCreator<CombatActions> = (set, get) => {
 
   /** Ends the combat as a win and rolls its rewards. */
   const winCombat = (player: Player, defeatedEnemies: Enemy[]) =>
-    set(
-      withRng((rng) =>
+    set({
+      ...withRng((rng) =>
         createVictoryState(get().persistentDeck, player, defeatedEnemies, rng),
       ),
-    );
+      combatsWon: get().combatsWon + 1,
+    });
 
   return {
     startCombat: (enemies = []) => {

@@ -19,6 +19,8 @@ export interface StoreState extends GameState {
   seed: number;
   /** Position of the run's random source, advanced by every random pick */
   rngState: number;
+  /** Combats won in this run */
+  combatsWon: number;
   /** Whether there is a saved game available */
   hasSavedGame: boolean;
   /** 1-based player turn of the current combat (0 before the first turn) */
